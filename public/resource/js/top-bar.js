@@ -1,0 +1,1 @@
+jQuery(document).ready(function($){$.ajax({type:"GET",url:'../wp-content/themes/piha/top-bar.php',dataType:'html',success:function(data){$('body').prepend(data);$('#header-menu-wrap #back-to-post').attr('href',$('body').attr('data-post'));},error:function(){}});});
