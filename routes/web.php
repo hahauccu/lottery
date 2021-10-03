@@ -27,10 +27,11 @@ Route::get('/adminer/login', function () {
 
 Route::post('/create_test', "App\Http\Controllers\LotteryController@create_test");
 
-Route::group(['middleware' => 'adminer', 'prefix' => 'adminer'],function(){
-	Route::get('/dashborad', function () {
-        return view('user_dashboard');
-   	})->name("userdashboard");
+Route::group(['middleware' => 'adminer'],function(){
+
+  Route::group(['prefix' => 'adminer'],function(){
+
+    Route::get('/dashborad', function () {return view('user_dashboard');})->name("userdashboard");
 
    	Route::resource('/lottery_lists', "App\Http\Controllers\LotteryController");
 
@@ -39,6 +40,12 @@ Route::group(['middleware' => 'adminer', 'prefix' => 'adminer'],function(){
    	Route::post('/do_login', "App\Http\Controllers\LoginController@do_login")->withoutMiddleware('adminer');
 
    	Route::resource('/sub_menu', "App\Http\Controllers\SubMenuController");
+   });
+  Route::get('/lottery/{code}', ["App\Http\Controllers\Front\LotteryController","lotteryBrowse"]);
+
+  Route::get('/lottery/{code?}/{step?}', ["App\Http\Controllers\Front\LotteryController","toLotteryList"]);
+
+  Route::get('/do_lottery/{step?}', ["App\Http\Controllers\Front\LotteryController","doLottery"]);
    	//Route::post('/sub_menu_save', "App\Http\Controllers\SubMenuController@sub_menu_save");
 });
 

@@ -42,7 +42,7 @@ class DatabaseSeeder extends Seeder
         		'is_visible'=>1,
         		'order'=>1,
         		'prize_number'=>10,
-        		'is_repeat_draw'=>0,
+        		'is_repeat_draw'=>1,
         		'participate_list'=>99,
         		'lottery_code'=>'SDvvdyuwqd',
     		],
@@ -54,7 +54,16 @@ class DatabaseSeeder extends Seeder
         		'is_repeat_draw'=>1,
         		'participate_list'=>10,
         		'lottery_code'=>99,
-    		]
+    		],
+            [
+                'step_name'=>'a thousand dollor',
+                'is_visible'=>1,
+                'order'=>1,
+                'prize_number'=>10,
+                'is_repeat_draw'=>0,
+                'participate_list'=>10,
+                'lottery_code'=>99,
+            ]
         );
 
         \App\Models\ParticipantLists::create(

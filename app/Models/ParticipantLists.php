@@ -12,6 +12,13 @@ class ParticipantLists extends Model
 
     public function getParticipantDetails()
     {
-    	return $this->hasMany('App\Models\ParticipantDetails','participant_lists_code','code');
+    	return $this->hasOneThrough(
+    		'App\Models\ParticipantLists',
+    		'App\Models\ParticipantDetails',
+    		'id',
+    		'participant_lists_code',
+    		'participate_list',
+    		'code',
+    	);
     }
 }
