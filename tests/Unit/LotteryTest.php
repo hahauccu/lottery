@@ -15,7 +15,7 @@ class LotteryTest extends TestCase
     	$this->artisan('db:seed');
 	}
     /**
-     * A basic unit test example.
+     * A test whitch check if the winner number is equal the needed
      *
      * @return void
      */
