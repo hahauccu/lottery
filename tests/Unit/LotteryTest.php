@@ -29,4 +29,14 @@ class LotteryTest extends TestCase
 		$this->assertEquals($lotterySteps['prize_number'],count( $looteryResult) );
     }
 
+    /**
+     * Make sure the list for on coming lotter had remove those who has already win in the non repeat step
+     *
+     * @return void
+     */
+    public function test_if_winner_can_win_again_in_the_non_repeat_step()
+    {
+
+    }
+
 }
