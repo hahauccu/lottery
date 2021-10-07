@@ -31,12 +31,15 @@ class DatabaseSeeder extends Seeder
         		"id"=>99,
         		"lottery_name"=>"moon fastivlal lottery",
         		"code" => "SDvvdyuwqd",
-        		"user_id" => 999
+        		"user_id" => 999,
+
         	]
         );
 
+        \App\Models\LotterySteps::truncate();
         //create lottery 
-        \App\Models\LotterySteps::create(
+        $lotterySteps=
+        [
     		[
     			'step_name'=>'ten cell phone',
         		'is_visible'=>1,
@@ -45,6 +48,8 @@ class DatabaseSeeder extends Seeder
         		'is_repeat_draw'=>1,
         		'participate_list'=>99,
         		'lottery_code'=>'SDvvdyuwqd',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
     		],
     		[
     			'step_name'=>'twenty cell phone',
@@ -52,8 +57,10 @@ class DatabaseSeeder extends Seeder
         		'order'=>1,
         		'prize_number'=>20,
         		'is_repeat_draw'=>1,
-        		'participate_list'=>10,
-        		'lottery_code'=>99,
+        		'participate_list'=>99,
+        		'lottery_code'=>'SDvvdyuwqd',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
     		],
             [
                 'step_name'=>'a thousand dollor',
@@ -61,10 +68,13 @@ class DatabaseSeeder extends Seeder
                 'order'=>1,
                 'prize_number'=>10,
                 'is_repeat_draw'=>0,
-                'participate_list'=>10,
-                'lottery_code'=>99,
+                'participate_list'=>99,
+                'lottery_code'=>'SDvvdyuwqd',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ]
-        );
+        ];
+        \App\Models\LotterySteps::insert($lotterySteps);
 
         \App\Models\ParticipantLists::create(
         	[
