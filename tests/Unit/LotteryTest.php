@@ -21,10 +21,10 @@ class LotteryTest extends TestCase
      */
     public function test_if_lootery_winner_number_is_currect()
     {
-    	$defultSteps = 1; 
+    	$toTestStep = 1; 
     	$lotteryService = new LotteryService();
-    	$lotterySteps = $lotteryService->getLotterySteps($defultSteps);
-    	$looteryResult = $lotteryService->doLottery($defultSteps);
+    	$lotterySteps = $lotteryService->getLotterySteps($toTestStep);
+    	$looteryResult = $lotteryService->doLottery($toTestStep);
     	//is winner number currect ?
 		$this->assertEquals($lotterySteps['prize_number'],count( $looteryResult) );
     }
@@ -36,7 +36,17 @@ class LotteryTest extends TestCase
      */
     public function test_if_winner_can_win_again_in_the_non_repeat_step()
     {
-
+    	$lotteryService = new LotteryService();
+    	$step1WinnerIdArray = $lotteryService->doLottery(1)->pluck('participant')->toArray();
+    	$toTestStep = 3; 
+    	$lotterySteps = $lotteryService->getLotterySteps($toTestStep);
+    	$participants = collect($lotteryService->getParticipants($lotterySteps))->pluck('id')->toArray();
+    	$step2LooteryResult = $lotteryService->doLottery($toTestStep)->pluck('participant')->toArray();
+    	foreach ($step1WinnerIdArray as $step1WinnerValue) 
+    	{
+    		$this->assertNotContains($step1WinnerValue,$participants);
+    		$this->assertNotContains($step1WinnerValue,$step2LooteryResult);
+    	}
     }
 
 }

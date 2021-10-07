@@ -16,7 +16,7 @@ class CreateLotteryWinnerList extends Migration
         Schema::create('lottery_winner_lists', function (Blueprint $table) {
             $table->id();
             $table->integer('step_id');
-            $table->integer('user_id');
+            $table->integer('participant');
             $table->timestamps();
         });
     }
