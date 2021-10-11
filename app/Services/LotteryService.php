@@ -49,6 +49,7 @@ class LotteryService
 		$allStepsIdArray = array();
 		foreach ($lotteryListsWithSteps['getLotterySteps'] as  $stepsValue) 
 		{
+			if($lotterySteps->id != $stepsValue->id)
 			$allStepsIdArray[]= $stepsValue->id;
 		}
 		$participants = $lotterySteps->participants->keyBy('id')->toArray();

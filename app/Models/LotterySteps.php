@@ -20,4 +20,9 @@ class LotterySteps extends Model
     		'participate_list',
     		'code')->where('is_visible',1);
     }
+
+    public function winners()
+    {
+        return $this->hasMany('App\Models\LotteryWinnerLists','step_id','id');
+    }
 }

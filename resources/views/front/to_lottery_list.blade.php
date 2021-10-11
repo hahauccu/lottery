@@ -30,19 +30,48 @@
 </head>
 <body>
 	<h1>抽獎名單</h1>
-	<h2>{{$lotteryData['step_name'] x $lotteryData['step_name']}}</h2>
+	<h2>{{$lotteryData['step_name'] ." -". $lotteryData['prize_number']." winners"}}</h2>
+	
 	<table>
-		@foreach($lotteryData['get_lottery_steps'] as $key =>$participants)
+		@foreach($lotteryData['participants'] as $key =>$participants)
 		@if($key %4 == 0)
 		<tr a="{{$key}}">
 		@endif
-			<td>
-				{{$participants['name']}} {{}}
+			<td @if(array_key_exists($participants['id'], $winners)) style="background-color: lightblue"  @endif>
+				{{$participants['name']}} 
+				@if(array_key_exists($participants['id'], $winners))
+				
+				@endif
 			</td>
 		@if($key+1 %4 == 0)
 		</tr>
 		@endif
 		@endforeach
 	</table>
+	@if(empty($lotteryData['winners']))
+		<input type="button" value="go!" id='do_lottery'>
+	@endif
+	<script src="{{ URL::to('resource/js/jquery-1.9.1.min.js') }}" type="text/javascript"></script>
+	<script type="text/javascript">
+		$("#do_lottery").click(function(){
+			$(this).unbind();
+			$.ajax({
+				url: '/do_lottery/{{$lotteryData['id']}}', 
+				method:'post',
+				data:{
+					'_token':'{{csrf_token()}}'
+				},
+				success: function(data)
+				{
+					if(data == 1)
+					{
+						location.reload();
+					}
+			    }
+			});
+
+		})
+		
+	</script>
 </body>
 </html>

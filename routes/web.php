@@ -12,24 +12,13 @@ use Illuminate\Support\Facades\Route;
 | contains the "web" middleware group. Now create something great!
 |
 */
-
-
-Route::get('/', function () {
-    return view('welcome');
-});
-
-
-Route::get('/adminer/login', function () {
-	return view('adminer_login');
-})->name("userloginpage");
-
-
-
 Route::post('/create_test', "App\Http\Controllers\LotteryController@create_test");
 
 Route::group(['middleware' => 'adminer'],function(){
 
   Route::group(['prefix' => 'adminer'],function(){
+
+    Route::get('/login', function () {return view('adminer_login');})->name("userloginpage")->withoutMiddleware('adminer');
 
     Route::get('/dashborad', function () {return view('user_dashboard');})->name("userdashboard");
 
@@ -40,23 +29,16 @@ Route::group(['middleware' => 'adminer'],function(){
    	Route::post('/do_login', "App\Http\Controllers\LoginController@do_login")->withoutMiddleware('adminer');
 
    	Route::resource('/sub_menu', "App\Http\Controllers\SubMenuController");
+
    });
+
   Route::get('/lottery/{code}', ["App\Http\Controllers\Front\LotteryController","lotteryBrowse"]);
 
   Route::get('/lottery/{code?}/{step?}', ["App\Http\Controllers\Front\LotteryController","toLotteryList"]);
 
-  Route::get('/do_lottery/{step?}', ["App\Http\Controllers\Front\LotteryController","doLottery"]);
-   	//Route::post('/sub_menu_save', "App\Http\Controllers\SubMenuController@sub_menu_save");
+  Route::post('/do_lottery/{step?}', ["App\Http\Controllers\Front\LotteryController","doLottery"]);
+   	
 });
-
-// Route::prefix('adminer')->middleware("auth")->group(function () 
-// {
-// 	Route::get('/dashborad', function () {
-//         return view('user_dashboard');
-//    	})->name("userdashboard");
-
-//    	Route::post('/do_login', "App\Http\Controllers\LoginController@do_login")->withoutMiddleware("auth");
-// });
 
 
 Route::get('/temp', function () {
