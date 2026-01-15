@@ -41,10 +41,10 @@ class EligibleEmployeesService
     {
         $base = $this->eligibleForEvent(
             $event->organization_id,
-            $event->rules()->where('type', \App\Models\EventRule::TYPE_INCLUDE_EMPLOYEE)->pluck('ref_id')->all(),
-            $event->rules()->where('type', \App\Models\EventRule::TYPE_INCLUDE_GROUP)->pluck('ref_id')->all(),
-            $event->rules()->where('type', \App\Models\EventRule::TYPE_EXCLUDE_EMPLOYEE)->pluck('ref_id')->all(),
-            $event->rules()->where('type', \App\Models\EventRule::TYPE_EXCLUDE_GROUP)->pluck('ref_id')->all()
+            [],
+            [],
+            [],
+            [],
         );
 
         $includeEmployeeIds = $this->normalizeIds($includeEmployeeIds);

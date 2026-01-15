@@ -44,7 +44,9 @@ class LotteryEvent extends Model
 
     public function prizes(): HasMany
     {
-        return $this->hasMany(Prize::class);
+        return $this->hasMany(Prize::class)
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function rules(): HasMany

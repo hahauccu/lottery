@@ -60,6 +60,7 @@ class LotteryFrontendController extends Controller
         $prizes = Prize::query()
             ->where('lottery_event_id', $event->id)
             ->with(['winners.employee'])
+            ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
 

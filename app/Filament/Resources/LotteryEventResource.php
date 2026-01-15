@@ -4,16 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Events\LotteryEventUpdated;
 use App\Filament\Resources\LotteryEventResource\Pages;
-use App\Livewire\EligibleEmployeesPreview;
-use App\Models\Employee;
-use App\Models\EmployeeGroup;
-use App\Models\EventRule;
+use App\Filament\Resources\LotteryEventResource\RelationManagers\PrizesRelationManager;
 use App\Models\LotteryEvent;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Livewire as LivewireComponent;
 use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
@@ -22,7 +17,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Forms\Get;
 
 class LotteryEventResource extends Resource
 {
@@ -56,13 +50,6 @@ class LotteryEventResource extends Resource
                         Toggle::make('is_lottery_open')
                             ->label('開放抽獎')
                             ->default(false),
-                        Select::make('current_prize_id')
-                            ->label('目前抽獎')
-                            ->options(fn (?LotteryEvent $record) => $record?->prizes()->orderBy('name')->pluck('name', 'id')->all() ?? [])
-                            ->searchable()
-                            ->preload()
-                            ->disabled(fn (?LotteryEvent $record) => $record === null)
-                            ->helperText('選擇後前台會自動切換顯示'),
                         FileUpload::make('default_bg_image_path')
                             ->label('預設背景圖')
                             ->disk('public')
@@ -70,74 +57,6 @@ class LotteryEventResource extends Resource
                             ->image()
                             ->imagePreviewHeight('120')
                             ->maxSize(4096),
-                    ])
-                    ->columns(2),
-                Section::make('抽獎範圍')
-                    ->description('包含為聯集，排除優先。重複包含不影響抽獎機率。')
-                    ->schema([
-                        Select::make('include_group_ids')
-                            ->label('包含群組')
-                            ->options(fn () => EmployeeGroup::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->live()
-                            ->dehydrated(false),
-                        Select::make('include_employee_ids')
-                            ->label('包含員工')
-                            ->options(fn () => Employee::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->live()
-                            ->dehydrated(false),
-                        Select::make('exclude_group_ids')
-                            ->label('排除群組')
-                            ->options(fn () => EmployeeGroup::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->live()
-                            ->dehydrated(false),
-                        Select::make('exclude_employee_ids')
-                            ->label('排除員工')
-                            ->options(fn () => Employee::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->live()
-                            ->dehydrated(false),
-                        LivewireComponent::make(EligibleEmployeesPreview::class, fn (Get $get) => [
-                            'context' => 'event',
-                            'organizationId' => Filament::getTenant()?->getKey(),
-                            'includeEmployeeIds' => $get('include_employee_ids') ?? [],
-                            'includeGroupIds' => $get('include_group_ids') ?? [],
-                            'excludeEmployeeIds' => $get('exclude_employee_ids') ?? [],
-                            'excludeGroupIds' => $get('exclude_group_ids') ?? [],
-                        ])
-                            ->key(fn (Get $get) => 'event-preview-'.md5(json_encode([
-                                $get('include_employee_ids'),
-                                $get('include_group_ids'),
-                                $get('exclude_employee_ids'),
-                                $get('exclude_group_ids'),
-                            ])))
-                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);
@@ -168,24 +87,6 @@ class LotteryEventResource extends Resource
                     ->counts('prizes'),
             ])
             ->actions([
-                \Filament\Tables\Actions\Action::make('setCurrentPrize')
-                    ->label('切換獎項')
-                    ->modalHeading('切換目前抽獎')
-                    ->form([
-                        Select::make('current_prize_id')
-                            ->label('目前獎項')
-                            ->options(fn (LotteryEvent $record) => $record->prizes()->orderBy('name')->pluck('name', 'id')->all())
-                            ->required()
-                            ->searchable()
-                            ->preload(),
-                    ])
-                    ->fillForm(fn (LotteryEvent $record) => [
-                        'current_prize_id' => $record->current_prize_id,
-                    ])
-                    ->action(function (LotteryEvent $record, array $data): void {
-                        $record->update(['current_prize_id' => $data['current_prize_id']]);
-                        event(new LotteryEventUpdated($record->refresh()));
-                    }),
                 \Filament\Tables\Actions\EditAction::make(),
                 \Filament\Tables\Actions\DeleteAction::make(),
             ])
@@ -202,6 +103,13 @@ class LotteryEventResource extends Resource
 
         return parent::getEloquentQuery()
             ->when($tenant, fn (Builder $query) => $query->where('organization_id', $tenant->getKey()));
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            PrizesRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

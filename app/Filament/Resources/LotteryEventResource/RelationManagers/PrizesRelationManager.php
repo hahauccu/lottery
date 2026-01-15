@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Resources\LotteryEventResource\RelationManagers;
 
-use App\Filament\Resources\PrizeResource\Pages;
+use App\Events\LotteryEventUpdated;
 use App\Livewire\EligibleEmployeesPreview;
 use App\Models\Employee;
 use App\Models\EmployeeGroup;
-use App\Models\LotteryEvent;
 use App\Models\Prize;
+use App\Models\PrizeRule;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Livewire as LivewireComponent;
@@ -16,44 +16,27 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
-use Filament\Resources\Resource;
+use Filament\Forms\Get;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Actions\CreateAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Forms\Get;
+use Illuminate\Support\Arr;
 
-class PrizeResource extends Resource
+class PrizesRelationManager extends RelationManager
 {
-    protected static ?string $model = Prize::class;
+    protected static string $relationship = 'prizes';
 
-    protected static bool $isScopedToTenant = false;
-
-    protected static bool $shouldRegisterNavigation = false;
-
-    protected static ?string $navigationIcon = 'heroicon-o-trophy';
-
-    protected static ?string $navigationLabel = '獎項';
-
-    protected static ?string $navigationGroup = '抽獎管理';
-
-    protected static ?string $recordTitleAttribute = 'name';
-
-    public static function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form
             ->schema([
                 Section::make('基本資訊')
                     ->schema([
-                        Select::make('lottery_event_id')
-                            ->label('抽獎活動')
-                            ->options(fn () => LotteryEvent::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
-                            ->required()
-                            ->searchable()
-                            ->live(),
                         TextInput::make('name')
                             ->label('獎項名稱')
                             ->required()
@@ -143,8 +126,10 @@ class PrizeResource extends Resource
                             ->dehydrated(false),
                         Select::make('exclude_prize_ids')
                             ->label('排除其他獎項中獎者')
-                            ->options(fn (Get $get) => Prize::query()
-                                ->where('lottery_event_id', $get('lottery_event_id'))
+                            ->options(fn (?Prize $record) => $this->getOwnerRecord()
+                                ->prizes()
+                                ->when($record, fn (Builder $query) => $query->whereKeyNot($record->getKey()))
+                                ->orderBy('sort_order')
                                 ->orderBy('name')
                                 ->pluck('name', 'id')
                                 ->all())
@@ -156,7 +141,7 @@ class PrizeResource extends Resource
                         LivewireComponent::make(EligibleEmployeesPreview::class, fn (Get $get, ?Prize $record) => [
                             'context' => 'prize',
                             'organizationId' => Filament::getTenant()?->getKey(),
-                            'eventId' => $get('lottery_event_id'),
+                            'eventId' => $this->getOwnerRecord()->getKey(),
                             'includeEmployeeIds' => $get('include_employee_ids') ?? [],
                             'includeGroupIds' => $get('include_group_ids') ?? [],
                             'excludeEmployeeIds' => $get('exclude_employee_ids') ?? [],
@@ -165,9 +150,9 @@ class PrizeResource extends Resource
                             'allowRepeatWithinPrize' => (bool) ($get('allow_repeat_within_prize') ?? false),
                             'currentPrizeId' => $record?->id,
                         ])
-                            ->key(fn (Get $get, ?Prize $record) => 'prize-preview-'.md5(json_encode([
+                            ->key(fn (Get $get, ?Prize $record) => 'event-prize-preview-'.md5(json_encode([
+                                $this->getOwnerRecord()->getKey(),
                                 $record?->id,
-                                $get('lottery_event_id'),
                                 $get('include_employee_ids'),
                                 $get('include_group_ids'),
                                 $get('exclude_employee_ids'),
@@ -181,50 +166,151 @@ class PrizeResource extends Resource
             ]);
     }
 
-    public static function table(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
+            ->reorderable('sort_order')
+            ->defaultSort('sort_order')
             ->columns([
+                TextColumn::make('sort_order')
+                    ->label('排序')
+                    ->sortable(),
                 TextColumn::make('name')
                     ->label('獎項名稱')
                     ->searchable(),
-                TextColumn::make('lotteryEvent.name')
-                    ->label('活動')
-                    ->toggleable()
-                    ->searchable(),
                 TextColumn::make('winners_count')
-                    ->label('人數'),
+                    ->label('中獎人數'),
                 TextColumn::make('draw_mode')
                     ->label('抽獎模式')
                     ->formatStateUsing(fn (string $state) => $state === Prize::DRAW_MODE_ONE_BY_ONE ? '逐一抽出' : '一次全抽'),
+                IconColumn::make('is_current')
+                    ->label('目前')
+                    ->boolean()
+                    ->getStateUsing(fn (Prize $record): bool => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()),
+            ])
+            ->headerActions([
+                CreateAction::make()
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $data['lottery_event_id'] = $this->getOwnerRecord()->getKey();
+                        $data['sort_order'] = $this->nextSortOrder();
+
+                        return $data;
+                    })
+                    ->using(function (array $data): Prize {
+                        $record = $this->getRelationship()->create($this->stripRuleFields($data));
+                        $this->syncRules($record, $data);
+
+                        return $record;
+                    }),
             ])
             ->actions([
-                \Filament\Tables\Actions\EditAction::make(),
-                \Filament\Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                \Filament\Tables\Actions\BulkActionGroup::make([
-                    \Filament\Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                \Filament\Tables\Actions\Action::make('set_current')
+                    ->label('設為目前獎項')
+                    ->requiresConfirmation()
+                    ->action(function (Prize $record): void {
+                        $event = $this->getOwnerRecord();
+                        $event->update(['current_prize_id' => $record->getKey()]);
+
+                        event(new LotteryEventUpdated($event->refresh()));
+                    }),
+                EditAction::make()
+                    ->mutateRecordDataUsing(function (array $data, Prize $record): array {
+                        return array_merge($data, $this->ruleStateFromRecord($record));
+                    })
+                    ->using(function (Prize $record, array $data): Prize {
+                        $record->update($this->stripRuleFields($data));
+                        $this->syncRules($record, $data);
+
+                        return $record;
+                    }),
+                DeleteAction::make()
+                    ->before(function (Prize $record): void {
+                        $event = $this->getOwnerRecord();
+
+                        if ((int) $event->current_prize_id !== (int) $record->getKey()) {
+                            return;
+                        }
+
+                        $event->update(['current_prize_id' => null]);
+                        event(new LotteryEventUpdated($event->refresh()));
+                    }),
             ]);
     }
 
-    public static function getEloquentQuery(): Builder
+    private function nextSortOrder(): int
     {
-        $tenant = Filament::getTenant();
+        $max = (int) ($this->getOwnerRecord()->prizes()->max('sort_order') ?? 0);
 
-        return parent::getEloquentQuery()
-            ->when($tenant, fn (Builder $query) => $query->whereHas('lotteryEvent', fn (Builder $eventQuery) => $eventQuery->where('organization_id', $tenant->getKey())))
-            ->orderBy('sort_order')
-            ->orderBy('id');
+        return $max + 1;
     }
 
-    public static function getPages(): array
+    private function stripRuleFields(array $data): array
+    {
+        return Arr::except($data, [
+            'include_employee_ids',
+            'include_group_ids',
+            'exclude_employee_ids',
+            'exclude_group_ids',
+            'exclude_prize_ids',
+        ]);
+    }
+
+    private function ruleStateFromRecord(Prize $record): array
     {
         return [
-            'index' => Pages\ListPrizes::route('/'),
-            'create' => Pages\CreatePrize::route('/create'),
-            'edit' => Pages\EditPrize::route('/{record}/edit'),
+            'include_employee_ids' => $record->rules()
+                ->where('type', PrizeRule::TYPE_INCLUDE_EMPLOYEE)
+                ->pluck('ref_id')
+                ->all(),
+            'include_group_ids' => $record->rules()
+                ->where('type', PrizeRule::TYPE_INCLUDE_GROUP)
+                ->pluck('ref_id')
+                ->all(),
+            'exclude_employee_ids' => $record->rules()
+                ->where('type', PrizeRule::TYPE_EXCLUDE_EMPLOYEE)
+                ->pluck('ref_id')
+                ->all(),
+            'exclude_group_ids' => $record->rules()
+                ->where('type', PrizeRule::TYPE_EXCLUDE_GROUP)
+                ->pluck('ref_id')
+                ->all(),
+            'exclude_prize_ids' => $record->rules()
+                ->where('type', PrizeRule::TYPE_EXCLUDE_PRIZE_WINNERS)
+                ->pluck('ref_id')
+                ->all(),
         ];
+    }
+
+    private function syncRules(Prize $prize, array $state): void
+    {
+        $prize->rules()->delete();
+        $prize->rules()->createMany($this->buildRules($state));
+    }
+
+    private function buildRules(array $state): array
+    {
+        $rules = [];
+
+        foreach (array_unique($state['include_employee_ids'] ?? []) as $id) {
+            $rules[] = ['type' => PrizeRule::TYPE_INCLUDE_EMPLOYEE, 'ref_id' => $id];
+        }
+
+        foreach (array_unique($state['include_group_ids'] ?? []) as $id) {
+            $rules[] = ['type' => PrizeRule::TYPE_INCLUDE_GROUP, 'ref_id' => $id];
+        }
+
+        foreach (array_unique($state['exclude_employee_ids'] ?? []) as $id) {
+            $rules[] = ['type' => PrizeRule::TYPE_EXCLUDE_EMPLOYEE, 'ref_id' => $id];
+        }
+
+        foreach (array_unique($state['exclude_group_ids'] ?? []) as $id) {
+            $rules[] = ['type' => PrizeRule::TYPE_EXCLUDE_GROUP, 'ref_id' => $id];
+        }
+
+        foreach (array_unique($state['exclude_prize_ids'] ?? []) as $id) {
+            $rules[] = ['type' => PrizeRule::TYPE_EXCLUDE_PRIZE_WINNERS, 'ref_id' => $id];
+        }
+
+        return $rules;
     }
 }
