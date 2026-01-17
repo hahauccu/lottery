@@ -8,6 +8,7 @@ use App\Models\Prize;
 use App\Services\LotteryDrawService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class LotteryFrontendController extends Controller
@@ -23,6 +24,9 @@ class LotteryFrontendController extends Controller
 
         $winners = $currentPrize?->winners ?? collect();
 
+        $bgPath = $currentPrize?->bg_image_path ?: $event->default_bg_image_path;
+        $bgUrl = $bgPath ? Storage::disk('public')->url($bgPath) : null;
+
         $payload = [
             'brandCode' => $event->brand_code,
             'eventId' => $event->id,
@@ -32,6 +36,7 @@ class LotteryFrontendController extends Controller
                 'id' => $currentPrize->id,
                 'name' => $currentPrize->name,
                 'drawMode' => $currentPrize->draw_mode,
+                'animationStyle' => $currentPrize->animation_style,
             ] : null,
             'winners' => $winners->map(fn ($winner) => [
                 'id' => $winner->id,
@@ -47,6 +52,7 @@ class LotteryFrontendController extends Controller
             'event' => $event,
             'currentPrize' => $currentPrize,
             'currentWinners' => $winners,
+            'bgUrl' => $bgUrl,
             'payload' => $payload,
         ]);
     }

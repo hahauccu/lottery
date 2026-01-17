@@ -55,6 +55,18 @@ class PrizesRelationManager extends RelationManager
                             ])
                             ->required()
                             ->default(Prize::DRAW_MODE_ALL_AT_ONCE),
+                        Select::make('animation_style')
+                            ->label('抽獎動畫')
+                            ->options([
+                                'slot' => '拉霸機',
+                                'roulette' => '輪盤跳動',
+                                'scramble' => '文字打亂',
+                                'typewriter' => '打字機',
+                                'flip' => '翻牌',
+                                'test' => 'TEST（強烈差異）',
+                            ])
+                            ->required()
+                            ->default('slot'),
                         Toggle::make('allow_repeat_within_prize')
                             ->label('同一獎項可重複中獎')
                             ->default(false),
@@ -183,6 +195,16 @@ class PrizesRelationManager extends RelationManager
                 TextColumn::make('draw_mode')
                     ->label('抽獎模式')
                     ->formatStateUsing(fn (string $state) => $state === Prize::DRAW_MODE_ONE_BY_ONE ? '逐一抽出' : '一次全抽'),
+                TextColumn::make('animation_style')
+                    ->label('動畫')
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        'roulette' => '輪盤',
+                        'scramble' => '打亂',
+                        'typewriter' => '打字機',
+                        'flip' => '翻牌',
+                        'test' => 'TEST',
+                        default => '拉霸',
+                    }),
                 IconColumn::make('is_current')
                     ->label('目前')
                     ->boolean()
@@ -222,6 +244,13 @@ class PrizesRelationManager extends RelationManager
                         $this->syncRules($record, $data);
 
                         return $record;
+                    })
+                    ->after(function (Prize $record): void {
+                        $event = $this->getOwnerRecord();
+
+                        if ((int) $event->current_prize_id === (int) $record->getKey()) {
+                            event(new LotteryEventUpdated($event->refresh()));
+                        }
                     }),
                 DeleteAction::make()
                     ->before(function (Prize $record): void {

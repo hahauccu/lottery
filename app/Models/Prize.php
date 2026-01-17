@@ -31,6 +31,7 @@ class Prize extends Model
         'name',
         'winners_count',
         'draw_mode',
+        'animation_style',
         'bg_image_path',
         'music_path',
         'allow_repeat_within_prize',
@@ -40,6 +41,7 @@ class Prize extends Model
     protected $casts = [
         'allow_repeat_within_prize' => 'boolean',
         'sort_order' => 'integer',
+        'animation_style' => 'string',
     ];
 
     public function lotteryEvent(): BelongsTo

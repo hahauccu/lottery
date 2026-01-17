@@ -46,6 +46,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
                 'id' => $currentPrize->id,
                 'name' => $currentPrize->name,
                 'draw_mode' => $currentPrize->draw_mode,
+                'animation_style' => $currentPrize->animation_style,
                 'winners_count' => $currentPrize->winners_count,
             ] : null,
             'winners' => $currentPrize

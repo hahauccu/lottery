@@ -41,7 +41,10 @@ class LotteryDrawService
                 ]));
             }
 
-            return $created->load('employee');
+            return PrizeWinner::query()
+                ->whereKey($created->pluck('id')->all())
+                ->with('employee')
+                ->get();
         }
 
         $selected = $eligible->shuffle()->take(min($drawCount, $eligible->count()));
@@ -55,6 +58,9 @@ class LotteryDrawService
             ]));
         }
 
-        return $created->load('employee');
+        return PrizeWinner::query()
+            ->whereKey($created->pluck('id')->all())
+            ->with('employee')
+            ->get();
     }
 }
