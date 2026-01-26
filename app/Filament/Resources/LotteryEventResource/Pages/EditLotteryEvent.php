@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\LotteryEventResource\Pages;
 
-use App\Events\LotteryEventUpdated;
 use App\Filament\Resources\LotteryEventResource;
 use App\Models\PrizeWinner;
+use App\Support\LotteryBroadcaster;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -36,7 +36,7 @@ class EditLotteryEvent extends EditRecord
                         ->whereIn('prize_id', $this->record->prizes()->select('id'))
                         ->delete();
 
-                    event(new LotteryEventUpdated($this->record->refresh()));
+                    LotteryBroadcaster::dispatchUpdate($this->record->refresh());
 
                     Notification::make()
                         ->title('已清空本場抽獎名單')
@@ -49,6 +49,6 @@ class EditLotteryEvent extends EditRecord
 
     protected function afterSave(): void
     {
-        event(new LotteryEventUpdated($this->record));
+        LotteryBroadcaster::dispatchUpdate($this->record->refresh());
     }
 }

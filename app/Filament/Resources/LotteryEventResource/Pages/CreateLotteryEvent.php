@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\LotteryEventResource\Pages;
 
-use App\Events\LotteryEventUpdated;
 use App\Filament\Resources\LotteryEventResource;
+use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -20,6 +20,6 @@ class CreateLotteryEvent extends CreateRecord
 
     protected function afterCreate(): void
     {
-        event(new LotteryEventUpdated($this->record));
+        LotteryBroadcaster::dispatchUpdate($this->record->refresh());
     }
 }

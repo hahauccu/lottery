@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources;
 
-use App\Events\LotteryEventUpdated;
 use App\Filament\Resources\LotteryEventResource\Pages;
 use App\Filament\Resources\LotteryEventResource\RelationManagers\PrizesRelationManager;
 use App\Models\LotteryEvent;
+use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
@@ -83,7 +83,7 @@ class LotteryEventResource extends Resource
                 ToggleColumn::make('is_lottery_open')
                     ->label('開放抽獎')
                     ->afterStateUpdated(function (LotteryEvent $record): void {
-                        event(new LotteryEventUpdated($record->refresh()));
+                        LotteryBroadcaster::dispatchUpdate($record->refresh());
                     }),
                 TextColumn::make('currentPrize.name')
                     ->label('目前獎項')

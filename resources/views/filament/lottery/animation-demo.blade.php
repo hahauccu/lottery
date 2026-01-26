@@ -30,6 +30,22 @@
                             </div>
                         </div>
                     </div>
+                @elseif(($style ?? 'slot') === 'big_treasure_chest')
+                    <div class="demo-big-chest">
+                        <div class="demo-big-chest-body"></div>
+                        <div class="demo-big-chest-lid"></div>
+                        <div class="demo-big-chest-glow"></div>
+                        <div class="demo-big-coins">
+                            <span class="demo-big-coin"></span>
+                            <span class="demo-big-coin"></span>
+                            <span class="demo-big-coin"></span>
+                            <span class="demo-big-coin"></span>
+                            <span class="demo-big-gourd"></span>
+                        </div>
+                        <div class="demo-big-hero">
+                            <div class="demo-big-hero-token">中獎者</div>
+                        </div>
+                    </div>
                 @elseif(($style ?? 'slot') === 'slot')
                     <div class="demo-slot-machine">
                         <div class="demo-reel">
@@ -71,6 +87,10 @@
         align-items: center;
         justify-content: center;
         overflow: hidden;
+    }
+
+    .demo-stage-big_treasure_chest {
+        height: 170px;
     }
 
     .demo-text {
@@ -427,5 +447,190 @@
         70% { opacity: 1; transform: translateY(-30px) scale(1); }
         80% { opacity: 0; transform: translateY(-40px) scale(0.8); }
         100% { opacity: 0; transform: translateY(0) scale(0.5); }
+    }
+
+    /* 大寶箱動畫 */
+    .demo-big-chest {
+        position: relative;
+        width: 230px;
+        height: 150px;
+    }
+
+    .demo-big-chest-body {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 185px;
+        height: 86px;
+        background: linear-gradient(135deg, #7c3a16 0%, #b5622f 50%, #5b2c12 100%);
+        border-radius: 14px;
+        border: 4px solid #f4c430;
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45);
+    }
+
+    .demo-big-chest-body::before {
+        content: '';
+        position: absolute;
+        top: 45%;
+        left: 8px;
+        right: 8px;
+        height: 12px;
+        background: linear-gradient(90deg, #d4a017, #ffd24d, #d4a017);
+        border-radius: 6px;
+    }
+
+    .demo-big-chest-lid {
+        position: absolute;
+        bottom: 72px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        height: 56px;
+        background: linear-gradient(135deg, #a3542a 0%, #8b4513 50%, #5b2c12 100%);
+        border-radius: 14px 14px 0 0;
+        border: 4px solid #f4c430;
+        border-bottom: none;
+        transform-origin: bottom center;
+        animation: demo-big-chest-open 2.6s ease-in-out infinite;
+    }
+
+    .demo-big-chest-glow {
+        position: absolute;
+        bottom: 78px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 150px;
+        height: 110px;
+        background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.9), rgba(255, 180, 0, 0.3) 55%, transparent 75%);
+        opacity: 0;
+        animation: demo-big-glow 2.6s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    .demo-big-coins {
+        position: absolute;
+        bottom: 86px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 150px;
+        height: 90px;
+    }
+
+    .demo-big-coin {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #fff2a8, #ffd24d 45%, #c58b00 100%);
+        opacity: 0;
+        animation: demo-big-coin 2.8s ease-out infinite;
+    }
+
+    .demo-big-coin:nth-child(1) { left: 45%; animation-delay: 0s; }
+    .demo-big-coin:nth-child(2) { left: 20%; animation-delay: 0.08s; }
+    .demo-big-coin:nth-child(3) { left: 70%; animation-delay: 0.12s; }
+    .demo-big-coin:nth-child(4) { left: 55%; animation-delay: 0.18s; }
+
+    .demo-big-gourd {
+        position: absolute;
+        width: 16px;
+        height: 22px;
+        border-radius: 45% 45% 50% 50%;
+        background: linear-gradient(160deg, #fff1a8, #ffd24d 45%, #b8860b 100%);
+        opacity: 0;
+        left: 32%;
+        animation: demo-big-gourd 2.8s ease-out infinite;
+        animation-delay: 0.18s;
+    }
+
+    .demo-big-gourd::before {
+        content: '';
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: linear-gradient(160deg, #fff6c0, #ffd24d 55%, #c58b00 100%);
+        top: -7px;
+        left: 2px;
+    }
+
+    .demo-big-hero {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 150px;
+        height: 90px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+
+    .demo-big-hero-token {
+        position: relative;
+        width: 150px;
+        height: 78px;
+        border-radius: 32px;
+        background: linear-gradient(160deg, #fff4b5, #ffd24d 45%, #b8860b 100%);
+        border: 4px solid #f5d36a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #6b1f06;
+        letter-spacing: 0.12em;
+        text-shadow: 0 2px 10px rgba(255, 220, 140, 0.9);
+        overflow: hidden;
+        animation: demo-big-hero 2.8s ease-in-out infinite;
+    }
+
+    .demo-big-hero-token::before {
+        content: '';
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 28px;
+        border-radius: 999px;
+        background: rgba(255, 248, 200, 0.45);
+    }
+
+    @keyframes demo-big-chest-open {
+        0%, 35% { transform: translateX(-50%) rotateX(0deg); }
+        45%, 70% { transform: translateX(-50%) rotateX(-105deg); }
+        85%, 100% { transform: translateX(-50%) rotateX(0deg); }
+    }
+
+    @keyframes demo-big-glow {
+        0%, 35% { opacity: 0; }
+        45%, 70% { opacity: 1; }
+        85%, 100% { opacity: 0; }
+    }
+
+    @keyframes demo-big-coin {
+        0%, 40% { opacity: 0; transform: translateY(0) scale(0.6); }
+        50% { opacity: 1; transform: translateY(-20px) scale(1); }
+        70% { opacity: 1; transform: translateY(-38px) scale(0.9); }
+        85% { opacity: 0; transform: translateY(-45px) scale(0.75); }
+        100% { opacity: 0; transform: translateY(0) scale(0.6); }
+    }
+
+    @keyframes demo-big-gourd {
+        0%, 40% { opacity: 0; transform: translateY(0) scale(0.65); }
+        50% { opacity: 1; transform: translateY(-16px) scale(1); }
+        70% { opacity: 1; transform: translateY(-32px) scale(0.9); }
+        85% { opacity: 0; transform: translateY(-40px) scale(0.75); }
+        100% { opacity: 0; transform: translateY(0) scale(0.65); }
+    }
+
+    @keyframes demo-big-hero {
+        0%, 38% { opacity: 0; transform: translateY(18px) scale(0.7); }
+        50% { opacity: 1; transform: translateY(0) scale(1); }
+        72% { opacity: 1; transform: translateY(-4px) scale(1); }
+        90%, 100% { opacity: 0; transform: translateY(-8px) scale(0.9); }
     }
 </style>

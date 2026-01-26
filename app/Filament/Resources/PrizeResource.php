@@ -79,6 +79,7 @@ class PrizeResource extends Resource
                                 'red_packet' => '紅包雨',
                                 'scratch_card' => '刮刮樂',
                                 'treasure_chest' => '寶箱開啟',
+                                'big_treasure_chest' => '大寶箱',
                             ])
                             ->required()
                             ->default('lotto_air')

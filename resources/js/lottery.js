@@ -148,6 +148,7 @@ const initLottery = () => {
         const isRedPacket = isRedPacketStyle(currentStyle);
         const isScratchCard = isScratchCardStyle(currentStyle);
         const isTreasureChest = isTreasureChestStyle(currentStyle);
+        const isBigTreasureChest = isBigTreasureChestStyle(currentStyle);
         const isCanvas = isCanvasStyle(currentStyle);
 
         if (slotDisplayEl) {
@@ -187,6 +188,13 @@ const initLottery = () => {
                 if (chestCount > 0) {
                     treasureChest.showChests(chestCount);
                 }
+            }
+        }
+
+        if (isBigTreasureChest) {
+            bigTreasureChest.ensureReady();
+            if (!state.isDrawing) {
+                bigTreasureChest.showChest();
             }
         }
 
@@ -331,7 +339,13 @@ const initLottery = () => {
     const isRedPacketStyle = (style) => style === 'red_packet';
     const isScratchCardStyle = (style) => style === 'scratch_card';
     const isTreasureChestStyle = (style) => style === 'treasure_chest';
-    const isCanvasStyle = (style) => isLottoAirStyle(style) || isLotto2Style(style) || isRedPacketStyle(style) || isScratchCardStyle(style) || isTreasureChestStyle(style);
+    const isBigTreasureChestStyle = (style) => style === 'big_treasure_chest';
+    const isCanvasStyle = (style) => isLottoAirStyle(style)
+        || isLotto2Style(style)
+        || isRedPacketStyle(style)
+        || isScratchCardStyle(style)
+        || isTreasureChestStyle(style)
+        || isBigTreasureChestStyle(style);
     const isLottoStyle = (style) => isLottoAirStyle(style) || isLotto2Style(style);
     const mapRange = (value, min, max) => min + (max - min) * ((value - 1) / 9);
     const TAU = Math.PI * 2;
@@ -3108,6 +3122,799 @@ const initLottery = () => {
         };
     })();
 
+    // ========== 大寶箱模組 ==========
+    const bigTreasureChest = (() => {
+        let running = false;
+        let phase = 'idle';
+        let winner = null;
+        let holdSeconds = 5;
+        let phaseTime = 0;
+        let openProgress = 0;
+        let burstDone = false;
+        let revealResolve = null;
+        let spawnTimer = 0;
+
+        const HERO_HOLD_SECONDS = 3.5;
+
+        let ctx = null;
+        let canvasRect = { width: 0, height: 0 };
+        let dpr = 1;
+        let rafId = null;
+        let last = 0;
+
+        const coins = [];
+        const ingots = [];
+        const gourds = [];
+        const sparkles = [];
+        const heroToken = {
+            active: false,
+            phase: 'idle',
+            t: 0,
+            total: 0,
+            x: 0,
+            y: 0,
+            startX: 0,
+            startY: 0,
+            targetX: 0,
+            targetY: 0,
+            size: 0,
+            scale: 0.7,
+            opacity: 0,
+            rotation: 0,
+            floatPhase: 0,
+            name: '',
+            variant: 'ingot',
+        };
+
+        const chest = {
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+        };
+
+        const resizeCanvas = () => {
+            if (!lottoCanvasEl) return false;
+            const wrapperRect = lottoWrapEl?.getBoundingClientRect();
+            const rect = wrapperRect && wrapperRect.width && wrapperRect.height
+                ? wrapperRect
+                : lottoCanvasEl.getBoundingClientRect();
+            if (!rect.width || !rect.height) return false;
+
+            dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+            lottoCanvasEl.width = Math.max(1, Math.floor(rect.width * dpr));
+            lottoCanvasEl.height = Math.max(1, Math.floor(rect.height * dpr));
+            ctx = lottoCanvasEl.getContext('2d');
+            if (ctx) {
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            canvasRect = { width: rect.width, height: rect.height };
+            updateLayout();
+            return true;
+        };
+
+        const updateLayout = () => {
+            const width = canvasRect.width;
+            const height = canvasRect.height;
+            const maxW = Math.min(width * 0.82, 680);
+            const chestW = clamp(maxW, 260, width * 0.95);
+            const chestH = chestW * 0.6;
+            chest.w = chestW;
+            chest.h = chestH;
+            chest.x = (width - chestW) / 2;
+            chest.y = height * 0.6 - chestH / 2;
+        };
+
+        const roundRect = (context, x, y, w, h, r) => {
+            context.beginPath();
+            context.moveTo(x + r, y);
+            context.arcTo(x + w, y, x + w, y + h, r);
+            context.arcTo(x + w, y + h, x, y + h, r);
+            context.arcTo(x, y + h, x, y, r);
+            context.arcTo(x, y, x + w, y, r);
+            context.closePath();
+        };
+
+        const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+        const getEmitPoint = () => {
+            const cx = chest.x + chest.w / 2;
+            const cy = chest.y + chest.h * 0.18;
+            const spreadX = chest.w * 0.08;
+            const spreadY = chest.h * 0.06;
+            return {
+                x: cx + rand(-spreadX, spreadX),
+                y: cy + rand(-spreadY, spreadY * 0.5),
+            };
+        };
+
+        const getEmitVelocity = (speedMin, speedMax, boostMin = 700, boostMax = 1100) => {
+            const angle = rand(-Math.PI * 0.82, -Math.PI * 0.18);
+            const speed = rand(speedMin, speedMax);
+            const boost = rand(boostMin, boostMax);
+            return {
+                angle,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                ax: Math.cos(angle) * boost,
+                ay: Math.sin(angle) * boost,
+                boostTime: rand(0.12, 0.2),
+            };
+        };
+
+        const getTiming = () => {
+            const total = Math.max(3, holdSeconds || 5);
+            const open = clamp(total * 0.32, 0.9, 1.8);
+            const fly = clamp(total * 0.2, 0.6, 1.0);
+            const fade = 0.6;
+            return { open, fly, fade };
+        };
+
+        const spawnBurst = () => {
+            const coinCount = 60;
+            const ingotCount = 14;
+            const gourdCount = 4;
+            for (let i = 0; i < coinCount; i++) {
+                const { x, y } = getEmitPoint();
+                const { vx, vy, ax, ay, boostTime } = getEmitVelocity(360, 780, 900, 1400);
+                coins.push({
+                    x,
+                    y,
+                    vx,
+                    vy,
+                    size: rand(14, 24),
+                    rotation: rand(0, TAU),
+                    rotSpeed: rand(-10, 10),
+                    life: rand(1.6, 2.4),
+                    t: 0,
+                    ax,
+                    ay,
+                    boostTime,
+                });
+            }
+            for (let i = 0; i < ingotCount; i++) {
+                const { x, y } = getEmitPoint();
+                const { vx, vy, ax, ay, boostTime } = getEmitVelocity(300, 640, 800, 1200);
+                ingots.push({
+                    x,
+                    y,
+                    vx,
+                    vy,
+                    w: rand(22, 36),
+                    h: rand(14, 24),
+                    rotation: rand(-0.6, 0.6),
+                    rotSpeed: rand(-6, 6),
+                    life: rand(1.7, 2.5),
+                    t: 0,
+                    ax,
+                    ay,
+                    boostTime,
+                });
+            }
+            for (let i = 0; i < gourdCount; i++) {
+                const { x, y } = getEmitPoint();
+                const { vx, vy, ax, ay, boostTime } = getEmitVelocity(260, 520, 720, 1100);
+                gourds.push({
+                    x,
+                    y,
+                    vx,
+                    vy,
+                    size: rand(16, 26),
+                    rotation: rand(-0.4, 0.4),
+                    rotSpeed: rand(-4, 4),
+                    life: rand(1.6, 2.4),
+                    t: 0,
+                    ax,
+                    ay,
+                    boostTime,
+                });
+            }
+            const sparkleCount = 26;
+            for (let i = 0; i < sparkleCount; i++) {
+                const { x, y } = getEmitPoint();
+                const angle = rand(-Math.PI * 0.9, -Math.PI * 0.1);
+                const speed = rand(160, 300);
+                sparkles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 40,
+                    size: rand(3, 7),
+                    life: rand(0.6, 1.1),
+                    t: 0,
+                });
+            }
+        };
+
+        const spawnStream = (dt) => {
+            spawnTimer += dt;
+            const interval = 0.06;
+            const maxParticles = 180;
+
+            while (spawnTimer >= interval) {
+                spawnTimer -= interval;
+                const total = coins.length + ingots.length + gourds.length;
+                if (total >= maxParticles) break;
+
+                const roll = Math.random();
+                if (roll < 0.72) {
+                    const { x, y } = getEmitPoint();
+                    const { vx, vy, ax, ay, boostTime } = getEmitVelocity(220, 420, 520, 900);
+                    coins.push({
+                        x,
+                        y,
+                        vx,
+                        vy,
+                        size: rand(10, 16),
+                        rotation: rand(0, TAU),
+                        rotSpeed: rand(-10, 10),
+                        life: rand(1.1, 1.9),
+                        t: 0,
+                        ax,
+                        ay,
+                        boostTime,
+                    });
+                } else if (roll < 0.93) {
+                    const { x, y } = getEmitPoint();
+                    const { vx, vy, ax, ay, boostTime } = getEmitVelocity(200, 380, 480, 820);
+                    ingots.push({
+                        x,
+                        y,
+                        vx,
+                        vy,
+                        w: rand(16, 24),
+                        h: rand(10, 16),
+                        rotation: rand(-0.6, 0.6),
+                        rotSpeed: rand(-6, 6),
+                        life: rand(1.2, 2.0),
+                        t: 0,
+                        ax,
+                        ay,
+                        boostTime,
+                    });
+                } else {
+                    const { x, y } = getEmitPoint();
+                    const { vx, vy, ax, ay, boostTime } = getEmitVelocity(200, 360, 460, 760);
+                    gourds.push({
+                        x,
+                        y,
+                        vx,
+                        vy,
+                        size: rand(12, 20),
+                        rotation: rand(-0.4, 0.4),
+                        rotSpeed: rand(-4, 4),
+                        life: rand(1.3, 2.1),
+                        t: 0,
+                        ax,
+                        ay,
+                        boostTime,
+                    });
+                }
+            }
+        };
+
+        const spawnHeroToken = () => {
+            if (!winner) return;
+            heroToken.active = true;
+            heroToken.phase = 'fly';
+            heroToken.t = 0;
+            heroToken.total = 0;
+            heroToken.name = winner;
+            heroToken.variant = Math.random() < 0.65 ? 'ingot' : 'coin';
+            heroToken.rotation = rand(-0.12, 0.12);
+            heroToken.floatPhase = rand(0, TAU);
+            heroToken.size = clamp(chest.w * 0.36, 170, 260);
+            heroToken.startX = chest.x + chest.w / 2 + rand(-24, 24);
+            heroToken.startY = chest.y + chest.h * 0.12;
+            heroToken.targetX = canvasRect.width * 0.5;
+            heroToken.targetY = canvasRect.height * 0.42;
+            heroToken.x = heroToken.startX;
+            heroToken.y = heroToken.startY;
+            heroToken.opacity = 0;
+            heroToken.scale = 0.65;
+        };
+
+        const updateHero = (dt, timing) => {
+            if (!heroToken.active) return false;
+            heroToken.total += dt;
+            heroToken.t += dt;
+
+            if (heroToken.phase === 'fly') {
+                const progress = clamp(heroToken.t / timing.fly, 0, 1);
+                const eased = easeOutCubic(progress);
+                heroToken.x = lerp(heroToken.startX, heroToken.targetX, eased);
+                heroToken.y = lerp(heroToken.startY, heroToken.targetY, eased);
+                heroToken.scale = lerp(0.65, 1, easeOutCubic(progress));
+                heroToken.opacity = Math.min(1, progress * 1.2);
+                if (progress >= 1) {
+                    heroToken.phase = 'hold';
+                    heroToken.t = 0;
+                }
+            } else if (heroToken.phase === 'hold') {
+                heroToken.opacity = 1;
+                heroToken.scale = 1 + Math.sin(heroToken.total * 2.2) * 0.02;
+                if (heroToken.t >= HERO_HOLD_SECONDS) {
+                    heroToken.phase = 'fade';
+                    heroToken.t = 0;
+                }
+            } else if (heroToken.phase === 'fade') {
+                const progress = clamp(heroToken.t / timing.fade, 0, 1);
+                heroToken.opacity = 1 - progress;
+                heroToken.scale = 1 - progress * 0.08;
+                if (progress >= 1) {
+                    heroToken.active = false;
+                    heroToken.phase = 'idle';
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        const updateParticles = (dt) => {
+            for (let i = coins.length - 1; i >= 0; i--) {
+                const c = coins[i];
+                c.t += dt;
+                if (c.boostTime && c.t <= c.boostTime) {
+                    c.vx += c.ax * dt;
+                    c.vy += c.ay * dt;
+                }
+                if (c.t >= c.life) { coins.splice(i, 1); continue; }
+                c.vy += 520 * dt;
+                c.x += c.vx * dt;
+                c.y += c.vy * dt;
+                c.rotation += c.rotSpeed * dt;
+                c.vx *= 0.985;
+                c.vy *= 0.985;
+            }
+
+            for (let i = ingots.length - 1; i >= 0; i--) {
+                const g = ingots[i];
+                g.t += dt;
+                if (g.boostTime && g.t <= g.boostTime) {
+                    g.vx += g.ax * dt;
+                    g.vy += g.ay * dt;
+                }
+                if (g.t >= g.life) { ingots.splice(i, 1); continue; }
+                g.vy += 520 * dt;
+                g.x += g.vx * dt;
+                g.y += g.vy * dt;
+                g.rotation += g.rotSpeed * dt;
+                g.vx *= 0.985;
+                g.vy *= 0.985;
+            }
+
+            for (let i = gourds.length - 1; i >= 0; i--) {
+                const g = gourds[i];
+                g.t += dt;
+                if (g.boostTime && g.t <= g.boostTime) {
+                    g.vx += g.ax * dt;
+                    g.vy += g.ay * dt;
+                }
+                if (g.t >= g.life) { gourds.splice(i, 1); continue; }
+                g.vy += 520 * dt;
+                g.x += g.vx * dt;
+                g.y += g.vy * dt;
+                g.rotation += g.rotSpeed * dt;
+                g.vx *= 0.985;
+                g.vy *= 0.985;
+            }
+
+            for (let i = sparkles.length - 1; i >= 0; i--) {
+                const s = sparkles[i];
+                s.t += dt;
+                if (s.t >= s.life) { sparkles.splice(i, 1); continue; }
+                s.vy += 80 * dt;
+                s.x += s.vx * dt;
+                s.y += s.vy * dt;
+                s.vx *= 0.96;
+            }
+        };
+
+        const drawBackground = () => {
+            const { width, height } = canvasRect;
+            const grad = ctx.createRadialGradient(width * 0.5, height * 0.35, 0, width * 0.5, height * 0.5, Math.max(width, height) * 0.8);
+            grad.addColorStop(0, 'rgba(120, 45, 20, 0.18)');
+            grad.addColorStop(0.5, 'rgba(60, 30, 10, 0.08)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+        };
+
+        const drawChest = () => {
+            const { x, y, w, h } = chest;
+            const bodyH = h * 0.55;
+            const lidH = h * 0.35;
+            const lidAngle = -110 * openProgress;
+
+            ctx.save();
+            ctx.translate(x, y + h * 0.1);
+
+            if (openProgress > 0.05) {
+                const glow = ctx.createRadialGradient(w * 0.5, h * 0.15, 0, w * 0.5, h * 0.15, w * 0.9);
+                glow.addColorStop(0, `rgba(255, 215, 0, ${0.6 * openProgress})`);
+                glow.addColorStop(0.5, `rgba(255, 170, 0, ${0.35 * openProgress})`);
+                glow.addColorStop(1, 'rgba(255, 170, 0, 0)');
+                ctx.fillStyle = glow;
+                ctx.fillRect(-w * 0.2, -h * 0.2, w * 1.4, h * 1.1);
+            }
+
+            const bodyGrad = ctx.createLinearGradient(0, bodyH * 0.2, 0, bodyH * 1.1);
+            bodyGrad.addColorStop(0, '#9a4a1f');
+            bodyGrad.addColorStop(0.5, '#b5652f');
+            bodyGrad.addColorStop(1, '#6b3416');
+            ctx.fillStyle = bodyGrad;
+            roundRect(ctx, w * 0.08, h * 0.25, w * 0.84, bodyH, 18);
+            ctx.fill();
+
+            ctx.strokeStyle = '#f4c430';
+            ctx.lineWidth = 5;
+            roundRect(ctx, w * 0.08, h * 0.25, w * 0.84, bodyH, 18);
+            ctx.stroke();
+
+            const bandGrad = ctx.createLinearGradient(0, h * 0.52, 0, h * 0.6);
+            bandGrad.addColorStop(0, '#d4a017');
+            bandGrad.addColorStop(0.5, '#ffd24d');
+            bandGrad.addColorStop(1, '#b8860b');
+            ctx.fillStyle = bandGrad;
+            ctx.fillRect(w * 0.12, h * 0.55, w * 0.76, 10);
+
+            ctx.save();
+            ctx.translate(w * 0.5, h * 0.25);
+            ctx.rotate((lidAngle * Math.PI) / 180);
+            const lidGrad = ctx.createLinearGradient(0, -lidH, 0, 0);
+            lidGrad.addColorStop(0, '#b5652f');
+            lidGrad.addColorStop(0.5, '#8b4513');
+            lidGrad.addColorStop(1, '#6b3416');
+            ctx.fillStyle = lidGrad;
+            ctx.beginPath();
+            ctx.moveTo(-w * 0.42, 0);
+            ctx.lineTo(-w * 0.42, -lidH * 0.5);
+            ctx.quadraticCurveTo(-w * 0.42, -lidH, -w * 0.2, -lidH);
+            ctx.lineTo(w * 0.2, -lidH);
+            ctx.quadraticCurveTo(w * 0.42, -lidH, w * 0.42, -lidH * 0.5);
+            ctx.lineTo(w * 0.42, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = '#f4c430';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.restore();
+        };
+
+        const drawCoin = (coin) => {
+            const alpha = 1 - coin.t / coin.life;
+            ctx.save();
+            ctx.translate(coin.x, coin.y);
+            ctx.rotate(coin.rotation);
+            ctx.globalAlpha = alpha;
+            const size = coin.size;
+            const squeeze = Math.abs(Math.sin(coin.rotation * 2));
+            const w = size;
+            const h = size * (0.35 + squeeze * 0.65);
+            const grad = ctx.createRadialGradient(-2, -2, 0, 0, 0, size);
+            grad.addColorStop(0, '#fff1a8');
+            grad.addColorStop(0.4, '#ffd24d');
+            grad.addColorStop(1, '#b8860b');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, w, h, 0, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+        };
+
+        const drawIngot = (ingot) => {
+            const alpha = 1 - ingot.t / ingot.life;
+            ctx.save();
+            ctx.translate(ingot.x, ingot.y);
+            ctx.rotate(ingot.rotation);
+            ctx.globalAlpha = alpha;
+            const grad = ctx.createLinearGradient(-ingot.w / 2, -ingot.h / 2, ingot.w / 2, ingot.h / 2);
+            grad.addColorStop(0, '#ffe08a');
+            grad.addColorStop(0.5, '#ffd24d');
+            grad.addColorStop(1, '#c58b00');
+            ctx.fillStyle = grad;
+            roundRect(ctx, -ingot.w / 2, -ingot.h / 2, ingot.w, ingot.h, ingot.h * 0.4);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(160, 110, 0, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+        };
+
+        const drawGourd = (gourd) => {
+            const alpha = 1 - gourd.t / gourd.life;
+            ctx.save();
+            ctx.translate(gourd.x, gourd.y);
+            ctx.rotate(gourd.rotation);
+            ctx.globalAlpha = alpha;
+
+            const topR = gourd.size * 0.45;
+            const bottomR = gourd.size * 0.6;
+            const grad = ctx.createLinearGradient(0, -bottomR, 0, bottomR);
+            grad.addColorStop(0, '#fff1a8');
+            grad.addColorStop(0.5, '#ffd24d');
+            grad.addColorStop(1, '#b8860b');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(0, -topR * 0.6, topR, 0, TAU);
+            ctx.arc(0, bottomR * 0.5, bottomR, 0, TAU);
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(160, 110, 0, 0.5)';
+            ctx.lineWidth = 1.6;
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.ellipse(-topR * 0.2, -topR * 0.7, topR * 0.25, topR * 0.4, -0.4, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+        };
+
+        const drawSparkles = () => {
+            for (const s of sparkles) {
+                const alpha = 1 - s.t / s.life;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size);
+                grad.addColorStop(0, 'rgba(255, 236, 166, 0.9)');
+                grad.addColorStop(0.5, 'rgba(255, 200, 80, 0.6)');
+                grad.addColorStop(1, 'rgba(255, 200, 80, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, TAU);
+                ctx.fill();
+                ctx.restore();
+            }
+        };
+
+        const getFittedFontSize = (text, maxWidth, maxSize, minSize = 16) => {
+            let size = maxSize;
+            while (size > minSize) {
+                ctx.font = `700 ${size}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
+                if (ctx.measureText(text).width <= maxWidth) break;
+                size -= 2;
+            }
+            return size;
+        };
+
+        const drawHeroToken = () => {
+            if (!heroToken.active || !ctx) return;
+            const displayName = heroToken.name || '???';
+            const floatOffset = Math.sin(heroToken.total * 2.2 + heroToken.floatPhase) * Math.min(12, heroToken.size * 0.08);
+            const baseX = heroToken.x;
+            const baseY = heroToken.y + floatOffset;
+            const tokenW = heroToken.size * 1.35;
+            const tokenH = heroToken.size * 0.9;
+
+            ctx.save();
+            ctx.translate(baseX, baseY);
+            ctx.rotate(heroToken.rotation);
+            ctx.scale(heroToken.scale, heroToken.scale);
+            ctx.globalAlpha = heroToken.opacity;
+
+            if (heroToken.variant === 'coin') {
+                const grad = ctx.createRadialGradient(-tokenW * 0.2, -tokenH * 0.2, 0, 0, 0, tokenW * 0.7);
+                grad.addColorStop(0, '#fff5b5');
+                grad.addColorStop(0.45, '#ffd24d');
+                grad.addColorStop(1, '#b8860b');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, tokenW * 0.5, tokenH * 0.5, 0, 0, TAU);
+                ctx.fill();
+                ctx.strokeStyle = '#f7d56b';
+                ctx.lineWidth = 6;
+                ctx.stroke();
+                ctx.strokeStyle = 'rgba(160, 110, 0, 0.6)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            } else {
+                const grad = ctx.createLinearGradient(0, -tokenH * 0.6, 0, tokenH * 0.6);
+                grad.addColorStop(0, '#fff1a8');
+                grad.addColorStop(0.45, '#ffd24d');
+                grad.addColorStop(1, '#b8860b');
+                ctx.fillStyle = grad;
+                roundRect(ctx, -tokenW / 2, -tokenH / 2, tokenW, tokenH, tokenH * 0.45);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(160, 110, 0, 0.7)';
+                ctx.lineWidth = 5;
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255, 248, 200, 0.9)';
+                ctx.beginPath();
+                ctx.ellipse(0, -tokenH * 0.15, tokenW * 0.28, tokenH * 0.18, 0, 0, TAU);
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(baseX, baseY);
+            ctx.scale(heroToken.scale, heroToken.scale);
+            ctx.globalAlpha = heroToken.opacity;
+            const scaleGuard = Math.max(0.8, heroToken.scale);
+            const maxTextWidth = (tokenW * 0.75) / scaleGuard;
+            const fontSize = getFittedFontSize(displayName, maxTextWidth, (tokenH * 0.35) / scaleGuard, 16);
+            ctx.font = `700 ${fontSize}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#6b1f06';
+            ctx.shadowColor = 'rgba(255, 215, 120, 0.9)';
+            ctx.shadowBlur = 14;
+            ctx.fillText(displayName, 0, 0);
+            ctx.restore();
+        };
+
+        const drawFrame = () => {
+            if (!ctx) return;
+            const { width, height } = canvasRect;
+            ctx.clearRect(0, 0, width, height);
+            drawBackground();
+            drawChest();
+            coins.forEach(drawCoin);
+            ingots.forEach(drawIngot);
+            gourds.forEach(drawGourd);
+            drawHeroToken();
+            drawSparkles();
+        };
+
+        const update = (dt) => {
+            const timing = getTiming();
+            phaseTime += dt;
+
+            if (phase === 'opening') {
+                openProgress = clamp(phaseTime / timing.open, 0, 1);
+                spawnStream(dt);
+                if (!burstDone && openProgress > 0.35) {
+                    spawnBurst();
+                    burstDone = true;
+                }
+                if (phaseTime >= timing.open) {
+                    phase = 'hero';
+                    phaseTime = 0;
+                    spawnHeroToken();
+                }
+            } else if (phase === 'hero') {
+                openProgress = 1;
+                spawnStream(dt);
+                const done = updateHero(dt, timing);
+                if (done) {
+                    if (revealResolve) {
+                        revealResolve();
+                        revealResolve = null;
+                    }
+                    phase = 'hold';
+                    phaseTime = 0;
+                }
+            } else if (phase === 'idle') {
+                openProgress = 0;
+            } else if (phase === 'hold') {
+                openProgress = 1;
+            }
+
+            updateParticles(dt);
+        };
+
+        const tick = (now) => {
+            if (!running) return;
+            const dt = Math.min(0.05, (now - last) / 1000);
+            last = now;
+            update(dt);
+            drawFrame();
+            rafId = requestAnimationFrame(tick);
+        };
+
+        const cleanup = () => {
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            coins.length = 0;
+            ingots.length = 0;
+            gourds.length = 0;
+            sparkles.length = 0;
+            spawnTimer = 0;
+            heroToken.active = false;
+            heroToken.phase = 'idle';
+            if (revealResolve) {
+                revealResolve();
+                revealResolve = null;
+            }
+        };
+
+        const showChest = () => {
+            if (running) return;
+            cleanup();
+            if (!resizeCanvas()) return;
+            running = true;
+            phase = 'idle';
+            phaseTime = 0;
+            openProgress = 0;
+            burstDone = false;
+            spawnTimer = 0;
+            heroToken.active = false;
+            heroToken.phase = 'idle';
+            winner = null;
+            last = performance.now();
+            rafId = requestAnimationFrame(tick);
+        };
+
+        const startOpening = () => {
+            if (!running) return;
+            phase = 'opening';
+            phaseTime = 0;
+            openProgress = 0;
+            burstDone = false;
+            spawnTimer = 0;
+            heroToken.active = false;
+            heroToken.phase = 'idle';
+        };
+
+        const setWinner = (name) => {
+            if (!running) {
+                showChest();
+            }
+            winner = name || '???';
+            startOpening();
+        };
+
+        const waitForReveal = () => new Promise((resolve) => {
+            revealResolve = resolve;
+        });
+
+        const prepareNext = () => {
+            phase = 'idle';
+            phaseTime = 0;
+            openProgress = 0;
+            burstDone = false;
+            winner = null;
+            coins.length = 0;
+            ingots.length = 0;
+            gourds.length = 0;
+            sparkles.length = 0;
+            spawnTimer = 0;
+            heroToken.active = false;
+            heroToken.phase = 'idle';
+        };
+
+        const stop = () => {
+            running = false;
+            phase = 'idle';
+            winner = null;
+            cleanup();
+        };
+
+        const setHoldSeconds = (seconds) => {
+            holdSeconds = Math.max(3, seconds || 5);
+        };
+
+        const ensureReady = () => {
+            if (!ctx || canvasRect.width === 0) {
+                resizeCanvas();
+            }
+        };
+
+        return {
+            showChest,
+            start: showChest,
+            stop,
+            setWinner,
+            waitForReveal,
+            prepareNext,
+            setHoldSeconds,
+            ensureReady,
+            resize: () => {
+                if (!running) return;
+                if (resizeCanvas()) {
+                    drawFrame();
+                }
+            },
+        };
+    })();
+
     const syncLotto3ControlLabels = () => {
         if (lotto3CountValueEl && lotto3CountEl) {
             lotto3CountValueEl.textContent = lotto3CountEl.value;
@@ -4634,9 +5441,12 @@ const initLottery = () => {
         const useRedPacket = isRedPacketStyle(style);
         const useScratchCard = isScratchCardStyle(style);
         const useTreasureChest = isTreasureChestStyle(style);
+        const useBigTreasureChest = isBigTreasureChestStyle(style);
 
         try {
-            const minSpin = (useLottoAir || useLotto2 || useRedPacket || useScratchCard || useTreasureChest) ? Promise.resolve() : runSpin(700);
+            const minSpin = (useLottoAir || useLotto2 || useRedPacket || useScratchCard || useTreasureChest || useBigTreasureChest)
+                ? Promise.resolve()
+                : runSpin(700);
             startDrawAudio();
             lottoTimerLabel = '';
 
@@ -4668,6 +5478,11 @@ const initLottery = () => {
                 treasureChest.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
             }
 
+            if (useBigTreasureChest) {
+                bigTreasureChest.ensureReady();
+                bigTreasureChest.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+            }
+
             const response = await fetch(config.drawUrl, {
                 method: 'POST',
                 headers: {
@@ -4692,6 +5507,9 @@ const initLottery = () => {
                 if (useTreasureChest) {
                     treasureChest.stop();
                 }
+                if (useBigTreasureChest) {
+                    bigTreasureChest.stop();
+                }
                 state.isDrawing = false;
                 render();
                 return;
@@ -4713,7 +5531,10 @@ const initLottery = () => {
                 if (useTreasureChest) {
                     treasureChest.stop();
                 }
-                if (slotDisplayEl && !useLottoAir && !useLotto2 && !useRedPacket && !useScratchCard && !useTreasureChest) {
+                if (useBigTreasureChest) {
+                    bigTreasureChest.stop();
+                }
+                if (slotDisplayEl && !useLottoAir && !useLotto2 && !useRedPacket && !useScratchCard && !useTreasureChest && !useBigTreasureChest) {
                     slotDisplayEl.textContent = '沒有更多中獎者';
                     animateFlash(slotDisplayEl);
                 }
@@ -4927,13 +5748,21 @@ const initLottery = () => {
                         treasureChest.showChests(batchCount);
                         treasureChest.setWinners(batchWinners.map((w) => w.employee_name ?? '???'));
 
-                        // 逐一開啟每個寶箱
+                        // 建立隨機開啟順序
+                        const openOrder = Array.from({ length: batchCount }, (_, i) => i);
+                        for (let i = openOrder.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [openOrder[i], openOrder[j]] = [openOrder[j], openOrder[i]];
+                        }
+
+                        // 逐一開啟每個寶箱（隨機順序）
                         for (let i = 0; i < batchCount; i++) {
+                            const chestIndex = openOrder[i];
                             // eslint-disable-next-line no-await-in-loop
-                            await treasureChest.openSingleChest(i);
+                            await treasureChest.openSingleChest(chestIndex);
 
                             // 加入中獎者列表
-                            state.winners = [...state.winners, batchWinners[i]];
+                            state.winners = [...state.winners, batchWinners[chestIndex]];
                             render();
 
                             const lastItem = winnerListEl?.lastElementChild;
@@ -4960,6 +5789,49 @@ const initLottery = () => {
                     // 最後等待一下再清除
                     await new Promise((r) => setTimeout(r, 1500));
                     treasureChest.prepareNext();
+                }
+            } else if (useBigTreasureChest) {
+                const settleDelay = 380;
+                const gapDelay = 480;
+
+                if (state.currentPrize?.drawMode === 'one_by_one') {
+                    bigTreasureChest.setWinner(winners[0]?.employee_name ?? '???');
+                    await bigTreasureChest.waitForReveal();
+                    state.winners = [...state.winners, winners[0]];
+                    render();
+
+                    const lastItem = winnerListEl?.lastElementChild;
+                    if (lastItem) {
+                        animateListItem(lastItem);
+                    }
+
+                    await new Promise((r) => setTimeout(r, settleDelay));
+                    bigTreasureChest.prepareNext();
+                } else {
+                    for (let i = 0; i < winners.length; i++) {
+                        const winner = winners[i];
+                        bigTreasureChest.setWinner(winner.employee_name ?? '???');
+                        // eslint-disable-next-line no-await-in-loop
+                        await bigTreasureChest.waitForReveal();
+                        state.winners = [...state.winners, winner];
+                        render();
+
+                        const lastItem = winnerListEl?.lastElementChild;
+                        if (lastItem) {
+                            animateListItem(lastItem);
+                        }
+
+                        if (i < winners.length - 1) {
+                            // eslint-disable-next-line no-await-in-loop
+                            await new Promise((r) => setTimeout(r, gapDelay));
+                            bigTreasureChest.prepareNext();
+                            // eslint-disable-next-line no-await-in-loop
+                            await new Promise((r) => setTimeout(r, 400));
+                        }
+                    }
+
+                    await new Promise((r) => setTimeout(r, settleDelay));
+                    bigTreasureChest.prepareNext();
                 }
             } else {
                 const totalDuration = 10000;
@@ -4993,6 +5865,9 @@ const initLottery = () => {
             }
             if (useTreasureChest) {
                 treasureChest.stop();
+            }
+            if (useBigTreasureChest) {
+                bigTreasureChest.stop();
             }
             return null;
         } finally {
@@ -5071,6 +5946,9 @@ const initLottery = () => {
         if (isTreasureChestStyle(state.currentPrize?.animationStyle)) {
             treasureChest.resize();
         }
+        if (isBigTreasureChestStyle(state.currentPrize?.animationStyle)) {
+            bigTreasureChest.resize();
+        }
     });
 
     const applyLotteryPayload = (payload) => {
@@ -5107,6 +5985,9 @@ const initLottery = () => {
         }
         if (!isTreasureChestStyle(nextPrize?.animationStyle)) {
             treasureChest.stop();
+        }
+        if (!isBigTreasureChestStyle(nextPrize?.animationStyle)) {
+            bigTreasureChest.stop();
         }
 
         // 結果展示模式切換

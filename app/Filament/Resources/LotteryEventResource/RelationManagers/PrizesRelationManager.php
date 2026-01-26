@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\LotteryEventResource\RelationManagers;
 
-use App\Events\LotteryEventUpdated;
 use App\Livewire\EligibleEmployeesPreview;
 use App\Models\Employee;
 use App\Models\EmployeeGroup;
 use App\Models\Prize;
 use App\Models\PrizeRule;
+use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Livewire as LivewireComponent;
@@ -64,6 +64,7 @@ class PrizesRelationManager extends RelationManager
                                 'red_packet' => '紅包雨',
                                 'scratch_card' => '刮刮樂',
                                 'treasure_chest' => '寶箱開啟',
+                                'big_treasure_chest' => '大寶箱',
                             ])
                             ->required()
                             ->default('lotto_air')
@@ -224,6 +225,7 @@ class PrizesRelationManager extends RelationManager
                         'red_packet' => '紅包雨',
                         'scratch_card' => '刮刮樂',
                         'treasure_chest' => '寶箱開啟',
+                        'big_treasure_chest' => '大寶箱',
                         default => $state,
                     }),
                 IconColumn::make('is_current')
@@ -254,7 +256,7 @@ class PrizesRelationManager extends RelationManager
                         $event = $this->getOwnerRecord();
                         $event->update(['current_prize_id' => $record->getKey()]);
 
-                        event(new LotteryEventUpdated($event->refresh()));
+                        LotteryBroadcaster::dispatchUpdate($event->refresh());
                     }),
                 EditAction::make()
                     ->mutateRecordDataUsing(function (array $data, Prize $record): array {
@@ -270,7 +272,7 @@ class PrizesRelationManager extends RelationManager
                         $event = $this->getOwnerRecord();
 
                         if ((int) $event->current_prize_id === (int) $record->getKey()) {
-                            event(new LotteryEventUpdated($event->refresh()));
+                            LotteryBroadcaster::dispatchUpdate($event->refresh());
                         }
                     }),
                 DeleteAction::make()
@@ -282,7 +284,7 @@ class PrizesRelationManager extends RelationManager
                         }
 
                         $event->update(['current_prize_id' => null]);
-                        event(new LotteryEventUpdated($event->refresh()));
+                        LotteryBroadcaster::dispatchUpdate($event->refresh());
                     }),
             ]);
     }
