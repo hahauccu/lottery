@@ -3,14 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Mail\RegisterAccountPasswordMail;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -52,16 +50,14 @@ class RegisterAccountController extends Controller
             return $user;
         });
 
-        Mail::to($user->email)->queue(new RegisterAccountPasswordMail(
-            email: $user->email,
-            password: $password,
-            organizationName: $organizationName,
-            loginUrl: route('login')
-        ));
-
         return redirect()
-            ->route('login')
-            ->with('status', '已建立帳號，登入密碼已寄送到你的信箱。');
+            ->route('register-account')
+            ->with([
+                'registered_email' => $user->email,
+                'registered_password' => $password,
+                'registered_org' => $organizationName,
+                'login_url' => route('login'),
+            ]);
     }
 
     private function guessUserName(string $email): string
