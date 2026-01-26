@@ -7,11 +7,18 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\RegisterAccountController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+    Route::get('register-account', [RegisterAccountController::class, 'create'])
+        ->name('register-account');
+
+    Route::post('register-account', [RegisterAccountController::class, 'store'])
+        ->name('register-account.store');
+
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
