@@ -11,6 +11,7 @@ use App\Models\PrizeRule;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Livewire as LivewireComponent;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -26,6 +27,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
+use Illuminate\Support\HtmlString;
 
 class PrizesRelationManager extends RelationManager
 {
@@ -58,22 +60,42 @@ class PrizesRelationManager extends RelationManager
                         Select::make('animation_style')
                             ->label('抽獎動畫')
                             ->options([
-                                'slot' => '拉霸機',
-                                'roulette' => '輪盤跳動',
-                                'scramble' => '文字打亂',
-                                'typewriter' => '打字機',
-                                'flip' => '翻牌',
-                                'test' => 'TEST（強烈差異）',
+                                'lotto_air' => '樂透氣流機',
+                                'red_packet' => '紅包雨',
+                                'scratch_card' => '刮刮樂',
+                                'treasure_chest' => '寶箱開啟',
                             ])
                             ->required()
-                            ->default('slot'),
+                            ->default('lotto_air')
+                            ->live(),
+                        TextInput::make('lotto_hold_seconds')
+                            ->label('抽獎秒數')
+                            ->helperText('每次抽獎的動畫時間（秒），最低 3 秒')
+                            ->numeric()
+                            ->minValue(3)
+                            ->default(5)
+                            ->suffix('秒'),
+                        Placeholder::make('animation_demo')
+                            ->label('動畫預覽')
+                            ->content(fn (Get $get) => new HtmlString(
+                                view('filament.lottery.animation-demo', [
+                                    'style' => $get('animation_style') ?? 'slot',
+                                ])->render()
+                            ))
+                            ->columnSpanFull(),
                         Toggle::make('allow_repeat_within_prize')
                             ->label('同一獎項可重複中獎')
                             ->default(false),
                         FileUpload::make('bg_image_path')
                             ->label('獎項背景圖')
                             ->disk('public')
-                            ->directory('lottery/prizes/backgrounds')
+                            ->directory(function () {
+                                $orgId = $this->getOwnerRecord()?->organization_id;
+
+                                return $orgId
+                                    ? 'lottery/'.hash('sha1', (string) $orgId)
+                                    : 'lottery/pending';
+                            })
                             ->image()
                             ->imagePreviewHeight('120')
                             ->maxSize(4096),
@@ -198,12 +220,11 @@ class PrizesRelationManager extends RelationManager
                 TextColumn::make('animation_style')
                     ->label('動畫')
                     ->formatStateUsing(fn (string $state) => match ($state) {
-                        'roulette' => '輪盤',
-                        'scramble' => '打亂',
-                        'typewriter' => '打字機',
-                        'flip' => '翻牌',
-                        'test' => 'TEST',
-                        default => '拉霸',
+                        'lotto_air' => '樂透氣流機',
+                        'red_packet' => '紅包雨',
+                        'scratch_card' => '刮刮樂',
+                        'treasure_chest' => '寶箱開啟',
+                        default => $state,
                     }),
                 IconColumn::make('is_current')
                     ->label('目前')

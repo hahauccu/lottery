@@ -4,7 +4,9 @@ namespace App\Filament\Resources\LotteryEventResource\Pages;
 
 use App\Events\LotteryEventUpdated;
 use App\Filament\Resources\LotteryEventResource;
+use App\Models\PrizeWinner;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
 class EditLotteryEvent extends EditRecord
@@ -22,6 +24,25 @@ class EditLotteryEvent extends EditRecord
                 ->label('前台中獎清單')
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->url(fn (): string => route('lottery.winners', ['brandCode' => $this->record->brand_code]), true),
+            Actions\Action::make('resetEventWinners')
+                ->label('清空本場抽獎')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('清空本場抽獎名單？')
+                ->modalDescription('此操作會刪除本活動所有獎項的中獎紀錄，且不可復原。')
+                ->action(function (): void {
+                    PrizeWinner::query()
+                        ->whereIn('prize_id', $this->record->prizes()->select('id'))
+                        ->delete();
+
+                    event(new LotteryEventUpdated($this->record->refresh()));
+
+                    Notification::make()
+                        ->title('已清空本場抽獎名單')
+                        ->success()
+                        ->send();
+                }),
             Actions\DeleteAction::make(),
         ];
     }

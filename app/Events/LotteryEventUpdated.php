@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\LotteryEvent;
+use App\Services\EligibleEmployeesService;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -22,7 +23,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): Channel
     {
-        return new Channel('lottery.' . $this->event->brand_code);
+        return new Channel('lottery.'.$this->event->brand_code);
     }
 
     public function broadcastAs(): string
@@ -33,6 +34,18 @@ class LotteryEventUpdated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $currentPrize = $this->event->currentPrize;
+
+        $eligibleNames = $currentPrize
+            ? app(EligibleEmployeesService::class)
+                ->eligibleForStoredPrize($currentPrize)
+                ->pluck('name')
+                ->values()
+                ->all()
+            : [];
+
+        $musicUrl = $currentPrize?->music_path
+            ? asset('storage/'.$currentPrize->music_path)
+            : null;
 
         return [
             'event' => [
@@ -47,7 +60,10 @@ class LotteryEventUpdated implements ShouldBroadcastNow
                 'name' => $currentPrize->name,
                 'draw_mode' => $currentPrize->draw_mode,
                 'animation_style' => $currentPrize->animation_style,
+                'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
+                'music_url' => $musicUrl,
                 'winners_count' => $currentPrize->winners_count,
+                'is_completed' => $currentPrize->winners()->count() >= $currentPrize->winners_count,
             ] : null,
             'winners' => $currentPrize
                 ? $currentPrize->winners
@@ -63,6 +79,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
                     ->values()
                     ->all()
                 : [],
+            'eligible_names' => $eligibleNames,
         ];
     }
 }

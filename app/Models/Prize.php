@@ -24,6 +24,7 @@ class Prize extends Model
     }
 
     public const DRAW_MODE_ALL_AT_ONCE = 'all_at_once';
+
     public const DRAW_MODE_ONE_BY_ONE = 'one_by_one';
 
     protected $fillable = [
@@ -32,6 +33,7 @@ class Prize extends Model
         'winners_count',
         'draw_mode',
         'animation_style',
+        'lotto_hold_seconds',
         'bg_image_path',
         'music_path',
         'allow_repeat_within_prize',
@@ -42,6 +44,7 @@ class Prize extends Model
         'allow_repeat_within_prize' => 'boolean',
         'sort_order' => 'integer',
         'animation_style' => 'string',
+        'lotto_hold_seconds' => 'integer',
     ];
 
     public function lotteryEvent(): BelongsTo
@@ -59,4 +62,3 @@ class Prize extends Model
         return $this->hasMany(PrizeWinner::class);
     }
 }
-

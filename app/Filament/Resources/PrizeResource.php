@@ -16,11 +16,11 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Forms\Get;
 
 class PrizeResource extends Resource
 {
@@ -72,6 +72,24 @@ class PrizeResource extends Resource
                             ])
                             ->required()
                             ->default(Prize::DRAW_MODE_ALL_AT_ONCE),
+                        Select::make('animation_style')
+                            ->label('抽獎動畫')
+                            ->options([
+                                'lotto_air' => '樂透氣流機',
+                                'red_packet' => '紅包雨',
+                                'scratch_card' => '刮刮樂',
+                                'treasure_chest' => '寶箱開啟',
+                            ])
+                            ->required()
+                            ->default('lotto_air')
+                            ->live(),
+                        TextInput::make('lotto_hold_seconds')
+                            ->label('抽獎秒數')
+                            ->helperText('每次抽獎的動畫時間（秒），最低 3 秒')
+                            ->numeric()
+                            ->minValue(3)
+                            ->default(5)
+                            ->suffix('秒'),
                         Toggle::make('allow_repeat_within_prize')
                             ->label('同一獎項可重複中獎')
                             ->default(false),

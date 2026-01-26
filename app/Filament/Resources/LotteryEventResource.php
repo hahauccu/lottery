@@ -53,7 +53,13 @@ class LotteryEventResource extends Resource
                         FileUpload::make('default_bg_image_path')
                             ->label('預設背景圖')
                             ->disk('public')
-                            ->directory('lottery/backgrounds')
+                            ->directory(function (?LotteryEvent $record) {
+                                $orgId = $record?->organization_id;
+
+                                return $orgId
+                                    ? 'lottery/'.hash('sha1', (string) $orgId)
+                                    : 'lottery/pending';
+                            })
                             ->image()
                             ->imagePreviewHeight('120')
                             ->maxSize(4096),
