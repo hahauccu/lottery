@@ -50,6 +50,12 @@ class EmployeeResource extends Resource
                     ->label('手機')
                     ->tel()
                     ->maxLength(50),
+                TextInput::make('department')
+                    ->label('部門')
+                    ->maxLength(255),
+                TextInput::make('employee_no')
+                    ->label('員工編號')
+                    ->maxLength(100),
                 Select::make('groups')
                     ->label('群組')
                     ->relationship(
@@ -75,6 +81,12 @@ class EmployeeResource extends Resource
                     ->searchable(),
                 TextColumn::make('phone')
                     ->label('手機')
+                    ->toggleable(),
+                TextColumn::make('department')
+                    ->label('部門')
+                    ->toggleable(),
+                TextColumn::make('employee_no')
+                    ->label('員工編號')
                     ->toggleable(),
                 TextColumn::make('groups_count')
                     ->label('群組數')

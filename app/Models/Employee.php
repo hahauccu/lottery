@@ -13,6 +13,8 @@ class Employee extends Model
         'name',
         'email',
         'phone',
+        'department',
+        'employee_no',
     ];
 
     public function organization(): BelongsTo
