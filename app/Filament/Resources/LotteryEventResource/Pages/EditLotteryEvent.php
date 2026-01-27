@@ -20,6 +20,10 @@ class EditLotteryEvent extends EditRecord
                 ->label('前台抽獎')
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->url(fn (): string => route('lottery.show', ['brandCode' => $this->record->brand_code]), true),
+            Actions\Action::make('openAnalysis')
+                ->label('抽獎分析')
+                ->icon('heroicon-o-chart-bar')
+                ->url(fn (): string => LotteryEventResource::getUrl('analysis', ['record' => $this->record])),
             Actions\Action::make('openFrontendWinners')
                 ->label('前台中獎清單')
                 ->icon('heroicon-o-arrow-top-right-on-square')

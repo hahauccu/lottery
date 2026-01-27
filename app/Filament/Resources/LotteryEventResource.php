@@ -124,6 +124,7 @@ class LotteryEventResource extends Resource
             'index' => Pages\ListLotteryEvents::route('/'),
             'create' => Pages\CreateLotteryEvent::route('/create'),
             'edit' => Pages\EditLotteryEvent::route('/{record}/edit'),
+            'analysis' => Pages\AnalyzeLotteryEvent::route('/{record}/analysis'),
         ];
     }
 }

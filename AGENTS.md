@@ -1,9 +1,12 @@
 # AGENTS.md
 
-這份文件是給 opencode / coding agent 使用的「專案技能（agent-skill）」。
+這份文件是給 opencode / coding agent 使用的「專案技能（agent-skill）」 在回應跟思考上的顯示請使用繁體中文。
 
 ## 專案概覽
 
+- 在回應跟思考上的顯示請使用繁體中文
+- 在回應跟思考上的顯示請使用繁體中文
+- 在回應跟思考上的顯示請使用繁體中文
 - Framework: Laravel 11 + Breeze（前台登入/註冊）
 - Admin: Filament（多租戶 tenant=Organization）
 - Lottery frontend: Blade + JS（`resources/js/lottery.js`）

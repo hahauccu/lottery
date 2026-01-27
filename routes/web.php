@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LotteryAnalysisController;
 use App\Http\Controllers\LotteryFrontendController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/analysis-runs/{analysisRun}/download', [LotteryAnalysisController::class, 'download'])
+        ->name('admin.lottery-analysis.download');
 });
 
 require __DIR__.'/auth.php';
