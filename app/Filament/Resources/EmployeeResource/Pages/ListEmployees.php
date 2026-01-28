@@ -30,7 +30,7 @@ class ListEmployees extends ListRecords
                 ->url(asset('examples/employee-import.csv'), true),
             Actions\Action::make('importCsv')
                 ->label('匯入 CSV')
-                ->modalHeading(new HtmlString('匯入員工 CSV <span class="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-600 cursor-help" title="以 Email 判斷同一人；同檔重複 Email 會略過；Email 已存在會更新。群組只能填一個，會覆蓋既有群組；留空會清空群組。匯入完成後會刪除檔案。">?</span>'))
+                ->modalHeading(new HtmlString('匯入員工 CSV <span class="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-600 cursor-help" title="以 Email 判斷同一人；同檔重複 Email 只取第一筆；Email 已存在會更新。群組只能填一個，會覆蓋既有群組；留空會清空群組。匯入完成後會刪除檔案。">?</span>'))
                 ->modalSubmitActionLabel('開始匯入')
                 ->form([
                     FileUpload::make('file')
@@ -124,29 +124,10 @@ class ListEmployees extends ListRecords
                         }
                     }
 
-                    $emailCounts = [];
-                    foreach ($csv->getRecords() as $record) {
-                        $normalized = [];
-                        foreach ($record as $key => $value) {
-                            $normalized[$normalizeHeader((string) $key)] = $value;
-                        }
-
-                        $email = strtolower($getValue($normalized, $headerAliases['email']));
-                        if ($email === '') {
-                            continue;
-                        }
-
-                        $emailCounts[$email] = ($emailCounts[$email] ?? 0) + 1;
-                    }
-
-                    $duplicateEmailSet = array_flip(array_keys(array_filter(
-                        $emailCounts,
-                        static fn (int $count): bool => $count > 1
-                    )));
-
                     $created = 0;
                     $updated = 0;
                     $skipped = 0;
+                    $seenEmails = [];
 
                     foreach ($csv->getRecords() as $record) {
                         $normalized = [];
@@ -161,13 +142,21 @@ class ListEmployees extends ListRecords
                         $employeeNo = $getValue($normalized, $headerAliases['employee_no']);
                         $groupsRaw = $getValue($normalized, $headerAliases['groups']);
 
-                        if ($name === '' || $email === '') {
+                        if ($email === '') {
                             $skipped++;
 
                             continue;
                         }
 
-                        if (isset($duplicateEmailSet[$email])) {
+                        if (isset($seenEmails[$email])) {
+                            $skipped++;
+
+                            continue;
+                        }
+
+                        $seenEmails[$email] = true;
+
+                        if ($name === '') {
                             $skipped++;
 
                             continue;

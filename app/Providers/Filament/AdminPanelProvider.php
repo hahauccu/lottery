@@ -28,7 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->tenant(Organization::class, ownershipRelationship: 'organization')
+            ->tenant(Organization::class, 'slug', ownershipRelationship: 'organization')
             ->tenantMenu(false)
             ->colors([
                 'primary' => Color::Amber,
