@@ -97,14 +97,28 @@ class PrizeResource extends Resource
                         FileUpload::make('bg_image_path')
                             ->label('獎項背景圖')
                             ->disk('public')
-                            ->directory('lottery/prizes/backgrounds')
+                            ->directory(function (?Prize $record) {
+                                $slug = Filament::getTenant()?->slug
+                                    ?? $record?->lotteryEvent?->organization?->slug;
+
+                                return $slug
+                                    ? 'lottery/'.$slug.'/prizes/backgrounds'
+                                    : 'lottery/pending/prizes/backgrounds';
+                            })
                             ->image()
                             ->imagePreviewHeight('120')
                             ->maxSize(4096),
                         FileUpload::make('music_path')
                             ->label('抽獎音樂')
                             ->disk('public')
-                            ->directory('lottery/prizes/music')
+                            ->directory(function (?Prize $record) {
+                                $slug = Filament::getTenant()?->slug
+                                    ?? $record?->lotteryEvent?->organization?->slug;
+
+                                return $slug
+                                    ? 'lottery/'.$slug.'/prizes/music'
+                                    : 'lottery/pending/prizes/music';
+                            })
                             ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'])
                             ->maxSize(10240),
                     ])

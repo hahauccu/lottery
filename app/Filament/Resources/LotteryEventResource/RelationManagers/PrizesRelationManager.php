@@ -91,11 +91,12 @@ class PrizesRelationManager extends RelationManager
                             ->label('獎項背景圖')
                             ->disk('public')
                             ->directory(function () {
-                                $orgId = $this->getOwnerRecord()?->organization_id;
+                                $slug = Filament::getTenant()?->slug
+                                    ?? $this->getOwnerRecord()?->organization?->slug;
 
-                                return $orgId
-                                    ? 'lottery/'.hash('sha1', (string) $orgId)
-                                    : 'lottery/pending';
+                                return $slug
+                                    ? 'lottery/'.$slug.'/prizes/backgrounds'
+                                    : 'lottery/pending/prizes/backgrounds';
                             })
                             ->image()
                             ->imagePreviewHeight('120')
@@ -103,7 +104,14 @@ class PrizesRelationManager extends RelationManager
                         FileUpload::make('music_path')
                             ->label('抽獎音樂')
                             ->disk('public')
-                            ->directory('lottery/prizes/music')
+                            ->directory(function () {
+                                $slug = Filament::getTenant()?->slug
+                                    ?? $this->getOwnerRecord()?->organization?->slug;
+
+                                return $slug
+                                    ? 'lottery/'.$slug.'/prizes/music'
+                                    : 'lottery/pending/prizes/music';
+                            })
                             ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'])
                             ->maxSize(10240),
                     ])

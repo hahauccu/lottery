@@ -54,10 +54,11 @@ class LotteryEventResource extends Resource
                             ->label('預設背景圖')
                             ->disk('public')
                             ->directory(function (?LotteryEvent $record) {
-                                $orgId = $record?->organization_id;
+                                $slug = Filament::getTenant()?->slug
+                                    ?? $record?->organization?->slug;
 
-                                return $orgId
-                                    ? 'lottery/'.hash('sha1', (string) $orgId)
+                                return $slug
+                                    ? 'lottery/'.$slug
                                     : 'lottery/pending';
                             })
                             ->image()
