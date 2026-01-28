@@ -212,6 +212,7 @@ class PrizesRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->poll('10s')
             ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->columns([
@@ -221,6 +222,11 @@ class PrizesRelationManager extends RelationManager
                 TextColumn::make('name')
                     ->label('獎項名稱')
                     ->searchable(),
+                TextColumn::make('drawn_count')
+                    ->label('已抽 / 目標')
+                    ->getStateUsing(fn (Prize $record) => $record->winners()->count().' / '.$record->winners_count)
+                    ->badge()
+                    ->color(fn (Prize $record) => $record->winners()->count() >= $record->winners_count ? 'success' : 'gray'),
                 TextColumn::make('winners_count')
                     ->label('中獎人數'),
                 TextColumn::make('draw_mode')
