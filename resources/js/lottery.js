@@ -324,6 +324,68 @@ const initLottery = () => {
         drawAudio.currentTime = 0;
     };
 
+    const sfx = (() => {
+        const AudioContextRef = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextRef) {
+            return {
+                playChestOpen: () => {},
+            };
+        }
+
+        let context = null;
+
+        const getContext = () => {
+            if (!context) {
+                context = new AudioContextRef();
+            }
+            if (context.state === 'suspended') {
+                context.resume().catch(() => {});
+            }
+            return context;
+        };
+
+        const playChestOpen = () => {
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.2, now);
+            master.connect(ctx.destination);
+
+            const thump = ctx.createOscillator();
+            const thumpGain = ctx.createGain();
+            thump.type = 'triangle';
+            thump.frequency.setValueAtTime(140, now);
+            thump.frequency.exponentialRampToValueAtTime(70, now + 0.18);
+            thumpGain.gain.setValueAtTime(0.0001, now);
+            thumpGain.gain.exponentialRampToValueAtTime(0.7, now + 0.02);
+            thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            thump.connect(thumpGain);
+            thumpGain.connect(master);
+
+            const sparkle = ctx.createOscillator();
+            const sparkleGain = ctx.createGain();
+            sparkle.type = 'sine';
+            sparkle.frequency.setValueAtTime(900, now + 0.01);
+            sparkle.frequency.exponentialRampToValueAtTime(420, now + 0.13);
+            sparkleGain.gain.setValueAtTime(0.0001, now);
+            sparkleGain.gain.exponentialRampToValueAtTime(0.22, now + 0.015);
+            sparkleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            sparkle.connect(sparkleGain);
+            sparkleGain.connect(master);
+
+            thump.start(now);
+            thump.stop(now + 0.22);
+            sparkle.start(now + 0.01);
+            sparkle.stop(now + 0.16);
+        };
+
+        return {
+            playChestOpen,
+        };
+    })();
+
     const randomLabel = () => {
         const pool = ['Emp', 'Lucky', 'Winner', '抽獎', '中獎'];
         const left = pool[Math.floor(Math.random() * pool.length)];
@@ -2817,6 +2879,7 @@ const initLottery = () => {
                     if (chest.lidAngle <= -100 && !chest.opened) {
                         chest.phase = 'open';
                         chest.opened = true;
+                        sfx.playChestOpen();
                         spawnCoins(chest);
                         spawnSparkles(chest);
                         openedCount++;
@@ -3851,6 +3914,7 @@ const initLottery = () => {
             spawnTimer = 0;
             heroToken.active = false;
             heroToken.phase = 'idle';
+            sfx.playChestOpen();
         };
 
         const setWinner = (name) => {
