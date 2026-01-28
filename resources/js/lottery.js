@@ -172,7 +172,9 @@ const initLottery = () => {
             // 一開始就顯示刮刮卡（不等抽獎）
             if (!state.isDrawing) {
                 const remaining = Math.max(0, (state.currentPrize?.winnersCount ?? 1) - (state.winners?.length ?? 0));
-                const cardCount = state.currentPrize?.drawMode === 'one_by_one' ? 1 : Math.min(remaining, 9);
+                // 考慮實際可抽人數（資格限制）
+                const actualCanDraw = Math.min(remaining, state.eligibleNames?.length ?? remaining);
+                const cardCount = state.currentPrize?.drawMode === 'one_by_one' ? 1 : Math.min(actualCanDraw, 9);
                 if (cardCount > 0) {
                     scratchCard.showCards(cardCount);
                 }
@@ -184,7 +186,9 @@ const initLottery = () => {
             // 一開始就顯示寶箱（不等抽獎）
             if (!state.isDrawing) {
                 const remaining = Math.max(0, (state.currentPrize?.winnersCount ?? 1) - (state.winners?.length ?? 0));
-                const chestCount = state.currentPrize?.drawMode === 'one_by_one' ? 1 : Math.min(remaining, 9);
+                // 考慮實際可抽人數（資格限制）
+                const actualCanDraw = Math.min(remaining, state.eligibleNames?.length ?? remaining);
+                const chestCount = state.currentPrize?.drawMode === 'one_by_one' ? 1 : Math.min(actualCanDraw, 9);
                 if (chestCount > 0) {
                     treasureChest.showChests(chestCount);
                 }
@@ -2187,13 +2191,13 @@ const initLottery = () => {
 
             // 中獎者名字
             if (winner && (cardPhase === 'scratching' || cardPhase === 'reveal')) {
-                const fontSize = Math.min(w * 0.18, h * 0.28, 36);
+                const fontSize = Math.min(w * 0.5, h * 0.55, 80);
                 ctx.font = `bold ${fontSize}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.save();
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
-                ctx.shadowBlur = 4;
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                ctx.shadowBlur = 6;
                 ctx.fillStyle = 'hsl(25, 90%, 22%)';
                 ctx.fillText(winner, x + w / 2, y + h / 2);
                 ctx.restore();
@@ -2311,6 +2315,16 @@ const initLottery = () => {
                         card.revealed = true;
                         spawnCardSparkles(card);
                         revealedCount++;
+
+                        // 單張卡片刮除完成，resolve 該卡片的 Promise
+                        if (card.scratchResolve) {
+                            setTimeout(() => {
+                                if (card.scratchResolve) {
+                                    card.scratchResolve();
+                                    card.scratchResolve = null;
+                                }
+                            }, 600);
+                        }
 
                         // 檢查是否全部揭曉
                         if (revealedCount >= cards.length && revealResolve) {
@@ -2447,6 +2461,22 @@ const initLottery = () => {
             }
         };
 
+        // 刮除單張卡片（返回 Promise，用於逐一刮開模式）
+        const scratchSingleCard = (index) => {
+            return new Promise((resolve) => {
+                const card = cards[index];
+                if (!card || !card.winner) {
+                    resolve();
+                    return;
+                }
+                phase = 'scratching';
+                card.scratchResolve = resolve;
+                card.phase = 'scratching';
+                card.scratchIndex = 0;
+                card.scratchDelay = 0;
+            });
+        };
+
         // 等待所有卡片揭曉
         const waitForAllRevealed = () => {
             return new Promise((resolve) => {
@@ -2501,6 +2531,7 @@ const initLottery = () => {
             showCards,
             setWinners,
             startScratching,
+            scratchSingleCard,
             waitForAllRevealed,
             // 單卡相容 API
             start,
@@ -5748,37 +5779,59 @@ const initLottery = () => {
                     await new Promise((r) => setTimeout(r, 1200));
                     scratchCard.prepareNext();
                 } else {
-                    // 一次全抽模式：同時顯示多張卡片並同時刮開
-                    const cardCount = Math.min(winners.length, 9);
-                    scratchCard.showCards(cardCount);
+                    // 一次全抽模式：分批顯示，逐一刮開
+                    let processedCount = 0;
 
-                    // 設定所有中獎者名字
-                    const winnerNames = winners.slice(0, cardCount).map((w) => w.employee_name ?? '???');
-                    scratchCard.setWinners(winnerNames);
+                    while (processedCount < winners.length) {
+                        // 計算本批數量（最多 9 張）
+                        const batchStart = processedCount;
+                        const batchCount = Math.min(winners.length - processedCount, 9);
+                        const batchWinners = winners.slice(batchStart, batchStart + batchCount);
 
-                    // 開始同時刮除所有卡片
-                    scratchCard.startScratching();
+                        // 顯示本批卡片
+                        scratchCard.showCards(batchCount);
+                        scratchCard.setWinners(batchWinners.map((w) => w.employee_name ?? '???'));
 
-                    // 等待所有卡片揭曉
-                    await scratchCard.waitForAllRevealed();
+                        // 建立隨機刮開順序 (Fisher-Yates)
+                        const scratchOrder = Array.from({ length: batchCount }, (_, i) => i);
+                        for (let i = scratchOrder.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [scratchOrder[i], scratchOrder[j]] = [scratchOrder[j], scratchOrder[i]];
+                        }
 
-                    // 將所有中獎者加入列表
-                    for (const winner of winners.slice(0, cardCount)) {
-                        state.winners = [...state.winners, winner];
-                    }
-                    render();
+                        // 逐一刮開每張卡片（隨機順序）
+                        for (let i = 0; i < batchCount; i++) {
+                            const cardIndex = scratchOrder[i];
+                            // eslint-disable-next-line no-await-in-loop
+                            await scratchCard.scratchSingleCard(cardIndex);
 
-                    // 動畫顯示每個中獎者
-                    const listItems = winnerListEl?.querySelectorAll(':scope > *');
-                    if (listItems) {
-                        const startIdx = Math.max(0, listItems.length - cardCount);
-                        for (let i = startIdx; i < listItems.length; i++) {
-                            animateListItem(listItems[i]);
+                            // 加入中獎者列表
+                            state.winners = [...state.winners, batchWinners[cardIndex]];
+                            render();
+
+                            const lastItem = winnerListEl?.lastElementChild;
+                            if (lastItem) {
+                                animateListItem(lastItem);
+                            }
+
+                            // 間隔 1.5 秒（最後一個不用等）
+                            if (i < batchCount - 1) {
+                                // eslint-disable-next-line no-await-in-loop
+                                await new Promise((r) => setTimeout(r, 1500));
+                            }
+                        }
+
+                        processedCount += batchCount;
+
+                        // 如果還有下一批，等待後重新顯示
+                        if (processedCount < winners.length) {
+                            // eslint-disable-next-line no-await-in-loop
+                            await new Promise((r) => setTimeout(r, 1500));
                         }
                     }
 
-                    // 等待一下再重置
-                    await new Promise((r) => setTimeout(r, 2000));
+                    // 最後等待一下再重置
+                    await new Promise((r) => setTimeout(r, 1500));
                     scratchCard.prepareNext();
                 }
             } else if (useTreasureChest) {
