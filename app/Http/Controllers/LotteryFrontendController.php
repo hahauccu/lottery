@@ -9,6 +9,8 @@ use App\Services\EligibleEmployeesService;
 use App\Services\LotteryDrawService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class LotteryFrontendController extends Controller
@@ -38,20 +40,38 @@ class LotteryFrontendController extends Controller
                 ->all()
             : [];
 
+        $allPrizes = $event->prizes()
+            ->withCount(['winners as drawn_count'])
+            ->get()
+            ->map(fn ($prize) => [
+                'id' => $prize->id,
+                'name' => $prize->name,
+                'winnersCount' => $prize->winners_count,
+                'drawnCount' => $prize->drawn_count,
+            ])->all();
+
+        // 檢查可抽人數是否用盡（名額未滿但沒有人可抽）
+        $drawnCount = $currentPrize?->winners()->count() ?? 0;
+        $isExhausted = $currentPrize && $drawnCount < $currentPrize->winners_count && empty($eligibleNames);
+
         $payload = [
             'brandCode' => $event->brand_code,
             'eventId' => $event->id,
             'eventName' => $event->name,
             'isOpen' => $event->is_lottery_open,
+            'showPrizesPreview' => $event->show_prizes_preview,
+            'allPrizes' => $allPrizes,
             'currentPrize' => $currentPrize ? [
                 'id' => $currentPrize->id,
                 'name' => $currentPrize->name,
                 'drawMode' => $currentPrize->draw_mode,
                 'animationStyle' => $currentPrize->animation_style,
                 'lottoHoldSeconds' => $currentPrize->lotto_hold_seconds,
+                'soundEnabled' => $currentPrize->sound_enabled,
                 'musicUrl' => $musicUrl,
                 'winnersCount' => $currentPrize->winners_count,
-                'isCompleted' => $currentPrize->winners()->count() >= $currentPrize->winners_count,
+                'isCompleted' => $drawnCount >= $currentPrize->winners_count,
+                'isExhausted' => $isExhausted,
             ] : null,
             'winners' => $winners->map(fn ($winner) => [
                 'id' => $winner->id,
@@ -64,6 +84,7 @@ class LotteryFrontendController extends Controller
             'eligibleNames' => $eligibleNames,
             'csrfToken' => csrf_token(),
             'drawUrl' => route('lottery.draw', ['brandCode' => $event->brand_code]),
+            'winnersUrl' => route('lottery.winners', ['brandCode' => $event->brand_code]),
         ];
 
         if ($request->boolean('payload')) {
@@ -73,17 +94,21 @@ class LotteryFrontendController extends Controller
                     'name' => $event->name,
                     'brand_code' => $event->brand_code,
                     'is_lottery_open' => $event->is_lottery_open,
+                    'show_prizes_preview' => $event->show_prizes_preview,
                     'current_prize_id' => $event->current_prize_id,
                 ],
+                'all_prizes' => $allPrizes,
                 'current_prize' => $currentPrize ? [
                     'id' => $currentPrize->id,
                     'name' => $currentPrize->name,
                     'draw_mode' => $currentPrize->draw_mode,
                     'animation_style' => $currentPrize->animation_style,
                     'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
+                    'sound_enabled' => $currentPrize->sound_enabled,
                     'music_url' => $musicUrl,
                     'winners_count' => $currentPrize->winners_count,
-                    'is_completed' => $currentPrize->winners()->count() >= $currentPrize->winners_count,
+                    'is_completed' => $drawnCount >= $currentPrize->winners_count,
+                    'is_exhausted' => $isExhausted,
                 ] : null,
                 'winners' => $payload['winners'],
                 'eligible_names' => $eligibleNames,
@@ -99,23 +124,28 @@ class LotteryFrontendController extends Controller
         ]);
     }
 
-    public function winners(string $brandCode): View
+    public function winners(string $brandCode): Response
     {
-        $event = LotteryEvent::query()
-            ->where('brand_code', $brandCode)
-            ->firstOrFail();
+        $cacheKey = "winners:{$brandCode}";
 
-        $prizes = Prize::query()
-            ->where('lottery_event_id', $event->id)
-            ->with(['winners.employee'])
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get();
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($brandCode) {
+            $event = LotteryEvent::query()
+                ->where('brand_code', $brandCode)
+                ->firstOrFail();
 
-        return view('lottery.winners', [
-            'event' => $event,
-            'prizes' => $prizes,
-        ]);
+            $prizes = Prize::query()
+                ->where('lottery_event_id', $event->id)
+                ->with(['winners.employee'])
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get();
+
+            return ['event' => $event, 'prizes' => $prizes];
+        });
+
+        return response()
+            ->view('lottery.winners', $data)
+            ->header('Cache-Control', 'public, max-age=60');
     }
 
     public function draw(Request $request, string $brandCode): JsonResponse
@@ -140,6 +170,9 @@ class LotteryFrontendController extends Controller
         }
 
         event(new PrizeWinnersUpdated($event->brand_code, $event->currentPrize, $winners));
+
+        // 清除 winners 頁面快取
+        Cache::forget("winners:{$brandCode}");
 
         return response()->json([
             'prize_id' => $event->currentPrize->id,
