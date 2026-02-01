@@ -16,15 +16,6 @@ const initLottery = () => {
     const drawButtonEl = document.getElementById('draw-button');
     const drawProgressEl = document.getElementById('draw-progress');
     const stageEl = document.getElementById('lottery-stage');
-    const lotto3ControlsEl = document.getElementById('lotto3-controls');
-    const lotto3CountEl = document.getElementById('lotto3-count');
-    const lotto3CountValueEl = document.getElementById('lotto3-count-value');
-    const lotto3TurbEl = document.getElementById('lotto3-turb');
-    const lotto3TurbValueEl = document.getElementById('lotto3-turb-value');
-    const lotto3SwirlEl = document.getElementById('lotto3-swirl');
-    const lotto3SwirlValueEl = document.getElementById('lotto3-swirl-value');
-    const lotto3GravEl = document.getElementById('lotto3-grav');
-    const lotto3GravValueEl = document.getElementById('lotto3-grav-value');
 
     // 結果展示模式元素
     const resultModeEl = document.getElementById('result-mode');
@@ -33,6 +24,11 @@ const initLottery = () => {
     const resultGridEl = document.getElementById('result-winners-grid');
     const resultPageInfoEl = document.getElementById('result-page-info');
 
+    // 獎項預覽模式元素
+    const prizesPreviewModeEl = document.getElementById('prizes-preview-mode');
+    const prizesPreviewListEl = document.getElementById('prizes-preview-list');
+    const prizesPreviewTotalEl = document.getElementById('prizes-preview-total');
+
     let state = {
         isOpen: config.isOpen,
         currentPrize: config.currentPrize,
@@ -40,6 +36,9 @@ const initLottery = () => {
         eligibleNames: config.eligibleNames ?? [],
         isDrawing: false,
         isResultMode: false,
+        isPrizesPreviewMode: false,
+        showPrizesPreview: config.showPrizesPreview ?? false,
+        allPrizes: config.allPrizes ?? [],
     };
 
     const modeLabel = (mode) => (mode === 'one_by_one' ? '逐一抽出' : '一次全抽');
@@ -173,7 +172,9 @@ const initLottery = () => {
             if (!state.isDrawing) {
                 const remaining = Math.max(0, (state.currentPrize?.winnersCount ?? 1) - (state.winners?.length ?? 0));
                 // 考慮實際可抽人數（資格限制）
-                const actualCanDraw = Math.min(remaining, state.eligibleNames?.length ?? remaining);
+                // eligibleNames 未定義時預設為 0，避免顯示錯誤的卡片數量
+                const eligibleCount = state.eligibleNames?.length ?? 0;
+                const actualCanDraw = Math.min(remaining, eligibleCount);
                 const cardCount = state.currentPrize?.drawMode === 'one_by_one' ? 1 : Math.min(actualCanDraw, 9);
                 if (cardCount > 0) {
                     scratchCard.showCards(cardCount);
@@ -187,7 +188,9 @@ const initLottery = () => {
             if (!state.isDrawing) {
                 const remaining = Math.max(0, (state.currentPrize?.winnersCount ?? 1) - (state.winners?.length ?? 0));
                 // 考慮實際可抽人數（資格限制）
-                const actualCanDraw = Math.min(remaining, state.eligibleNames?.length ?? remaining);
+                // eligibleNames 未定義時預設為 0，避免顯示錯誤的寶箱數量
+                const eligibleCount = state.eligibleNames?.length ?? 0;
+                const actualCanDraw = Math.min(remaining, eligibleCount);
                 const chestCount = state.currentPrize?.drawMode === 'one_by_one' ? 1 : Math.min(actualCanDraw, 9);
                 if (chestCount > 0) {
                     treasureChest.showChests(chestCount);
@@ -215,6 +218,10 @@ const initLottery = () => {
         }
         if (!state.isDrawing) {
             renderWinnersPage(true);
+        }
+        // 若在 resultMode，同步更新內容
+        if (state.isResultMode) {
+            resultMode.renderPage();
         }
     };
 
@@ -296,6 +303,70 @@ const initLottery = () => {
         return { show, hide, renderPage };
     })();
 
+    // 獎項預覽模式
+    const prizesPreviewMode = (() => {
+        const show = () => {
+            if (!prizesPreviewModeEl) return;
+            stageEl?.classList.add('hidden');
+            resultModeEl?.classList.add('hidden');
+            prizesPreviewModeEl.classList.remove('hidden');
+            state.isPrizesPreviewMode = true;
+            state.isResultMode = false;
+            render_();
+        };
+
+        const hide = () => {
+            if (!prizesPreviewModeEl) return;
+            prizesPreviewModeEl.classList.add('hidden');
+            stageEl?.classList.remove('hidden');
+            state.isPrizesPreviewMode = false;
+        };
+
+        const render_ = () => {
+            if (!prizesPreviewListEl) return;
+
+            const prizes = state.allPrizes ?? [];
+            if (prizesPreviewTotalEl) {
+                prizesPreviewTotalEl.textContent = prizes.length;
+            }
+
+            prizesPreviewListEl.innerHTML = prizes.map((prize) => {
+                const isComplete = prize.drawnCount >= prize.winnersCount;
+                const statusClass = isComplete
+                    ? 'border-green-500/40 bg-green-900/20'
+                    : 'border-amber-400/30 bg-amber-900/20';
+                const statusText = isComplete
+                    ? '<span class="text-green-400">已抽完</span>'
+                    : `<span class="text-amber-400">待抽</span>`;
+                return `
+                    <div class="prize-card rounded-xl border ${statusClass} p-5">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-xl font-bold text-white">${prize.name}</h3>
+                            ${statusText}
+                        </div>
+                        <div class="text-white/70">
+                            名額：${prize.winnersCount} 位
+                        </div>
+                        <div class="text-white/50 text-sm mt-1">
+                            已抽出：${prize.drawnCount} / ${prize.winnersCount}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        return { show, hide, render: render_ };
+    })();
+
+    // 判斷是否應顯示獎項預覽
+    const shouldShowPrizesPreview = () => {
+        // 後台手動開啟
+        if (state.showPrizesPreview) return true;
+        // 沒有當前獎項時自動顯示（但需要有獎項資料）
+        if (!state.currentPrize && state.allPrizes?.length > 0) return true;
+        return false;
+    };
+
     let drawAudio = null;
     let drawAudioUrl = null;
     let lottoTimerId = null;
@@ -333,10 +404,19 @@ const initLottery = () => {
         if (!AudioContextRef) {
             return {
                 playChestOpen: () => {},
+                playBallPick: () => {},
+                playMachineStop: () => {},
+                playScratch: () => ({ stop: () => {} }),
+                playReveal: () => {},
+                playSlotTick: () => {},
+                playCoinDrop: () => {},
+                playVictory: () => {},
+                playPaperTear: () => {},
             };
         }
 
         let context = null;
+        let noiseBuffer = null;
 
         const getContext = () => {
             if (!context) {
@@ -348,7 +428,23 @@ const initLottery = () => {
             return context;
         };
 
+        // 產生白噪音 buffer（用於刮卡、撕紙等音效）
+        const getNoiseBuffer = () => {
+            const ctx = getContext();
+            if (!noiseBuffer) {
+                const bufferSize = ctx.sampleRate * 2;
+                noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+            }
+            return noiseBuffer;
+        };
+
+        // 寶箱開啟音效（原有）
         const playChestOpen = () => {
+            console.log('[sfx] playChestOpen: start');
             const ctx = getContext();
             if (!ctx) return;
 
@@ -383,10 +479,359 @@ const initLottery = () => {
             thump.stop(now + 0.22);
             sparkle.start(now + 0.01);
             sparkle.stop(now + 0.16);
+            setTimeout(() => console.log('[sfx] playChestOpen: end'), 220);
+        };
+
+        // 樂透抽球音效（whoosh + 咔啦聲）
+        const playBallPick = () => {
+            console.log('[sfx] playBallPick: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.25, now);
+            master.connect(ctx.destination);
+
+            // Whoosh 音效（頻率下降的噪音）
+            const noise = ctx.createBufferSource();
+            noise.buffer = getNoiseBuffer();
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.setValueAtTime(2000, now);
+            noiseFilter.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+            noiseFilter.Q.setValueAtTime(1.5, now);
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.0001, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.3, now + 0.03);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(master);
+
+            // 咔啦聲（短促的敲擊）
+            const click = ctx.createOscillator();
+            const clickGain = ctx.createGain();
+            click.type = 'square';
+            click.frequency.setValueAtTime(800, now + 0.12);
+            click.frequency.exponentialRampToValueAtTime(200, now + 0.18);
+            clickGain.gain.setValueAtTime(0.0001, now + 0.12);
+            clickGain.gain.exponentialRampToValueAtTime(0.4, now + 0.125);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            click.connect(clickGain);
+            clickGain.connect(master);
+
+            noise.start(now);
+            noise.stop(now + 0.2);
+            click.start(now + 0.12);
+            click.stop(now + 0.22);
+            setTimeout(() => console.log('[sfx] playBallPick: end'), 220);
+        };
+
+        // 機器減速音效
+        const playMachineStop = () => {
+            console.log('[sfx] playMachineStop: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.15, now);
+            master.connect(ctx.destination);
+
+            // 低頻嗡嗡聲減速
+            const hum = ctx.createOscillator();
+            const humGain = ctx.createGain();
+            hum.type = 'sawtooth';
+            hum.frequency.setValueAtTime(120, now);
+            hum.frequency.exponentialRampToValueAtTime(40, now + 0.8);
+            humGain.gain.setValueAtTime(0.3, now);
+            humGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+            hum.connect(humGain);
+            humGain.connect(master);
+
+            // 機械摩擦聲
+            const friction = ctx.createOscillator();
+            const frictionGain = ctx.createGain();
+            friction.type = 'triangle';
+            friction.frequency.setValueAtTime(80, now);
+            friction.frequency.exponentialRampToValueAtTime(30, now + 0.7);
+            frictionGain.gain.setValueAtTime(0.2, now);
+            frictionGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+            friction.connect(frictionGain);
+            frictionGain.connect(master);
+
+            hum.start(now);
+            hum.stop(now + 1);
+            friction.start(now);
+            friction.stop(now + 0.9);
+            setTimeout(() => console.log('[sfx] playMachineStop: end'), 1000);
+        };
+
+        // 刮卡沙沙聲（持續播放，返回控制物件）
+        const playScratch = () => {
+            console.log('[sfx] playScratch: start');
+            const ctx = getContext();
+            if (!ctx) return { stop: () => {} };
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.12, now);
+            master.connect(ctx.destination);
+
+            const noise = ctx.createBufferSource();
+            noise.buffer = getNoiseBuffer();
+            noise.loop = true;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.setValueAtTime(3000, now);
+            filter.Q.setValueAtTime(0.5, now);
+
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.frequency.setValueAtTime(15, now);
+            lfoGain.gain.setValueAtTime(0.08, now);
+            lfo.connect(lfoGain);
+            lfoGain.connect(master.gain);
+
+            noise.connect(filter);
+            filter.connect(master);
+
+            noise.start(now);
+            lfo.start(now);
+
+            return {
+                stop: () => {
+                    console.log('[sfx] playScratch: stop called');
+                    const t = ctx.currentTime;
+                    master.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+                    setTimeout(() => {
+                        try {
+                            noise.stop();
+                            lfo.stop();
+                            console.log('[sfx] playScratch: end');
+                        } catch {
+                            // already stopped
+                        }
+                    }, 150);
+                },
+            };
+        };
+
+        // 揭曉閃光音效
+        const playReveal = () => {
+            console.log('[sfx] playReveal: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.2, now);
+            master.connect(ctx.destination);
+
+            // 閃光上升音
+            const shimmer = ctx.createOscillator();
+            const shimmerGain = ctx.createGain();
+            shimmer.type = 'sine';
+            shimmer.frequency.setValueAtTime(800, now);
+            shimmer.frequency.exponentialRampToValueAtTime(1600, now + 0.15);
+            shimmerGain.gain.setValueAtTime(0.0001, now);
+            shimmerGain.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
+            shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            shimmer.connect(shimmerGain);
+            shimmerGain.connect(master);
+
+            // 叮聲
+            const ding = ctx.createOscillator();
+            const dingGain = ctx.createGain();
+            ding.type = 'sine';
+            ding.frequency.setValueAtTime(1200, now + 0.08);
+            dingGain.gain.setValueAtTime(0.0001, now + 0.08);
+            dingGain.gain.exponentialRampToValueAtTime(0.4, now + 0.1);
+            dingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            ding.connect(dingGain);
+            dingGain.connect(master);
+
+            shimmer.start(now);
+            shimmer.stop(now + 0.35);
+            ding.start(now + 0.08);
+            ding.stop(now + 0.55);
+            setTimeout(() => console.log('[sfx] playReveal: end'), 550);
+        };
+
+        // 轉輪滴答聲
+        const playSlotTick = () => {
+            console.log('[sfx] playSlotTick: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.08, now);
+            master.connect(ctx.destination);
+
+            const tick = ctx.createOscillator();
+            const tickGain = ctx.createGain();
+            tick.type = 'square';
+            tick.frequency.setValueAtTime(1800, now);
+            tick.frequency.exponentialRampToValueAtTime(600, now + 0.02);
+            tickGain.gain.setValueAtTime(0.5, now);
+            tickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+            tick.connect(tickGain);
+            tickGain.connect(master);
+
+            tick.start(now);
+            tick.stop(now + 0.04);
+            setTimeout(() => console.log('[sfx] playSlotTick: end'), 40);
+        };
+
+        // 金幣叮噹聲
+        const playCoinDrop = () => {
+            console.log('[sfx] playCoinDrop: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.15, now);
+            master.connect(ctx.destination);
+
+            // 金屬敲擊聲（多個頻率疊加）
+            const frequencies = [2400, 3200, 4000];
+            frequencies.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.7, now + 0.15);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(0.25 - i * 0.05, now + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12 + i * 0.03);
+                osc.connect(gain);
+                gain.connect(master);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            });
+
+            // 彈跳聲
+            const bounce = ctx.createOscillator();
+            const bounceGain = ctx.createGain();
+            bounce.type = 'triangle';
+            bounce.frequency.setValueAtTime(1200, now + 0.08);
+            bounce.frequency.exponentialRampToValueAtTime(800, now + 0.12);
+            bounceGain.gain.setValueAtTime(0.0001, now + 0.08);
+            bounceGain.gain.exponentialRampToValueAtTime(0.15, now + 0.09);
+            bounceGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            bounce.connect(bounceGain);
+            bounceGain.connect(master);
+            bounce.start(now + 0.08);
+            bounce.stop(now + 0.18);
+            setTimeout(() => console.log('[sfx] playCoinDrop: end'), 200);
+        };
+
+        // 勝利音效（和弦上升）
+        const playVictory = () => {
+            console.log('[sfx] playVictory: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.18, now);
+            master.connect(ctx.destination);
+
+            // C-E-G 和弦依序播放（琶音）
+            const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + i * 0.1);
+
+                gain.gain.setValueAtTime(0.0001, now + i * 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.3, now + i * 0.1 + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.15, now + i * 0.1 + 0.3);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+                osc.connect(gain);
+                gain.connect(master);
+                osc.start(now + i * 0.1);
+                osc.stop(now + 1);
+            });
+
+            // 閃亮層
+            const shimmer = ctx.createOscillator();
+            const shimmerGain = ctx.createGain();
+            shimmer.type = 'sine';
+            shimmer.frequency.setValueAtTime(2093, now + 0.35); // C7
+            shimmerGain.gain.setValueAtTime(0.0001, now + 0.35);
+            shimmerGain.gain.exponentialRampToValueAtTime(0.2, now + 0.4);
+            shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+            shimmer.connect(shimmerGain);
+            shimmerGain.connect(master);
+            shimmer.start(now + 0.35);
+            shimmer.stop(now + 1);
+            setTimeout(() => console.log('[sfx] playVictory: end'), 1000);
+        };
+
+        // 紅包撕開音效
+        const playPaperTear = () => {
+            console.log('[sfx] playPaperTear: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.2, now);
+            master.connect(ctx.destination);
+
+            // 撕紙噪音
+            const noise = ctx.createBufferSource();
+            noise.buffer = getNoiseBuffer();
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.setValueAtTime(4000, now);
+            noiseFilter.frequency.exponentialRampToValueAtTime(1500, now + 0.2);
+            noiseFilter.Q.setValueAtTime(2, now);
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.0001, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.4, now + 0.02);
+            noiseGain.gain.setValueAtTime(0.35, now + 0.08);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(master);
+
+            // 撕裂的爆破感
+            const pop = ctx.createOscillator();
+            const popGain = ctx.createGain();
+            pop.type = 'sawtooth';
+            pop.frequency.setValueAtTime(300, now);
+            pop.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+            popGain.gain.setValueAtTime(0.0001, now);
+            popGain.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+            popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            pop.connect(popGain);
+            popGain.connect(master);
+
+            noise.start(now);
+            noise.stop(now + 0.3);
+            pop.start(now);
+            pop.stop(now + 0.15);
+            setTimeout(() => console.log('[sfx] playPaperTear: end'), 300);
         };
 
         return {
             playChestOpen,
+            playBallPick,
+            playMachineStop,
+            playScratch,
+            playReveal,
+            playSlotTick,
+            playCoinDrop,
+            playVictory,
+            playPaperTear,
         };
     })();
 
@@ -530,9 +975,15 @@ const initLottery = () => {
             shake.power = Math.max(shake.power, value);
         };
 
-        const syncCountFromEligible = () => {
+        const syncCountFromEligible = (forceSync = false) => {
             const eligibleCount = state.eligibleNames?.length ?? 0;
-            if (eligibleCount > 0) {
+            // 只有在以下情況同步：
+            // 1. 強制同步 (forceSync)
+            // 2. 球還沒初始化 (balls.length === 0)
+            // 3. 當前沒有已抽出的球 (沒有 out 的球)
+            // 避免 one_by_one 模式連續抽獎時因 eligibleNames 減少而重置已抽出的球
+            const hasOutBalls = airState.balls.some((b) => b.out);
+            if (eligibleCount > 0 && (forceSync || !airState.balls.length || !hasOutBalls)) {
                 lottoAirConfig.count = eligibleCount;
             }
         };
@@ -790,7 +1241,14 @@ const initLottery = () => {
                 waiter?.();
                 return;
             }
-            const target = candidates.find((ball) => ball.name === winnerName) ?? candidates[0];
+            let target = candidates.find((ball) => ball.name === winnerName);
+            if (!target) {
+                // 找不到匹配的球，使用第一個可用的球並強制更新名字
+                target = candidates[0];
+                console.warn(`[lottery] pickBall: no ball named "${winnerName}", using fallback and renaming`);
+                target.name = winnerName;
+                target.label = shortLabel(winnerName);
+            }
             target.grabbed = true;
             target.onOut = () => {
                 const waiter = airState.waiters.shift();
@@ -807,7 +1265,7 @@ const initLottery = () => {
             target.vy += (dy / dist) * 520;
             burst(target.x, target.y, 90, 320);
             addShake(12);
-
+            sfx.playBallPick();
         };
 
         const update = (dt) => {
@@ -1203,7 +1661,15 @@ const initLottery = () => {
 
         const ensureReady = () => {
             syncCountFromEligible();
-            if (!airState.ctx || !airState.balls.length || airState.balls.length !== lottoAirConfig.count) {
+            // 只在以下情況重置：
+            // 1. 沒有 canvas context
+            // 2. 球還沒初始化
+            // 3. 球數不對且沒有已抽出的球（避免 one_by_one 模式重置收納盤）
+            const hasOutBalls = airState.balls.some((b) => b.out);
+            const needsReset = !airState.ctx
+                || !airState.balls.length
+                || (airState.balls.length !== lottoAirConfig.count && !hasOutBalls);
+            if (needsReset) {
                 reset();
                 drawFrame();
             }
@@ -1232,7 +1698,9 @@ const initLottery = () => {
         };
 
         const ensureCount = (count) => {
-            if (lottoAirConfig.count !== count) {
+            // 如果有已抽出的球，不更新 count，避免 one_by_one 模式下的不一致
+            const hasOutBalls = airState.balls.some((b) => b.out);
+            if (!hasOutBalls && lottoAirConfig.count !== count) {
                 lottoAirConfig.count = count;
             }
         };
@@ -1277,6 +1745,7 @@ const initLottery = () => {
 
         const slowStop = () => {
             airState.slowStop = true;
+            sfx.playMachineStop();
         };
 
         const setHoldSeconds = (seconds) => {
@@ -1677,10 +2146,12 @@ const initLottery = () => {
                         // 到達中央，開始打開動畫
                         phase = 'opening';
                         p.opening = true;
+                        sfx.playPaperTear();
                         animateTo(p, { openProgress: 1, scale: 3 }, 800, () => {
                             if (!running) return;
                             phase = 'reveal';
                             launchCoins();
+                            sfx.playCoinDrop();
                             // 在 reveal 後稍等一下再 resolve
                             revealTimeoutId = setTimeout(() => {
                                 revealTimeoutId = null;
@@ -2314,6 +2785,7 @@ const initLottery = () => {
                         card.phase = 'reveal';
                         card.revealed = true;
                         spawnCardSparkles(card);
+                        sfx.playReveal();
                         revealedCount++;
 
                         // 單張卡片刮除完成，resolve 該卡片的 Promise
@@ -2913,6 +3385,7 @@ const initLottery = () => {
                         sfx.playChestOpen();
                         spawnCoins(chest);
                         spawnSparkles(chest);
+                        setTimeout(() => sfx.playCoinDrop(), 80);
                         openedCount++;
 
                         // 單個寶箱開啟完成，resolve 該寶箱的 Promise
@@ -3864,6 +4337,7 @@ const initLottery = () => {
                 spawnStream(dt);
                 if (!burstDone && openProgress > 0.35) {
                     spawnBurst();
+                    sfx.playCoinDrop();
                     burstDone = true;
                 }
                 if (phaseTime >= timing.open) {
@@ -4010,1324 +4484,9 @@ const initLottery = () => {
         };
     })();
 
-    const syncLotto3ControlLabels = () => {
-        if (lotto3CountValueEl && lotto3CountEl) {
-            lotto3CountValueEl.textContent = lotto3CountEl.value;
-        }
-        if (lotto3TurbValueEl && lotto3TurbEl) {
-            lotto3TurbValueEl.textContent = lotto3TurbEl.value;
-        }
-        if (lotto3SwirlValueEl && lotto3SwirlEl) {
-            lotto3SwirlValueEl.textContent = lotto3SwirlEl.value;
-        }
-        if (lotto3GravValueEl && lotto3GravEl) {
-            lotto3GravValueEl.textContent = lotto3GravEl.value;
-        }
-    };
 
-    const getLotto3Config = () => {
-        const countLevel = Number(lotto3CountEl?.value ?? 6);
-        const turbLevel = Number(lotto3TurbEl?.value ?? 8);
-        const swirlLevel = Number(lotto3SwirlEl?.value ?? 7);
-        const gravLevel = Number(lotto3GravEl?.value ?? 6);
-
-        return {
-            count: Math.round(mapRange(countLevel, 24, 90)),
-            turb: mapRange(turbLevel, 0, 100),
-            swirl: mapRange(swirlLevel, 0, 100),
-            grav: mapRange(gravLevel, 0, 100),
-        };
-    };
-
-    const getLotto3TrayPage = () => {
-        const winners = state.winners ?? [];
-        const perPage = 10;
-        const totalPages = Math.max(1, Math.ceil(winners.length / perPage));
-        const now = performance.now();
-        if (!lotto3State.pageStart || lotto3State.lastWinnerCount !== winners.length) {
-            lotto3State.pageStart = now;
-            lotto3State.lastWinnerCount = winners.length;
-        }
-        const pageDuration = 3500;
-        const pageIndex = totalPages > 1
-            ? Math.floor((now - lotto3State.pageStart) / pageDuration) % totalPages
-            : 0;
-        const slice = winners.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
-        return { slice, pageIndex, totalPages };
-    };
-
-    const lottoState = {
-        running: false,
-        balls: [],
-        picked: [],
-        drum: { x: 0, y: 0, r: 0, exitX: 0, exitY: 0 },
-        last: 0,
-        rafId: null,
-        namesKey: '',
-        ctx: null,
-        dpr: 1,
-    };
-
-    const lotto3State = {
-        running: false,
-        balls: [],
-        picked: [],
-        mode: 'idle',
-        fieldT: 0,
-        drum: { x: 0, y: 0, r: 0 },
-        chute: { x: 0, y: 0, w: 0, h: 0, active: false },
-        tray: { x: 0, y: 0, w: 0, h: 0 },
-        last: 0,
-        rafId: null,
-        namesKey: '',
-        ctx: null,
-        dpr: 1,
-        pageStart: 0,
-        lastWinnerCount: 0,
-    };
-
-    const particleState = {
-        particles: [],
-    };
-
-    const shakeState = {
-        power: 0,
-        decay: 18,
-    };
-
-    const getLottoNames = () => {
-        const base = (state.eligibleNames?.length ? state.eligibleNames : [])
-            .concat(state.winners.map((winner) => winner.employee_name).filter(Boolean))
-            .filter(Boolean);
-        const unique = Array.from(new Set(base));
-
-        if (unique.length === 0) {
-            return Array.from({ length: 16 }, (_, index) => `抽${index + 1}`);
-        }
-
-        const shuffled = shuffle(unique);
-        return shuffled.slice(0, 48);
-    };
-
-    function resizeLottoCanvas() {
-        if (!lottoCanvasEl) return false;
-        const wrapperRect = lottoWrapEl?.getBoundingClientRect();
-        const rect = wrapperRect && wrapperRect.width && wrapperRect.height
-            ? wrapperRect
-            : lottoCanvasEl.getBoundingClientRect();
-
-        if (!rect.width || !rect.height) {
-            return false;
-        }
-
-        lottoState.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-        lottoCanvasEl.width = Math.max(1, Math.floor(rect.width * lottoState.dpr));
-        lottoCanvasEl.height = Math.max(1, Math.floor(rect.height * lottoState.dpr));
-        lottoState.ctx = lottoCanvasEl.getContext('2d');
-        if (lottoState.ctx) {
-            lottoState.ctx.setTransform(lottoState.dpr, 0, 0, lottoState.dpr, 0, 0);
-        }
-
-        lottoState.drum.x = rect.width * 0.5;
-        lottoState.drum.y = rect.height * 0.52;
-        lottoState.drum.r = Math.min(rect.width, rect.height) * 0.42;
-        lottoState.drum.exitX = rect.width * 0.5;
-        lottoState.drum.exitY = rect.height * 0.12;
-
-        return true;
-    }
-
-    function initLottoBalls() {
-        if (!lottoCanvasEl) return;
-
-        if (!resizeLottoCanvas()) {
-            return;
-        }
-        const names = getLottoNames();
-        const key = names.join('|');
-        if (key && key === lottoState.namesKey && lottoState.balls.length) {
-            return;
-        }
-
-        lottoState.namesKey = key;
-        lottoState.balls = [];
-        lottoState.picked = [];
-
-        const rect = lottoCanvasEl.getBoundingClientRect();
-        const count = Math.max(6, names.length || 0);
-        const base = Math.min(rect.width, rect.height);
-        const radius = clamp(base / Math.sqrt(count * 2.6), 18, 34);
-
-        names.forEach((name, index) => {
-            const angle = rand(0, Math.PI * 2);
-            const spread = rand(0, lottoState.drum.r - radius - 8);
-            lottoState.balls.push({
-                id: index,
-                name,
-                label: name.length > 4 ? `${name.slice(0, 4)}…` : name,
-                x: lottoState.drum.x + Math.cos(angle) * spread,
-                y: lottoState.drum.y + Math.sin(angle) * spread,
-                vx: rand(-55, 55),
-                vy: rand(-55, 55),
-                r: radius,
-                hue: (index * 37) % 360,
-                grabbed: false,
-                arrived: false,
-                phase: 'drum',
-                glow: 0,
-                floatPhase: rand(0, Math.PI * 2),
-                showcaseStart: 0,
-                pulse: 0,
-                onArrive: null,
-                onShowcase: null,
-                pauseUntil: 0,
-                showcaseStatic: false,
-            });
-        });
-    }
-
-    const ensureLottoReady = () => {
-        requestAnimationFrame(() => {
-            if (resizeLottoCanvas()) {
-                initLottoBalls();
-                drawLotto();
-                return;
-            }
-
-            setTimeout(() => {
-                if (resizeLottoCanvas()) {
-                    initLottoBalls();
-                    drawLotto();
-                }
-            }, 250);
-        });
-    };
-
-    const resizeLotto3Canvas = () => {
-        if (!lottoCanvasEl) return false;
-        const wrapperRect = lottoWrapEl?.getBoundingClientRect();
-        const rect = wrapperRect && wrapperRect.width && wrapperRect.height
-            ? wrapperRect
-            : lottoCanvasEl.getBoundingClientRect();
-
-        if (!rect.width || !rect.height) {
-            return false;
-        }
-
-        lotto3State.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-        lottoCanvasEl.width = Math.max(1, Math.floor(rect.width * lotto3State.dpr));
-        lottoCanvasEl.height = Math.max(1, Math.floor(rect.height * lotto3State.dpr));
-        lotto3State.ctx = lottoCanvasEl.getContext('2d');
-        if (lotto3State.ctx) {
-            lotto3State.ctx.setTransform(lotto3State.dpr, 0, 0, lotto3State.dpr, 0, 0);
-        }
-
-        let baseR = Math.min(rect.width, rect.height) * 0.34;
-        let drumX = rect.width * 0.5;
-        let drumY = rect.height * 0.58;
-
-        const trayWidth = Math.min(rect.width * 0.7, 520);
-        const trayHeight = Math.min(rect.height * 0.18, 92);
-        const trayTopY = rect.height * 0.06;
-        const trayBottom = trayTopY + trayHeight;
-        const drumTop = drumY - baseR - 12;
-
-        let trayPosition = 'top';
-        if (trayBottom > drumTop) {
-            trayPosition = 'right';
-            baseR = Math.min(rect.width, rect.height) * 0.38;
-            drumX = rect.width * 0.45;
-        }
-
-        lotto3State.drum = { x: drumX, y: drumY, r: baseR };
-        lotto3State.chute = {
-            x: drumX + baseR * 0.62,
-            y: rect.height * 0.22,
-            w: baseR * 0.44,
-            h: baseR * 0.3,
-            active: true,
-        };
-
-        let trayX = rect.width * 0.5 - trayWidth / 2;
-        let trayY = trayTopY;
-        if (trayPosition === 'right') {
-            trayX = rect.width - trayWidth - 24;
-            trayX = Math.max(trayX, lotto3State.drum.x + lotto3State.drum.r + 16);
-            trayX = Math.min(trayX, rect.width - trayWidth - 8);
-            trayY = clamp(rect.height * 0.3, 16, rect.height - trayHeight - 16);
-        }
-
-        lotto3State.tray = {
-            x: trayX,
-            y: trayY,
-            w: trayWidth,
-            h: trayHeight,
-            position: trayPosition,
-        };
-
-        return true;
-    };
-
-    const initLotto3Balls = () => {
-        if (!lottoCanvasEl) return;
-        if (!resizeLotto3Canvas()) {
-            return;
-        }
-
-        const { count } = getLotto3Config();
-        const names = getLottoNames();
-        const preparedNames = [];
-        for (let i = 0; i < count; i += 1) {
-            preparedNames.push(names[i % Math.max(1, names.length)] ?? `抽${i + 1}`);
-        }
-
-        const key = `${preparedNames.join('|')}|${count}`;
-        if (key && key === lotto3State.namesKey && lotto3State.balls.length) {
-            return;
-        }
-
-        lotto3State.namesKey = key;
-        lotto3State.balls = [];
-        lotto3State.picked = [];
-        lotto3State.fieldT = 0;
-
-        const rect = lottoCanvasEl.getBoundingClientRect();
-        const radius = clamp(Math.floor(Math.min(rect.width, rect.height) * 0.018), 10, 18);
-        preparedNames.forEach((name, index) => {
-            const angle = rand(0, TAU);
-            const spread = rand(0, lotto3State.drum.r - radius - 10);
-            lotto3State.balls.push({
-                name,
-                label: name.length > 4 ? `${name.slice(0, 4)}…` : name,
-                x: lotto3State.drum.x + Math.cos(angle) * spread,
-                y: lotto3State.drum.y + Math.sin(angle) * spread,
-                vx: rand(-90, 90),
-                vy: rand(-90, 90),
-                r: radius,
-                hue: (index * 7) % 360,
-                spin: rand(-8, 8),
-                jitter: rand(0.6, 1.4),
-                restitution: rand(0.82, 0.94),
-                friction: rand(0.965, 0.988),
-                mass: rand(0.85, 1.15),
-                grabbed: false,
-                out: false,
-                phase: rand(0, TAU),
-                onOut: null,
-            });
-        });
-    };
-
-    const ensureLotto3Ready = () => {
-        requestAnimationFrame(() => {
-            if (resizeLotto3Canvas()) {
-                initLotto3Balls();
-                drawLotto3();
-                return;
-            }
-
-            setTimeout(() => {
-                if (resizeLotto3Canvas()) {
-                    initLotto3Balls();
-                    drawLotto3();
-                }
-            }, 250);
-        });
-    };
-
-    const confineLotto3Ball = (ball) => {
-        const { x: cx, y: cy, r } = lotto3State.drum;
-        const dx = ball.x - cx;
-        const dy = ball.y - cy;
-        const dist = Math.hypot(dx, dy);
-        const limit = r - ball.r - 2;
-        if (dist > limit) {
-            const nx = dx / dist;
-            const ny = dy / dist;
-            ball.x = cx + nx * limit;
-            ball.y = cy + ny * limit;
-            const vn = ball.vx * nx + ball.vy * ny;
-            ball.vx -= (1 + ball.restitution) * vn * nx;
-            ball.vy -= (1 + ball.restitution) * vn * ny;
-            const tx = -ny;
-            const ty = nx;
-            const kick = rand(-90, 90) * ball.jitter;
-            ball.vx += tx * kick * 0.02;
-            ball.vy += ty * kick * 0.02;
-        }
-    };
-
-    const collideLotto3Balls = (first, second) => {
-        const dx = second.x - first.x;
-        const dy = second.y - first.y;
-        const dist = Math.hypot(dx, dy);
-        const minDist = first.r + second.r;
-        if (!dist || dist >= minDist) return;
-
-        const nx = dx / dist;
-        const ny = dy / dist;
-        const overlap = minDist - dist;
-        const sum = first.mass + second.mass;
-        first.x -= nx * overlap * (second.mass / sum);
-        first.y -= ny * overlap * (second.mass / sum);
-        second.x += nx * overlap * (first.mass / sum);
-        second.y += ny * overlap * (first.mass / sum);
-
-        const rvx = second.vx - first.vx;
-        const rvy = second.vy - first.vy;
-        const vn = rvx * nx + rvy * ny;
-        if (vn > 0) return;
-
-        const e = Math.min(first.restitution, second.restitution);
-        const impulse = -(1 + e) * vn / (1 / first.mass + 1 / second.mass);
-        const ix = impulse * nx;
-        const iy = impulse * ny;
-        first.vx -= ix / first.mass;
-        first.vy -= iy / first.mass;
-        second.vx += ix / second.mass;
-        second.vy += iy / second.mass;
-
-        const tx = -ny;
-        const ty = nx;
-        const vt = rvx * tx + rvy * ty;
-        const mu = 0.015 + 0.02 * Math.abs(vt) / 400;
-        const jt = clamp(-vt * mu, -140, 140);
-        first.vx -= jt * tx / first.mass;
-        first.vy -= jt * ty / first.mass;
-        second.vx += jt * tx / second.mass;
-        second.vy += jt * ty / second.mass;
-        first.spin -= jt * 0.004;
-        second.spin += jt * 0.004;
-
-        if (Math.abs(vn) > 180 && Math.random() < 0.25) {
-            emitExplosion((first.x + second.x) / 2, (first.y + second.y) / 2, 0.35);
-        }
-    };
-
-    const updateLotto3 = (dt) => {
-        const { turb, swirl, grav } = getLotto3Config();
-        const turbRatio = turb / 100;
-        const swirlRatio = swirl / 100;
-        const gravRatio = grav / 100;
-
-        lotto3State.fieldT += dt * lerp(0.9, 2.4, turbRatio);
-
-        const { x: cx, y: cy, r: radius } = lotto3State.drum;
-        const swirlStrength = lerp(0.6, 4.8, swirlRatio);
-        const turbStrength = lerp(50, 720, turbRatio);
-        const gravity = lerp(150, 980, gravRatio);
-
-        const jetAngle = lotto3State.fieldT * 1.2 + 1.6 * Math.sin(lotto3State.fieldT * 0.7);
-        const jetX = cx + Math.cos(jetAngle) * radius * 0.55;
-        const jetY = cy + Math.sin(jetAngle * 0.9) * radius * 0.45;
-
-        lotto3State.balls.forEach((ball) => {
-            if (ball.out) {
-                ball.vy += 880 * dt;
-                ball.x += ball.vx * dt;
-                ball.y += ball.vy * dt;
-                ball.vx *= Math.pow(0.985, dt * 60);
-                ball.vy *= Math.pow(0.985, dt * 60);
-                const tray = lotto3State.tray;
-                if (ball.y > tray.y + tray.h - ball.r) {
-                    ball.y = tray.y + tray.h - ball.r;
-                    ball.vy *= -0.35;
-                    ball.vx *= 0.85;
-                    if (Math.abs(ball.vy) < 20) {
-                        ball.vy = 0;
-                    }
-                }
-                if (ball.x < tray.x + ball.r) {
-                    ball.x = tray.x + ball.r;
-                    ball.vx *= -0.35;
-                }
-                if (ball.x > tray.x + tray.w - ball.r) {
-                    ball.x = tray.x + tray.w - ball.r;
-                    ball.vx *= -0.35;
-                }
-                return;
-            }
-
-            if (ball.grabbed) {
-                const intakeX = lotto3State.chute.x - lotto3State.chute.w * 0.08;
-                const intakeY = lotto3State.chute.y + lotto3State.chute.h * 0.55;
-                const pull = 7.2;
-                ball.vx += (intakeX - ball.x) * pull * dt;
-                ball.vy += (intakeY - ball.y) * pull * dt;
-                ball.vx += rand(-1, 1) * turbStrength * 0.05 * dt;
-                ball.vy += rand(-1, 1) * turbStrength * 0.05 * dt;
-
-                const inChute = (
-                    ball.x > lotto3State.chute.x - lotto3State.chute.w * 0.46
-                    && ball.x < lotto3State.chute.x + lotto3State.chute.w * 0.1
-                    && ball.y > lotto3State.chute.y + lotto3State.chute.h * 0.18
-                    && ball.y < lotto3State.chute.y + lotto3State.chute.h * 0.9
-                );
-
-                if (inChute) {
-                    ball.out = true;
-                    ball.x = lotto3State.tray.x + lotto3State.tray.w * 0.5 + rand(-80, 80);
-                    ball.y = lotto3State.tray.y - ball.r - rand(12, 30);
-                    ball.vx = rand(-140, 140);
-                    ball.vy = rand(40, 120);
-                    emitExplosion(ball.x, ball.y + 30, 1.1);
-                    shakeCamera(10);
-                    if (ball.onOut) {
-                        ball.onOut();
-                        ball.onOut = null;
-                    }
-                }
-            } else {
-                const dx = ball.x - cx;
-                const dy = ball.y - cy;
-                ball.vx += -dy * swirlStrength * dt;
-                ball.vy += dx * swirlStrength * dt;
-
-                const nx = ball.x * 0.004 + lotto3State.fieldT * 0.22 + ball.phase * 0.02;
-                const ny = ball.y * 0.004 - lotto3State.fieldT * 0.18 + ball.phase * 0.02;
-                const noiseX = fbm(nx, ny);
-                const noiseY = fbm(nx + 7.13, ny + 3.77);
-                ball.vx += (noiseX - 0.5) * turbStrength * ball.jitter * dt;
-                ball.vy += (noiseY - 0.5) * turbStrength * ball.jitter * dt;
-
-                const jetDx = ball.x - jetX;
-                const jetDy = ball.y - jetY;
-                const jetDist = Math.max(1, Math.hypot(jetDx, jetDy));
-                const jet = Math.exp(-(jetDist * jetDist) / (2 * (radius * 0.18) * (radius * 0.18)));
-                const jetTx = -jetDy / jetDist;
-                const jetTy = jetDx / jetDist;
-                ball.vx += jetTx * jet * turbStrength * 0.22 * dt;
-                ball.vy += jetTy * jet * turbStrength * 0.22 * dt;
-
-                ball.vy += gravity * dt;
-
-                if (Math.random() < 0.018 * turbRatio * dt * 60) {
-                    ball.vx += rand(-220, 220) * turbRatio * ball.jitter * 0.25;
-                    ball.vy += rand(-220, 120) * turbRatio * ball.jitter * 0.25;
-                    ball.spin += rand(-10, 10);
-                }
-            }
-
-            ball.x += ball.vx * dt;
-            ball.y += ball.vy * dt;
-            ball.vx *= Math.pow(ball.friction, dt * 60);
-            ball.vy *= Math.pow(ball.friction, dt * 60);
-
-            confineLotto3Ball(ball);
-        });
-
-        for (let i = 0; i < lotto3State.balls.length; i += 1) {
-            const first = lotto3State.balls[i];
-            if (first.out) continue;
-            for (let j = i + 1; j < lotto3State.balls.length; j += 1) {
-                const second = lotto3State.balls[j];
-                if (second.out) continue;
-                collideLotto3Balls(first, second);
-            }
-        }
-
-        updateParticles(dt);
-        updateShake(dt);
-    };
-
-    const drawLotto3Background = (ctx, width, height) => {
-        const g1 = ctx.createRadialGradient(width * 0.5, height * 0.26, 80, width * 0.5, height * 0.26, Math.max(width, height));
-        g1.addColorStop(0, 'rgba(120,170,255,0.11)');
-        g1.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = g1;
-        ctx.fillRect(0, 0, width, height);
-
-        const g2 = ctx.createRadialGradient(width * 0.5, height * 0.92, 80, width * 0.5, height * 0.92, Math.max(width, height));
-        g2.addColorStop(0, 'rgba(255,210,120,0.1)');
-        g2.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = g2;
-        ctx.fillRect(0, 0, width, height);
-
-        const vg = ctx.createRadialGradient(width * 0.5, height * 0.55, Math.min(width, height) * 0.1, width * 0.5, height * 0.55, Math.max(width, height));
-        vg.addColorStop(0, 'rgba(0,0,0,0)');
-        vg.addColorStop(1, 'rgba(0,0,0,0.55)');
-        ctx.fillStyle = vg;
-        ctx.fillRect(0, 0, width, height);
-    };
-
-    const drawLotto3Machine = (ctx) => {
-        const { x, y, r } = lotto3State.drum;
-        const ring = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 1.25);
-        ring.addColorStop(0, 'rgba(255,255,255,0.08)');
-        ring.addColorStop(1, 'rgba(0,0,0,0.65)');
-        ctx.fillStyle = ring;
-        ctx.beginPath();
-        ctx.arc(x, y, r * 1.08, 0, TAU);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, TAU);
-        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(x - r * 0.18, y - r * 0.2, r * 0.78, -0.2, Math.PI * 0.65);
-        ctx.strokeStyle = 'rgba(200,230,255,0.1)';
-        ctx.lineWidth = 10;
-        ctx.stroke();
-
-        const chute = lotto3State.chute;
-        ctx.save();
-        ctx.globalAlpha = 0.92;
-        ctx.strokeStyle = 'rgba(255,255,255,0.16)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        if (ctx.roundRect) {
-            ctx.roundRect(chute.x - chute.w * 0.6, chute.y + chute.h * 0.18, chute.w * 0.55, chute.h * 0.62, 18);
-        } else {
-            ctx.rect(chute.x - chute.w * 0.6, chute.y + chute.h * 0.18, chute.w * 0.55, chute.h * 0.62);
-        }
-        ctx.stroke();
-
-        const pipe = ctx.createLinearGradient(chute.x - chute.w * 0.6, 0, chute.x, 0);
-        pipe.addColorStop(0, 'rgba(255,255,255,0.04)');
-        pipe.addColorStop(1, 'rgba(255,220,120,0.06)');
-        ctx.fillStyle = pipe;
-        ctx.beginPath();
-        if (ctx.roundRect) {
-            ctx.roundRect(chute.x - chute.w * 0.6, chute.y + chute.h * 0.18, chute.w * 0.55, chute.h * 0.62, 18);
-        } else {
-            ctx.rect(chute.x - chute.w * 0.6, chute.y + chute.h * 0.18, chute.w * 0.55, chute.h * 0.62);
-        }
-        ctx.fill();
-
-        ctx.globalAlpha = 0.95;
-        ctx.fillStyle = 'rgba(255,220,120,0.1)';
-        ctx.beginPath();
-        ctx.arc(chute.x - chute.w * 0.45, chute.y + chute.h * 0.5, 14, 0, TAU);
-        ctx.fill();
-        ctx.restore();
-
-        const tray = lotto3State.tray;
-        ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,0.28)';
-        ctx.strokeStyle = 'rgba(255,220,120,0.18)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        if (ctx.roundRect) {
-            ctx.roundRect(tray.x, tray.y, tray.w, tray.h, 18);
-        } else {
-            ctx.rect(tray.x, tray.y, tray.w, tray.h);
-        }
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-    };
-
-    const drawLotto3TrayBalls = (ctx) => {
-        const tray = lotto3State.tray;
-        if (!tray?.w || !tray?.h) return;
-
-        const { slice, pageIndex, totalPages } = getLotto3TrayPage();
-        const cols = 5;
-        const rows = 2;
-        const padding = 12;
-        const cellW = (tray.w - padding * 2) / cols;
-        const cellH = (tray.h - padding * 2) / rows;
-        const radius = Math.min(cellW, cellH) * 0.34;
-
-        slice.forEach((winner, index) => {
-            const col = index % cols;
-            const row = Math.floor(index / cols);
-            const cx = tray.x + padding + cellW * col + cellW / 2;
-            const cy = tray.y + padding + cellH * row + cellH / 2;
-            const labelText = (winner.employee_name ?? winner.name ?? '').toString();
-            const label = labelText.length > 4 ? `${labelText.slice(0, 4)}…` : labelText;
-
-            ctx.save();
-            const grad = ctx.createRadialGradient(cx - radius * 0.35, cy - radius * 0.35, radius * 0.25, cx, cy, radius * 1.2);
-            grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-            grad.addColorStop(1, 'rgba(245, 158, 11, 0.95)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius, 0, TAU);
-            ctx.fill();
-
-            ctx.fillStyle = 'rgba(0,0,0,0.8)';
-            ctx.font = `${Math.max(10, Math.floor(radius * 0.85))}px ui-sans-serif, system-ui`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(label, cx, cy + 0.5);
-            ctx.restore();
-        });
-
-        ctx.save();
-        ctx.fillStyle = 'rgba(255,255,255,0.65)';
-        ctx.font = '11px ui-sans-serif, system-ui';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillText('中獎名單', tray.x + 10, tray.y + 8);
-        if (totalPages > 1) {
-            ctx.textAlign = 'right';
-            ctx.fillText(`${pageIndex + 1}/${totalPages}`, tray.x + tray.w - 10, tray.y + 8);
-        }
-        ctx.restore();
-    };
-
-    const drawLotto3Ball = (ctx, ball) => {
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = 'black';
-        ctx.beginPath();
-        ctx.arc(ball.x + 6, ball.y + 9, ball.r * 1.02, 0, TAU);
-        ctx.fill();
-
-        ctx.globalAlpha = 1;
-        const gradient = ctx.createRadialGradient(ball.x - ball.r * 0.35, ball.y - ball.r * 0.35, ball.r * 0.25, ball.x, ball.y, ball.r * 1.15);
-        gradient.addColorStop(0, `hsla(${ball.hue} 95% 72% / 1)`);
-        gradient.addColorStop(1, `hsla(${(ball.hue + 25) % 360} 95% 46% / 1)`);
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r, 0, TAU);
-        ctx.fill();
-
-        ctx.globalAlpha = 0.26;
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(ball.x - ball.r * 0.32, ball.y - ball.r * 0.36, ball.r * 0.36, 0, TAU);
-        ctx.fill();
-
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.r * 0.58, 0, TAU);
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(0,0,0,0.82)';
-        ctx.font = `${Math.floor(ball.r * 0.95)}px ui-sans-serif, system-ui`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(ball.label, ball.x, ball.y + 0.5);
-
-        if (ball.grabbed && !ball.out) {
-            ctx.globalAlpha = 0.25;
-            ctx.strokeStyle = `hsla(${ball.hue} 95% 70% / 1)`;
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.arc(ball.x, ball.y, ball.r + 6, 0, TAU);
-            ctx.stroke();
-        }
-
-        ctx.restore();
-    };
-
-    const drawLotto3 = () => {
-        const ctx = lotto3State.ctx;
-        if (!ctx || !lottoCanvasEl) return;
-        const rect = lottoCanvasEl.getBoundingClientRect();
-        // 清除畫布以顯示背景
-        ctx.clearRect(0, 0, rect.width, rect.height);
-
-        drawLotto3Background(ctx, rect.width, rect.height);
-
-        ctx.save();
-        applyCameraShake(ctx);
-        drawLotto3Machine(ctx);
-        drawLotto3TrayBalls(ctx);
-
-        const { x, y, r } = lotto3State.drum;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r - 1, 0, TAU);
-        ctx.clip();
-        lotto3State.balls.forEach((ball) => {
-            if (!ball.out) {
-                drawLotto3Ball(ctx, ball);
-            }
-        });
-        ctx.restore();
-
-        lotto3State.balls.forEach((ball) => {
-            if (ball.out) {
-                drawLotto3Ball(ctx, ball);
-            }
-        });
-
-        drawParticles(ctx);
-        ctx.restore();
-    };
-
-    const startLotto3 = () => {
-        if (!lottoCanvasEl || lotto3State.running) return;
-        stopLotto();
-        initLotto3Balls();
-        lotto3State.balls.forEach((ball) => {
-            ball.grabbed = false;
-            ball.out = false;
-            ball.onOut = null;
-        });
-        lotto3State.mode = 'mixing';
-        lotto3State.running = true;
-        lotto3State.last = performance.now();
-
-        const tick = (now) => {
-            if (!lotto3State.running) return;
-            const dt = Math.min(0.033, (now - lotto3State.last) / 1000);
-            lotto3State.last = now;
-            updateLotto3(dt);
-            drawLotto3();
-            lotto3State.rafId = requestAnimationFrame(tick);
-        };
-
-        lotto3State.rafId = requestAnimationFrame(tick);
-    };
-
-    const stopLotto3 = () => {
-        lotto3State.running = false;
-        if (lotto3State.rafId) {
-            cancelAnimationFrame(lotto3State.rafId);
-            lotto3State.rafId = null;
-        }
-        drawLotto3();
-    };
-
-    const freezeLotto3 = () => {
-        lotto3State.running = false;
-        if (lotto3State.rafId) {
-            cancelAnimationFrame(lotto3State.rafId);
-            lotto3State.rafId = null;
-        }
-        lotto3State.balls.forEach((ball) => {
-            ball.vx = 0;
-            ball.vy = 0;
-        });
-        particleState.particles = [];
-        shakeState.power = 0;
-        drawLotto3();
-    };
-
-    const revealWithLotto3 = async (name, delayMs = 0, maxWaitMs = 6000) => {
-        if (!lottoCanvasEl) {
-            await revealWithScramble(name);
-            return null;
-        }
-
-        if (delayMs > 0) {
-            await new Promise((r) => setTimeout(r, delayMs));
-        }
-
-        initLotto3Balls();
-        if (!lotto3State.running) {
-            startLotto3();
-        }
-
-        const targetBall = lotto3State.balls.find((ball) => !ball.grabbed && ball.name === name)
-            ?? lotto3State.balls.find((ball) => !ball.grabbed)
-            ?? lotto3State.balls[0];
-
-        if (!targetBall) {
-            return null;
-        }
-
-        targetBall.grabbed = true;
-        lotto3State.mode = 'picking';
-        const revealedBall = await new Promise((resolve) => {
-            let timeoutId = null;
-            const done = () => {
-                if (timeoutId) {
-                    clearTimeout(timeoutId);
-                }
-                resolve(targetBall);
-            };
-
-            targetBall.onOut = done;
-            if (maxWaitMs > 0) {
-                timeoutId = setTimeout(done, maxWaitMs);
-            }
-        });
-
-        return revealedBall;
-    };
-
-    const resolveLottoCollision = (a, b) => {
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const dist = Math.hypot(dx, dy);
-        const minDist = a.r + b.r;
-        if (!dist || dist >= minDist) return;
-
-        const nx = dx / dist;
-        const ny = dy / dist;
-        const overlap = minDist - dist;
-        a.x -= nx * overlap * 0.5;
-        a.y -= ny * overlap * 0.5;
-        b.x += nx * overlap * 0.5;
-        b.y += ny * overlap * 0.5;
-
-        const rvx = b.vx - a.vx;
-        const rvy = b.vy - a.vy;
-        const vn = rvx * nx + rvy * ny;
-        if (vn > 0) return;
-
-        const restitution = 0.995;
-        const impulse = -(1 + restitution) * vn * 0.5;
-        const ix = impulse * nx;
-        const iy = impulse * ny;
-        a.vx -= ix;
-        a.vy -= iy;
-        b.vx += ix;
-        b.vy += iy;
-    };
-
-    const resolveCircleCollision = (a, b) => {
-        resolveLottoCollision(a, b);
-    };
-
-    const physicsUpdate = (objects, dt) => {
-        objects.forEach((object) => {
-            if (object.phase === 'showcase') {
-                return;
-            }
-            object.vx *= Math.pow(0.998, dt * 60);
-            object.vy *= Math.pow(0.998, dt * 60);
-        });
-    };
-
-    const emitExplosion = (x, y, power = 1, color = 'rgba(255, 214, 90, 0.9)') => {
-        const count = Math.floor(60 + power * 80);
-        for (let i = 0; i < count; i += 1) {
-            const angle = rand(0, Math.PI * 2);
-            const speed = rand(140, 320) * (0.9 + power * 0.6);
-            particleState.particles.push({
-                x,
-                y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: rand(0.7, 1.6),
-                ttl: rand(0.7, 1.6),
-                size: rand(2.6, 5.2),
-                color,
-            });
-        }
-    };
-
-    const updateParticles = (dt) => {
-        particleState.particles = particleState.particles.filter((particle) => {
-            particle.life -= dt;
-            if (particle.life <= 0) {
-                return false;
-            }
-            particle.x += particle.vx * dt;
-            particle.y += particle.vy * dt;
-            particle.vx *= Math.pow(0.86, dt * 60);
-            particle.vy *= Math.pow(0.86, dt * 60);
-            return true;
-        });
-    };
-
-    const drawParticles = (ctx) => {
-        if (!particleState.particles.length) return;
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        particleState.particles.forEach((particle) => {
-            const alpha = clamp(particle.life / particle.ttl, 0, 1);
-            ctx.fillStyle = particle.color.replace('0.9', alpha.toFixed(2));
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.restore();
-    };
-
-    const shakeCamera = (power = 10) => {
-        shakeState.power = Math.max(shakeState.power, power);
-    };
-
-    const applyCameraShake = (ctx) => {
-        if (shakeState.power <= 0) return;
-        const angle = rand(0, Math.PI * 2);
-        const offset = shakeState.power * rand(0.4, 1);
-        ctx.translate(Math.cos(angle) * offset, Math.sin(angle) * offset);
-    };
-
-    const updateShake = (dt) => {
-        if (shakeState.power <= 0) return;
-        shakeState.power = Math.max(0, shakeState.power - shakeState.decay * dt);
-    };
-
-    const confineLottoBall = (ball) => {
-        const { x: cx, y: cy, r } = lottoState.drum;
-        const dx = ball.x - cx;
-        const dy = ball.y - cy;
-        const dist = Math.hypot(dx, dy);
-        const limit = r - ball.r - 2;
-        if (dist > limit) {
-            const nx = dx / dist;
-            const ny = dy / dist;
-            ball.x = cx + nx * limit;
-            ball.y = cy + ny * limit;
-            const vn = ball.vx * nx + ball.vy * ny;
-            ball.vx -= 2 * vn * nx;
-            ball.vy -= 2 * vn * ny;
-            ball.vx *= 0.9;
-            ball.vy *= 0.9;
-        }
-    };
-
-    const getShowcaseTarget = (ball, useFloat = true) => {
-        const targetIndex = lottoState.picked.indexOf(ball);
-        const offset = (targetIndex - Math.max(0, lottoState.picked.length - 1) / 2) * (ball.r * 1.55);
-        const floatY = useFloat ? Math.sin(performance.now() * 0.003 + ball.floatPhase) * 4 : 0;
-        const tx = lottoState.drum.exitX + offset;
-        const ty = lottoState.drum.y - lottoState.drum.r - 30 + floatY;
-        return { tx, ty };
-    };
-
-    function updateLotto(dt) {
-        const useLotto2 = state.currentPrize?.animationStyle === 'lotto2';
-        const speedBoost = useLotto2 ? 2 : 1;
-        const spin = 4.8 * speedBoost;
-        const turbulence = 760 * speedBoost;
-        const gravity = 680 * speedBoost;
-        const drag = 0.972;
-
-        updateShake(dt);
-
-        lottoState.balls.forEach((ball) => {
-            let showcaseTarget = null;
-            if (ball.phase === 'showcase') {
-                const useFloat = !ball.showcaseStatic;
-                showcaseTarget = getShowcaseTarget(ball, useFloat);
-                ball.vx += (showcaseTarget.tx - ball.x) * 6.5 * dt;
-                ball.vy += (showcaseTarget.ty - ball.y) * 6.5 * dt;
-                ball.vx *= Math.pow(0.3, dt);
-                ball.vy *= Math.pow(0.3, dt);
-                ball.glow = clamp(ball.glow + dt * 1.8, 0, 1);
-            } else if (ball.phase === 'pause') {
-                if (performance.now() >= ball.pauseUntil) {
-                    const target = getShowcaseTarget(ball, false);
-                    ball.phase = 'showcase';
-                    ball.showcaseStatic = true;
-                    ball.x = target.tx;
-                    ball.y = target.ty;
-                    ball.vx = 0;
-                    ball.vy = 0;
-                }
-                ball.vx *= Math.pow(0.2, dt);
-                ball.vy *= Math.pow(0.2, dt);
-                ball.glow = clamp(ball.glow + dt * 2.2, 0, 1);
-            } else if (ball.grabbed && !ball.arrived) {
-                const targetIndex = lottoState.picked.indexOf(ball);
-                const offset = (targetIndex - Math.max(0, lottoState.picked.length - 1) / 2) * (ball.r * 1.4);
-                const tx = lottoState.drum.exitX + offset;
-                const ty = lottoState.drum.exitY;
-                const grabPull = useLotto2 ? 14 : 8;
-                const grabDamp = useLotto2 ? 0.25 : 0.4;
-                ball.vx += (tx - ball.x) * grabPull * dt;
-                ball.vy += (ty - ball.y) * grabPull * dt;
-                ball.vx *= Math.pow(grabDamp, dt);
-                ball.vy *= Math.pow(grabDamp, dt);
-                if (useLotto2 && Math.random() > 0.7) {
-                    emitExplosion(ball.x, ball.y, 0.25, 'rgba(255, 214, 90, 0.65)');
-                }
-            } else if (!ball.arrived) {
-                const dx = ball.x - lottoState.drum.x;
-                const dy = ball.y - lottoState.drum.y;
-                ball.vx += -dy * spin * dt;
-                ball.vy += dx * spin * dt;
-                ball.vx += rand(-1, 1) * turbulence * dt;
-                ball.vy += rand(-1, 1) * turbulence * dt;
-                ball.vy += gravity * dt;
-            }
-
-            ball.x += ball.vx * dt;
-            ball.y += ball.vy * dt;
-            ball.vx *= Math.pow(drag, dt * 60);
-            ball.vy *= Math.pow(drag, dt * 60);
-
-            if (ball.phase !== 'showcase' && ball.phase !== 'pause') {
-                confineLottoBall(ball);
-            }
-
-            if (ball.grabbed && !ball.arrived) {
-                const dx = ball.x - lottoState.drum.exitX;
-                const dy = ball.y - lottoState.drum.exitY;
-                if (Math.hypot(dx, dy) < ball.r * 0.55) {
-                    ball.arrived = true;
-                    ball.phase = useLotto2 ? 'pause' : 'showcase';
-                    ball.pauseUntil = useLotto2 ? performance.now() + 520 : 0;
-                    ball.showcaseStatic = !useLotto2 ? false : true;
-                    ball.vx = 0;
-                    ball.vy = 0;
-                    ball.pulse = 1;
-                    ball.showcaseStart = performance.now();
-                    ball.glow = Math.max(ball.glow, 0.6);
-                    if (useLotto2) {
-                        emitExplosion(ball.x, ball.y, 2.4);
-                        shakeCamera(10);
-                    }
-                    if (ball.onArrive) {
-                        ball.onArrive();
-                        ball.onArrive = null;
-                    }
-                }
-            } else if (ball.phase !== 'showcase' && ball.glow > 0) {
-                ball.glow = Math.max(0, ball.glow - dt * 1.2);
-            }
-
-            if (ball.phase === 'showcase' && ball.onShowcase && showcaseTarget) {
-                const dx = ball.x - showcaseTarget.tx;
-                const dy = ball.y - showcaseTarget.ty;
-                if (Math.hypot(dx, dy) < ball.r * 0.35) {
-                    ball.onShowcase();
-                    ball.onShowcase = null;
-                }
-            }
-        });
-
-        const balls = lottoState.balls;
-        if (useLotto2) {
-            physicsUpdate(balls, dt);
-            updateParticles(dt);
-        }
-        for (let i = 0; i < balls.length; i += 1) {
-            for (let j = i + 1; j < balls.length; j += 1) {
-                if (balls[i].phase === 'showcase' || balls[j].phase === 'showcase') {
-                    continue;
-                }
-                resolveCircleCollision(balls[i], balls[j]);
-            }
-        }
-    }
-
-    function drawLotto() {
-        const ctx = lottoState.ctx;
-        if (!ctx || !lottoCanvasEl) return;
-        const rect = lottoCanvasEl.getBoundingClientRect();
-        ctx.clearRect(0, 0, rect.width, rect.height);
-
-        ctx.save();
-        applyCameraShake(ctx);
-
-        const { x, y, r } = lottoState.drum;
-        ctx.save();
-        const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 1.2);
-        glow.addColorStop(0, 'rgba(255,255,255,0.08)');
-        glow.addColorStop(1, 'rgba(0,0,0,0.55)');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(x, y, r * 1.08, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.restore();
-
-        const drawGlowCircle = (x, y, r, color) => {
-            ctx.save();
-            ctx.globalCompositeOperation = 'screen';
-            const halo = ctx.createRadialGradient(x, y, r * 0.2, x, y, r);
-            halo.addColorStop(0, color);
-            halo.addColorStop(1, 'rgba(255, 214, 90, 0)');
-            ctx.fillStyle = halo;
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        };
-
-        const isLotto2 = state.currentPrize?.animationStyle === 'lotto2';
-
-        const drawBall = (ball, spotlight = false) => {
-            const shadow = 6;
-            const pulseScale = ball.pulse ? 1 + ball.pulse * 0.25 : 1;
-
-            ctx.save();
-            ctx.globalAlpha = 0.9;
-            ctx.beginPath();
-            ctx.fillStyle = 'rgba(0,0,0,0.35)';
-            ctx.arc(ball.x + shadow * 0.3, ball.y + shadow * 0.4, ball.r * 1.02, 0, Math.PI * 2);
-            ctx.fill();
-
-            const g = ctx.createRadialGradient(ball.x - ball.r * 0.35, ball.y - ball.r * 0.35, ball.r * 0.25, ball.x, ball.y, ball.r * 1.12);
-            g.addColorStop(0, `hsla(${ball.hue} 95% 70% / 1)`);
-            g.addColorStop(1, `hsla(${(ball.hue + 25) % 360} 95% 45% / 1)`);
-            ctx.beginPath();
-            ctx.fillStyle = g;
-            ctx.arc(ball.x, ball.y, ball.r * pulseScale, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.globalAlpha = 0.9;
-            ctx.beginPath();
-            ctx.fillStyle = 'rgba(255,255,255,0.85)';
-            ctx.arc(ball.x, ball.y, ball.r * 0.6 * pulseScale, 0, Math.PI * 2);
-            ctx.fill();
-
-            if (spotlight && ball.glow > 0) {
-                const glowStrength = clamp(ball.glow, 0.35, 1);
-                const glowScale = isLotto2 ? 4.2 : 3.3;
-                drawGlowCircle(ball.x, ball.y, ball.r * glowScale, `rgba(255, 239, 170, ${0.7 * glowStrength})`);
-                if (isLotto2) {
-                    drawGlowCircle(ball.x, ball.y, ball.r * 5.2, `rgba(255, 214, 90, ${0.35 * glowStrength})`);
-                }
-
-                ctx.save();
-                ctx.globalCompositeOperation = 'screen';
-                ctx.strokeStyle = `rgba(255, 227, 130, ${0.75 * glowStrength})`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(ball.x, ball.y, ball.r * (1.35 + glowStrength * 0.5), 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = 'rgba(15,23,42,0.9)';
-            ctx.font = `${Math.max(10, Math.floor(ball.r * 0.6))}px ui-sans-serif, system-ui`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(ball.label, ball.x, ball.y + 0.5);
-
-            ctx.restore();
-        };
-
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, r - 1, 0, Math.PI * 2);
-        ctx.clip();
-
-        lottoState.balls.forEach((ball) => {
-            if (ball.pulse) {
-                ball.pulse = Math.max(0, ball.pulse - 0.02);
-            }
-            if (ball.phase !== 'showcase') {
-                drawBall(ball);
-            }
-        });
-
-        ctx.restore();
-
-
-        lottoState.balls.forEach((ball) => {
-            if (ball.phase === 'showcase') {
-                drawBall(ball, true);
-            }
-        });
-
-        if (isLotto2) {
-            drawParticles(ctx);
-        }
-
-        ctx.restore();
-    }
-
-    const startLotto = () => {
-        if (!lottoCanvasEl || lottoState.running) return;
-        stopLotto3();
-        initLottoBalls();
-        lottoState.balls.forEach((ball) => {
-            ball.grabbed = false;
-            ball.arrived = false;
-            ball.phase = 'drum';
-            ball.glow = 0;
-            ball.showcaseStart = 0;
-            ball.onArrive = null;
-            ball.onShowcase = null;
-            ball.pauseUntil = 0;
-            ball.showcaseStatic = false;
-            ball.pulse = 0;
-        });
-        lottoState.picked = [];
-        lottoState.running = true;
-        lottoState.last = performance.now();
-
-        const tick = (now) => {
-            if (!lottoState.running) return;
-            const dt = Math.min(0.033, (now - lottoState.last) / 1000);
-            lottoState.last = now;
-            updateLotto(dt);
-            drawLotto();
-            lottoState.rafId = requestAnimationFrame(tick);
-        };
-
-        lottoState.rafId = requestAnimationFrame(tick);
-    };
-
-    const stopLotto = () => {
-        lottoState.running = false;
-        if (lottoState.rafId) {
-            cancelAnimationFrame(lottoState.rafId);
-            lottoState.rafId = null;
-        }
-        drawLotto();
-    };
-
-    const freezeLotto = (winnerBall) => {
-        lottoState.running = false;
-        if (lottoState.rafId) {
-            cancelAnimationFrame(lottoState.rafId);
-            lottoState.rafId = null;
-        }
-        lottoState.balls.forEach((ball) => {
-            ball.vx = 0;
-            ball.vy = 0;
-        });
-        if (winnerBall) {
-            const target = getShowcaseTarget(winnerBall, false);
-            winnerBall.showcaseStatic = true;
-            winnerBall.x = target.tx;
-            winnerBall.y = target.ty;
-        }
-        particleState.particles = [];
-        shakeState.power = 0;
-        drawLotto();
-    };
-
-    const revealWithLotto = async (name, delayMs = 0, maxWaitMs = 3500) => {
-        if (!lottoCanvasEl) {
-            await revealWithScramble(name);
-            return null;
-        }
-
-        if (delayMs > 0) {
-            await new Promise((r) => setTimeout(r, delayMs));
-        }
-
-        initLottoBalls();
-        if (!lottoState.running) {
-            startLotto();
-        }
-
-        const targetBall = lottoState.balls.find((ball) => !ball.grabbed && ball.name === name)
-            ?? lottoState.balls.find((ball) => !ball.grabbed)
-            ?? lottoState.balls[0];
-
-        if (!targetBall) {
-            return null;
-        }
-
-        targetBall.grabbed = true;
-        lottoState.picked.push(targetBall);
-
-        const revealedBall = await new Promise((resolve) => {
-            let timeoutId = null;
-            const done = () => {
-                if (timeoutId) {
-                    clearTimeout(timeoutId);
-                }
-                resolve(targetBall);
-            };
-
-            targetBall.onShowcase = done;
-            if (maxWaitMs > 0) {
-                timeoutId = setTimeout(done, maxWaitMs);
-            }
-        });
-
-        return revealedBall;
-    };
+    // [已刪除舊版 lotto/lotto3 相關函數]
+    // 舊版樂透動畫已整合至 lottoAir 模組
 
     const animateFlash = (element) => {
         if (!element || !element.animate) return;
@@ -5408,8 +4567,14 @@ const initLottery = () => {
         if (!slotDisplayEl) return;
 
         const startedAt = Date.now();
+        let tickCount = 0;
         while (Date.now() - startedAt < durationMs) {
             slotDisplayEl.textContent = randomLabel();
+            // 每 3 次播放一次滴答聲（約 120ms）
+            if (tickCount % 3 === 0) {
+                sfx.playSlotTick();
+            }
+            tickCount++;
             // eslint-disable-next-line no-await-in-loop
             await new Promise((r) => setTimeout(r, 40));
         }
@@ -5528,6 +4693,13 @@ const initLottery = () => {
         }
 
         state.isDrawing = true;
+
+        // 抽獎開始前清空中獎名單（避免顯示上一次結果）
+        // one_by_one 模式且已有中獎者時才保留
+        if (state.currentPrize?.drawMode !== 'one_by_one' || !state.winners?.length) {
+            state.winners = [];
+        }
+
         render();
 
         const style = state.currentPrize?.animationStyle ?? 'slot';
@@ -5632,6 +4804,10 @@ const initLottery = () => {
                 if (slotDisplayEl && !useLottoAir && !useLotto2 && !useRedPacket && !useScratchCard && !useTreasureChest && !useBigTreasureChest) {
                     slotDisplayEl.textContent = '沒有更多中獎者';
                     animateFlash(slotDisplayEl);
+                }
+                // 可抽人數已用盡但名額未滿，若有中獎者則進入 resultMode
+                if (state.winners?.length > 0 && !isPrizeCompleted()) {
+                    setTimeout(() => resultMode.show(), 2000);
                 }
                 return;
             }
@@ -5994,6 +5170,7 @@ const initLottery = () => {
 
             // 延遲檢查是否抽完，切換到結果模式
             if (isPrizeCompleted()) {
+                sfx.playVictory();
                 setTimeout(() => resultMode.show(), 2000);
             }
         }
@@ -6081,13 +5258,21 @@ const initLottery = () => {
             : null;
 
         state.isOpen = payload.event?.is_lottery_open ?? state.isOpen;
+        state.showPrizesPreview = payload.event?.show_prizes_preview ?? state.showPrizesPreview;
+        state.allPrizes = payload.all_prizes ?? state.allPrizes ?? [];
+
         if (nextPrize) {
             nextPrize.musicUrl = payload.current_prize?.music_url ?? nextPrize.musicUrl;
         }
 
+        // 獎項變更時強制清空 eligibleNames，避免使用舊獎項的資格名單
+        const prizeChanged = nextPrize?.id !== state.currentPrize?.id;
+
         state.currentPrize = nextPrize;
         state.winners = payload.winners ?? [];
-        state.eligibleNames = payload.eligible_names ?? state.eligibleNames ?? [];
+        state.eligibleNames = prizeChanged
+            ? (payload.eligible_names ?? []) // 獎項變更：使用新值或清空
+            : (payload.eligible_names ?? state.eligibleNames ?? []); // 同獎項：保留舊值
         pageIndex = 0;
 
         updateTitle(payload.current_prize?.name ?? payload.event?.name);
@@ -6107,12 +5292,35 @@ const initLottery = () => {
             bigTreasureChest.stop();
         }
 
-        // 結果展示模式切換
+        // 模式切換邏輯：獎項預覽優先於結果展示
         const isCompleted = payload.current_prize?.is_completed ?? isPrizeCompleted();
-        if (isCompleted && !state.isResultMode) {
-            resultMode.show();
-        } else if (!isCompleted && state.isResultMode) {
-            resultMode.hide();
+        // 可抽人數用盡（名額未滿但沒有人可抽）且有中獎者
+        const isExhausted = payload.current_prize?.is_exhausted && state.winners?.length > 0;
+        const shouldShowResult = isCompleted || isExhausted;
+        const wantPreview = shouldShowPrizesPreview();
+
+        if (wantPreview && !state.isPrizesPreviewMode) {
+            // 顯示獎項預覽
+            prizesPreviewMode.show();
+        } else if (!wantPreview && state.isPrizesPreviewMode) {
+            // 隱藏獎項預覽
+            prizesPreviewMode.hide();
+            // 檢查是否需要顯示結果模式
+            if (shouldShowResult) {
+                resultMode.show();
+            }
+        } else if (!wantPreview) {
+            // 不在預覽模式時，處理結果展示模式
+            if (shouldShowResult && !state.isResultMode) {
+                resultMode.show();
+            } else if (!shouldShowResult && state.isResultMode) {
+                resultMode.hide();
+            }
+        }
+
+        // 如果在預覽模式，更新內容
+        if (state.isPrizesPreviewMode) {
+            prizesPreviewMode.render();
         }
     };
 
@@ -6137,6 +5345,11 @@ const initLottery = () => {
         window.Echo.channel(`lottery.${config.brandCode}`)
             .listen('.lottery.updated', (payload) => {
                 console.log('[lottery] websocket: lottery.updated', payload);
+                // 抽獎進行中不處理，避免狀態衝突
+                if (state.isDrawing) {
+                    console.log('[lottery] ignored lottery.updated during drawing');
+                    return;
+                }
                 applyLotteryPayload(payload);
             })
             .listen('.winners.updated', (payload) => {
@@ -6145,9 +5358,42 @@ const initLottery = () => {
                     return;
                 }
 
-                state.winners = [...state.winners, ...(payload.winners ?? [])];
+                // 更新 eligibleNames（影響刮刮樂卡片數量計算）
+                if (payload.eligible_names) {
+                    state.eligibleNames = payload.eligible_names;
+                }
+
+                // 更新 allPrizes（影響獎項預覽的已抽出數量顯示）
+                if (payload.all_prizes) {
+                    state.allPrizes = payload.all_prizes;
+                }
+
+                // 抽獎進行中，只更新 eligibleNames 和 allPrizes，不更新 winners
+                // 因為 draw() 會自己處理 winners 的更新
+                if (state.isDrawing) {
+                    console.log('[lottery] winners.updated during drawing: only updated eligibleNames/allPrizes');
+                    return;
+                }
+
+                // 非抽獎狀態：用 id 去重，附加新中獎者
+                const existingIds = new Set(state.winners.map((w) => w.id));
+                const newWinners = (payload.winners ?? []).filter((w) => !existingIds.has(w.id));
+                state.winners = [...state.winners, ...newWinners];
+
                 pageIndex = 0;
                 render();
+
+                // 若在 resultMode，立即更新
+                if (state.isResultMode) {
+                    resultMode.renderPage();
+                }
+
+                // 若獎項已完成或可抽人數用盡，進入結果模式
+                if (payload.is_completed || (payload.is_exhausted && state.winners?.length > 0)) {
+                    if (!state.isResultMode && !shouldShowPrizesPreview()) {
+                        setTimeout(() => resultMode.show(), 2000);
+                    }
+                }
             });
     }
 
@@ -6158,9 +5404,17 @@ const initLottery = () => {
         lottoAir.ensureReady();
     }
 
-    // 初始化時檢查是否已經抽完，直接顯示結果模式
+    // 初始化時檢查顯示模式
+    const initialWantPreview = shouldShowPrizesPreview();
     const initialCompleted = state.currentPrize?.isCompleted ?? isPrizeCompleted();
-    if (initialCompleted) {
+    // 可抽人數用盡（名額未滿但沒有人可抽）且有中獎者
+    const initialExhausted = state.currentPrize?.isExhausted && state.winners?.length > 0;
+
+    if (initialWantPreview) {
+        // 優先顯示獎項預覽
+        prizesPreviewMode.show();
+    } else if (initialCompleted || initialExhausted) {
+        // 其次顯示結果模式（名額滿或可抽人數用盡）
         resultMode.show();
     }
 };
