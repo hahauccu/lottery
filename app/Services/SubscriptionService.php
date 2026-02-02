@@ -31,12 +31,15 @@ class SubscriptionService
         ?string $notes = null
     ): OrganizationSubscription {
         $now = Carbon::now();
+        // 從隔天開始算完整天數：今天購買，明天開始生效，享有完整 duration_days 天
+        $startsAt = $now->copy()->addDay()->startOfDay();
+        $expiresAt = $startsAt->copy()->addDays($plan->duration_days);
 
         return OrganizationSubscription::create([
             'organization_id' => $organization->id,
             'subscription_plan_id' => $plan->id,
-            'starts_at' => $now,
-            'expires_at' => $now->copy()->addDays($plan->duration_days),
+            'starts_at' => $startsAt,
+            'expires_at' => $expiresAt,
             'status' => 'active',
             'notes' => $notes,
         ]);
@@ -48,15 +51,19 @@ class SubscriptionService
         ?string $notes = null
     ): OrganizationSubscription {
         $activeSubscription = $organization->activeSubscription;
+        $now = Carbon::now();
 
-        $baseDate = $activeSubscription && $activeSubscription->expires_at->isFuture()
-            ? $activeSubscription->expires_at
-            : Carbon::now();
+        // 續訂：從現有到期日延長，若已過期則從明天開始
+        if ($activeSubscription && $activeSubscription->expires_at->isFuture()) {
+            $baseDate = $activeSubscription->expires_at;
+        } else {
+            $baseDate = $now->copy()->addDay()->startOfDay();
+        }
 
         return OrganizationSubscription::create([
             'organization_id' => $organization->id,
             'subscription_plan_id' => $plan->id,
-            'starts_at' => Carbon::now(),
+            'starts_at' => $now,
             'expires_at' => $baseDate->copy()->addDays($plan->duration_days),
             'status' => 'active',
             'notes' => $notes,
