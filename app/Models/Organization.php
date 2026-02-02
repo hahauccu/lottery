@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class Organization extends Model
@@ -67,5 +68,45 @@ class Organization extends Model
     public function lotteryEvents(): HasMany
     {
         return $this->hasMany(LotteryEvent::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(OrganizationSubscription::class);
+    }
+
+    public function activeSubscription(): HasOne
+    {
+        return $this->hasOne(OrganizationSubscription::class)
+            ->where('status', 'active')
+            ->where('expires_at', '>', now())
+            ->latest('expires_at');
+    }
+
+    public function getActivePlan(): ?SubscriptionPlan
+    {
+        return $this->activeSubscription?->plan;
+    }
+
+    public function hasValidSubscription(): bool
+    {
+        $subscription = $this->activeSubscription;
+
+        if (! $subscription) {
+            return false;
+        }
+
+        $plan = $subscription->plan;
+
+        if (! $plan) {
+            return false;
+        }
+
+        return $this->employees()->count() <= $plan->max_employees;
+    }
+
+    public function isTestMode(): bool
+    {
+        return ! $this->hasValidSubscription();
     }
 }

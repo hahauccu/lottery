@@ -28,9 +28,11 @@ const initLottery = () => {
     const prizesPreviewModeEl = document.getElementById('prizes-preview-mode');
     const prizesPreviewListEl = document.getElementById('prizes-preview-list');
     const prizesPreviewTotalEl = document.getElementById('prizes-preview-total');
+    const testModeWatermarkEl = document.getElementById('test-mode-watermark');
 
     let state = {
         isOpen: config.isOpen,
+        isTestMode: config.isTestMode ?? false,
         currentPrize: config.currentPrize,
         winners: config.winners ?? [],
         eligibleNames: config.eligibleNames ?? [],
@@ -138,6 +140,11 @@ const initLottery = () => {
     const render = () => {
         if (statusEl) {
             statusEl.innerHTML = `狀態：<span class="font-semibold">${state.isOpen ? '可抽獎' : '尚未開放'}</span>`;
+        }
+
+        // 測試模式浮水印控制
+        if (testModeWatermarkEl) {
+            testModeWatermarkEl.classList.toggle('hidden', !state.isTestMode);
         }
 
         updateTitle(state.currentPrize?.name ?? config.eventName);
@@ -358,6 +365,13 @@ const initLottery = () => {
         return { show, hide, render: render_ };
     })();
 
+    // 初始化獎項預覽頁面的 QR Code
+    const winnersQrcodeEl = document.getElementById('winners-qrcode');
+    if (winnersQrcodeEl && config.winnersUrl) {
+        const qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data=' + encodeURIComponent(config.winnersUrl);
+        winnersQrcodeEl.src = qrApiUrl;
+    }
+
     // 判斷是否應顯示獎項預覽
     const shouldShowPrizesPreview = () => {
         // 後台手動開啟
@@ -400,18 +414,31 @@ const initLottery = () => {
     };
 
     const sfx = (() => {
+        // 音效設定由後台獎項設定控制，讀取 state.currentPrize?.soundEnabled
         const AudioContextRef = window.AudioContext || window.webkitAudioContext;
+        const noop = () => {};
+        const noopLooped = () => ({ stop: noop });
+
+        // 檢查音效是否啟用（讀取獎項設定）
+        const isEnabled = () => state.currentPrize?.soundEnabled ?? true;
+
         if (!AudioContextRef) {
             return {
-                playChestOpen: () => {},
-                playBallPick: () => {},
-                playMachineStop: () => {},
-                playScratch: () => ({ stop: () => {} }),
-                playReveal: () => {},
-                playSlotTick: () => {},
-                playCoinDrop: () => {},
-                playVictory: () => {},
-                playPaperTear: () => {},
+                isEnabled,
+                playChestOpen: noop,
+                playBallPick: noop,
+                playMachineStop: noop,
+                playScratch: noopLooped,
+                playReveal: noop,
+                playSlotTick: noop,
+                playCoinDrop: noop,
+                playVictory: noop,
+                playPaperTear: noop,
+                playBallRumble: noopLooped,
+                playButtonClick: noop,
+                playError: noop,
+                playWhoosh: noop,
+                playDrumRoll: noopLooped,
             };
         }
 
@@ -444,6 +471,7 @@ const initLottery = () => {
 
         // 寶箱開啟音效（原有）
         const playChestOpen = () => {
+            if (!isEnabled()) return;
             console.log('[sfx] playChestOpen: start');
             const ctx = getContext();
             if (!ctx) return;
@@ -484,6 +512,7 @@ const initLottery = () => {
 
         // 樂透抽球音效（whoosh + 咔啦聲）
         const playBallPick = () => {
+            if (!isEnabled()) return;
             console.log('[sfx] playBallPick: start');
             const ctx = getContext();
             if (!ctx) return;
@@ -530,6 +559,7 @@ const initLottery = () => {
 
         // 機器減速音效
         const playMachineStop = () => {
+            if (!isEnabled()) return;
             console.log('[sfx] playMachineStop: start');
             const ctx = getContext();
             if (!ctx) return;
@@ -570,6 +600,7 @@ const initLottery = () => {
 
         // 刮卡沙沙聲（持續播放，返回控制物件）
         const playScratch = () => {
+            if (!isEnabled()) return { stop: () => {} };
             console.log('[sfx] playScratch: start');
             const ctx = getContext();
             if (!ctx) return { stop: () => {} };
@@ -621,6 +652,7 @@ const initLottery = () => {
 
         // 揭曉閃光音效
         const playReveal = () => {
+            if (!isEnabled()) return;
             console.log('[sfx] playReveal: start');
             const ctx = getContext();
             if (!ctx) return;
@@ -662,6 +694,7 @@ const initLottery = () => {
 
         // 轉輪滴答聲
         const playSlotTick = () => {
+            if (!isEnabled()) return;
             console.log('[sfx] playSlotTick: start');
             const ctx = getContext();
             if (!ctx) return;
@@ -688,6 +721,7 @@ const initLottery = () => {
 
         // 金幣叮噹聲
         const playCoinDrop = () => {
+            if (!isEnabled()) return;
             console.log('[sfx] playCoinDrop: start');
             const ctx = getContext();
             if (!ctx) return;
@@ -732,6 +766,7 @@ const initLottery = () => {
 
         // 勝利音效（和弦上升）
         const playVictory = () => {
+            if (!isEnabled()) return;
             console.log('[sfx] playVictory: start');
             const ctx = getContext();
             if (!ctx) return;
@@ -777,6 +812,7 @@ const initLottery = () => {
 
         // 紅包撕開音效
         const playPaperTear = () => {
+            if (!isEnabled()) return;
             console.log('[sfx] playPaperTear: start');
             const ctx = getContext();
             if (!ctx) return;
@@ -822,7 +858,217 @@ const initLottery = () => {
             setTimeout(() => console.log('[sfx] playPaperTear: end'), 300);
         };
 
+        // 樂透球滾動聲（持續播放）
+        const playBallRumble = () => {
+            if (!isEnabled()) return { stop: () => {} };
+            console.log('[sfx] playBallRumble: start');
+            const ctx = getContext();
+            if (!ctx) return { stop: () => {} };
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.1, now);
+            master.connect(ctx.destination);
+
+            // 低頻滾動聲
+            const rumble = ctx.createOscillator();
+            const rumbleGain = ctx.createGain();
+            rumble.type = 'triangle';
+            rumble.frequency.setValueAtTime(60, now);
+            rumbleGain.gain.setValueAtTime(0.3, now);
+            rumble.connect(rumbleGain);
+            rumbleGain.connect(master);
+
+            // 碰撞噪音
+            const noise = ctx.createBufferSource();
+            noise.buffer = getNoiseBuffer();
+            noise.loop = true;
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = 'lowpass';
+            noiseFilter.frequency.setValueAtTime(800, now);
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.15, now);
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(master);
+
+            // LFO 調製頻率模擬滾動
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.frequency.setValueAtTime(8, now);
+            lfoGain.gain.setValueAtTime(20, now);
+            lfo.connect(lfoGain);
+            lfoGain.connect(rumble.frequency);
+
+            rumble.start(now);
+            noise.start(now);
+            lfo.start(now);
+
+            return {
+                stop: () => {
+                    console.log('[sfx] playBallRumble: stop called');
+                    const t = ctx.currentTime;
+                    master.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                    setTimeout(() => {
+                        try {
+                            rumble.stop();
+                            noise.stop();
+                            lfo.stop();
+                            console.log('[sfx] playBallRumble: end');
+                        } catch {
+                            // already stopped
+                        }
+                    }, 350);
+                },
+            };
+        };
+
+        // 按鈕點擊確認音
+        const playButtonClick = () => {
+            if (!isEnabled()) return;
+            console.log('[sfx] playButtonClick: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.12, now);
+            master.connect(ctx.destination);
+
+            // 短促的點擊聲
+            const click = ctx.createOscillator();
+            const clickGain = ctx.createGain();
+            click.type = 'sine';
+            click.frequency.setValueAtTime(1000, now);
+            click.frequency.exponentialRampToValueAtTime(600, now + 0.05);
+            clickGain.gain.setValueAtTime(0.4, now);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            click.connect(clickGain);
+            clickGain.connect(master);
+
+            click.start(now);
+            click.stop(now + 0.1);
+            setTimeout(() => console.log('[sfx] playButtonClick: end'), 100);
+        };
+
+        // 錯誤/無法操作提示音
+        const playError = () => {
+            if (!isEnabled()) return;
+            console.log('[sfx] playError: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.15, now);
+            master.connect(ctx.destination);
+
+            // 低沉的錯誤音（兩個下降音）
+            [0, 0.12].forEach((delay) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now + delay);
+                osc.frequency.exponentialRampToValueAtTime(200, now + delay + 0.1);
+                gain.gain.setValueAtTime(0.0001, now + delay);
+                gain.gain.exponentialRampToValueAtTime(0.3, now + delay + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.12);
+                osc.connect(gain);
+                gain.connect(master);
+                osc.start(now + delay);
+                osc.stop(now + delay + 0.15);
+            });
+            setTimeout(() => console.log('[sfx] playError: end'), 270);
+        };
+
+        // 通用過渡音效（Whoosh）
+        const playWhoosh = () => {
+            if (!isEnabled()) return;
+            console.log('[sfx] playWhoosh: start');
+            const ctx = getContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.15, now);
+            master.connect(ctx.destination);
+
+            const noise = ctx.createBufferSource();
+            noise.buffer = getNoiseBuffer();
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(3000, now);
+            filter.frequency.exponentialRampToValueAtTime(500, now + 0.25);
+            filter.Q.setValueAtTime(1, now);
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.0001, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            noise.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(master);
+
+            noise.start(now);
+            noise.stop(now + 0.35);
+            setTimeout(() => console.log('[sfx] playWhoosh: end'), 350);
+        };
+
+        // 鼓聲滾動（持續播放，用於緊張氛圍）
+        const playDrumRoll = () => {
+            if (!isEnabled()) return { stop: () => {} };
+            console.log('[sfx] playDrumRoll: start');
+            const ctx = getContext();
+            if (!ctx) return { stop: () => {} };
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.12, now);
+            master.connect(ctx.destination);
+
+            // 快速重複的鼓點
+            const noise = ctx.createBufferSource();
+            noise.buffer = getNoiseBuffer();
+            noise.loop = true;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1200, now);
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.25, now);
+            noise.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(master);
+
+            // LFO 調製音量產生滾動感
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.frequency.setValueAtTime(20, now);
+            lfoGain.gain.setValueAtTime(0.15, now);
+            lfo.connect(lfoGain);
+            lfoGain.connect(noiseGain.gain);
+
+            noise.start(now);
+            lfo.start(now);
+
+            return {
+                stop: () => {
+                    console.log('[sfx] playDrumRoll: stop called');
+                    const t = ctx.currentTime;
+                    master.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+                    setTimeout(() => {
+                        try {
+                            noise.stop();
+                            lfo.stop();
+                            console.log('[sfx] playDrumRoll: end');
+                        } catch {
+                            // already stopped
+                        }
+                    }, 250);
+                },
+            };
+        };
+
         return {
+            isEnabled,
             playChestOpen,
             playBallPick,
             playMachineStop,
@@ -832,6 +1078,11 @@ const initLottery = () => {
             playCoinDrop,
             playVictory,
             playPaperTear,
+            playBallRumble,
+            playButtonClick,
+            playError,
+            playWhoosh,
+            playDrumRoll,
         };
     })();
 
@@ -4685,6 +4936,7 @@ const initLottery = () => {
 
     const draw = async () => {
         if (!state.isOpen || !state.currentPrize || !config.drawUrl) {
+            sfx.playError();
             return;
         }
 
@@ -4692,6 +4944,7 @@ const initLottery = () => {
             return;
         }
 
+        sfx.playButtonClick();
         state.isDrawing = true;
 
         // 抽獎開始前清空中獎名單（避免顯示上一次結果）
@@ -4710,6 +4963,10 @@ const initLottery = () => {
         const useTreasureChest = isTreasureChestStyle(style);
         const useBigTreasureChest = isBigTreasureChestStyle(style);
 
+        // 用於追蹤持續播放的音效
+        let ballRumbleSound = null;
+        let drumRollSound = null;
+
         try {
             const minSpin = (useLottoAir || useLotto2 || useRedPacket || useScratchCard || useTreasureChest || useBigTreasureChest)
                 ? Promise.resolve()
@@ -4724,6 +4981,7 @@ const initLottery = () => {
                     lottoAir.ensureCount(state.eligibleNames.length);
                 }
                 lottoAir.start();
+                ballRumbleSound = sfx.playBallRumble();
             }
 
             // 紅包雨：先啟動飄落動畫
@@ -4854,6 +5112,7 @@ const initLottery = () => {
             } else if (useLottoAir) {
                 lottoAir.ensureReady();
                 lottoAir.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+                ballRumbleSound = sfx.playBallRumble();
                 if (state.currentPrize?.drawMode === 'one_by_one') {
                     if (state.eligibleNames?.length) {
                         lottoAir.ensureCount(state.eligibleNames.length);
@@ -5164,6 +5423,9 @@ const initLottery = () => {
             }
             return null;
         } finally {
+            // 停止持續播放的音效
+            ballRumbleSound?.stop();
+            drumRollSound?.stop();
             stopDrawAudio();
             state.isDrawing = false;
             render();
@@ -5253,11 +5515,13 @@ const initLottery = () => {
                 drawMode: payload.current_prize.draw_mode,
                 animationStyle: payload.current_prize.animation_style ?? state.currentPrize?.animationStyle,
                 lottoHoldSeconds: payload.current_prize.lotto_hold_seconds ?? 5,
+                soundEnabled: payload.current_prize.sound_enabled ?? true,
                 winnersCount: payload.current_prize.winners_count ?? 0,
             }
             : null;
 
         state.isOpen = payload.event?.is_lottery_open ?? state.isOpen;
+        state.isTestMode = payload.event?.is_test_mode ?? state.isTestMode;
         state.showPrizesPreview = payload.event?.show_prizes_preview ?? state.showPrizesPreview;
         state.allPrizes = payload.all_prizes ?? state.allPrizes ?? [];
 

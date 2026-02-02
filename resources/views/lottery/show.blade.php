@@ -61,6 +61,49 @@
             opacity: 0;
             visibility: hidden;
         }
+
+        /* 測試模式浮水印 */
+        #test-mode-watermark {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        #test-mode-watermark::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 4px;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(239, 68, 68, 0.6) 0px,
+                rgba(239, 68, 68, 0.6) 20px,
+                transparent 20px,
+                transparent 40px
+            );
+            transform: translate(-50%, -50%) rotate(-35deg);
+        }
+        #test-mode-watermark .watermark-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            white-space: nowrap;
+            font-size: 4rem;
+            font-weight: 800;
+            color: rgba(239, 68, 68, 0.35);
+            letter-spacing: 0.5em;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+            user-select: none;
+        }
+        @media (max-width: 640px) {
+            #test-mode-watermark .watermark-text {
+                font-size: 2rem;
+            }
+        }
     </style>
 </head>
 <body class="h-[100svh] overflow-hidden bg-black text-white">
@@ -70,6 +113,11 @@
         @if ($bgUrl) style="--lottery-bg-url: url('{{ $bgUrl }}');" @endif
     >
         <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/35"></div>
+
+        <!-- 測試模式浮水印 -->
+        <div id="test-mode-watermark" class="hidden">
+            <div class="watermark-text">抽獎測試中</div>
+        </div>
 
         <div id="lottery-stage" class="relative flex min-h-[100svh] flex-col items-center justify-center gap-6 px-6 text-center">
             <div id="test-overlay" class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center">
@@ -114,6 +162,24 @@
                         <li class="rounded-2xl border border-white/10 bg-black/20 px-4 py-6 text-sm text-slate-200/50">尚未抽出中獎者</li>
                     @endforelse
                 </ul>
+            </div>
+        </div>
+
+        <!-- 獎項預覽模式 -->
+        <div id="prizes-preview-mode" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center">
+            <div class="absolute inset-0 bg-black/95"></div>
+            <div class="relative z-10 w-full max-w-5xl px-6">
+                <h2 class="text-center text-4xl font-bold text-white mb-2">今日獎項</h2>
+                <p class="text-center text-white/60 mb-8">共 <span id="prizes-preview-total">0</span> 個獎項</p>
+                <div id="prizes-preview-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2"></div>
+
+                <!-- QR Code 區塊 -->
+                <div class="mt-8 flex flex-col items-center">
+                    <p class="text-white/60 text-sm mb-3">掃描查看中獎名單</p>
+                    <div class="rounded-xl bg-white p-3">
+                        <img id="winners-qrcode" src="" alt="QR Code" class="h-32 w-32" />
+                    </div>
+                </div>
             </div>
         </div>
 

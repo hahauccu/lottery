@@ -54,11 +54,14 @@ class LotteryFrontendController extends Controller
         $drawnCount = $currentPrize?->winners()->count() ?? 0;
         $isExhausted = $currentPrize && $drawnCount < $currentPrize->winners_count && empty($eligibleNames);
 
+        $isTestMode = $event->organization->isTestMode();
+
         $payload = [
             'brandCode' => $event->brand_code,
             'eventId' => $event->id,
             'eventName' => $event->name,
             'isOpen' => $event->is_lottery_open,
+            'isTestMode' => $isTestMode,
             'showPrizesPreview' => $event->show_prizes_preview,
             'allPrizes' => $allPrizes,
             'currentPrize' => $currentPrize ? [
@@ -94,6 +97,7 @@ class LotteryFrontendController extends Controller
                     'name' => $event->name,
                     'brand_code' => $event->brand_code,
                     'is_lottery_open' => $event->is_lottery_open,
+                    'is_test_mode' => $isTestMode,
                     'show_prizes_preview' => $event->show_prizes_preview,
                     'current_prize_id' => $event->current_prize_id,
                 ],
