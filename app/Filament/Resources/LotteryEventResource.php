@@ -50,6 +50,10 @@ class LotteryEventResource extends Resource
                         Toggle::make('is_lottery_open')
                             ->label('開放抽獎')
                             ->default(false),
+                        Toggle::make('show_prizes_preview')
+                            ->label('顯示獎項預覽')
+                            ->helperText('啟用後前台會顯示所有獎項資訊（無當前獎項時自動顯示，或手動開啟）')
+                            ->default(false),
                         FileUpload::make('default_bg_image_path')
                             ->label('預設背景圖')
                             ->disk('public')
@@ -86,6 +90,11 @@ class LotteryEventResource extends Resource
                     ->afterStateUpdated(function (LotteryEvent $record): void {
                         LotteryBroadcaster::dispatchUpdate($record->refresh());
                     }),
+                ToggleColumn::make('show_prizes_preview')
+                    ->label('顯示獎項預覽')
+                    ->afterStateUpdated(function (LotteryEvent $record): void {
+                        LotteryBroadcaster::dispatchUpdate($record->refresh());
+                    }),
                 TextColumn::make('currentPrize.name')
                     ->label('目前獎項')
                     ->toggleable(),
@@ -94,6 +103,11 @@ class LotteryEventResource extends Resource
                     ->counts('prizes'),
             ])
             ->actions([
+                \Filament\Tables\Actions\Action::make('claims')
+                    ->label('領獎管理')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->color('success')
+                    ->url(fn (LotteryEvent $record) => static::getUrl('claims', ['record' => $record])),
                 \Filament\Tables\Actions\EditAction::make(),
                 \Filament\Tables\Actions\DeleteAction::make(),
             ])
@@ -126,6 +140,7 @@ class LotteryEventResource extends Resource
             'create' => Pages\CreateLotteryEvent::route('/create'),
             'edit' => Pages\EditLotteryEvent::route('/{record}/edit'),
             'analysis' => Pages\AnalyzeLotteryEvent::route('/{record}/analysis'),
+            'claims' => Pages\ManageClaims::route('/{record}/claims'),
         ];
     }
 }

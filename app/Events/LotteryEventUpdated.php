@@ -18,7 +18,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
 
     public function __construct(public LotteryEvent $event)
     {
-        $this->event->loadMissing(['currentPrize.winners.employee']);
+        $this->event->loadMissing(['currentPrize.winners.employee', 'prizes']);
     }
 
     public function broadcastOn(): Channel
@@ -47,20 +47,31 @@ class LotteryEventUpdated implements ShouldBroadcastNow
             ? asset('storage/'.$currentPrize->music_path)
             : null;
 
+        $allPrizes = $this->event->prizes
+            ->map(fn ($prize) => [
+                'id' => $prize->id,
+                'name' => $prize->name,
+                'winnersCount' => $prize->winners_count,
+                'drawnCount' => $prize->winners()->count(),
+            ])->all();
+
         return [
             'event' => [
                 'id' => $this->event->id,
                 'name' => $this->event->name,
                 'brand_code' => $this->event->brand_code,
                 'is_lottery_open' => $this->event->is_lottery_open,
+                'show_prizes_preview' => $this->event->show_prizes_preview,
                 'current_prize_id' => $this->event->current_prize_id,
             ],
+            'all_prizes' => $allPrizes,
             'current_prize' => $currentPrize ? [
                 'id' => $currentPrize->id,
                 'name' => $currentPrize->name,
                 'draw_mode' => $currentPrize->draw_mode,
                 'animation_style' => $currentPrize->animation_style,
                 'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
+                'sound_enabled' => $currentPrize->sound_enabled,
                 'music_url' => $musicUrl,
                 'winners_count' => $currentPrize->winners_count,
                 'is_completed' => $currentPrize->winners()->count() >= $currentPrize->winners_count,

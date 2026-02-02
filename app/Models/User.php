@@ -49,7 +49,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
         return true;
     }
 
-    public function getTenants(Panel $panel): array | Collection
+    public function getTenants(Panel $panel): array|Collection
     {
         return $this->organizations()->get();
     }

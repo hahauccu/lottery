@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LotteryEventResource\RelationManagers;
 
+use App\Jobs\SendPrizeNotifications;
 use App\Livewire\EligibleEmployeesPreview;
 use App\Models\Employee;
 use App\Models\EmployeeGroup;
@@ -18,6 +19,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
@@ -271,6 +273,38 @@ class PrizesRelationManager extends RelationManager
                         $event->update(['current_prize_id' => $record->getKey()]);
 
                         LotteryBroadcaster::dispatchUpdate($event->refresh());
+                    }),
+                \Filament\Tables\Actions\Action::make('send_notifications')
+                    ->label('發送中獎通知')
+                    ->icon('heroicon-o-envelope')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->modalHeading('發送中獎通知')
+                    ->modalDescription(fn (Prize $record) => sprintf(
+                        '將發送通知給 %d 位尚未收到通知的中獎者。確定要發送嗎？',
+                        $record->winners()->whereNull('notified_at')->count()
+                    ))
+                    ->visible(fn (Prize $record) => $record->winners()->count() > 0)
+                    ->action(function (Prize $record): void {
+                        $unnotifiedCount = $record->winners()->whereNull('notified_at')->count();
+
+                        if ($unnotifiedCount === 0) {
+                            Notification::make()
+                                ->warning()
+                                ->title('無需發送')
+                                ->body('所有中獎者已收到通知')
+                                ->send();
+
+                            return;
+                        }
+
+                        SendPrizeNotifications::dispatch($record->id);
+
+                        Notification::make()
+                            ->success()
+                            ->title('通知已排程')
+                            ->body("正在發送 {$unnotifiedCount} 封通知信")
+                            ->send();
                     }),
                 EditAction::make()
                     ->mutateRecordDataUsing(function (array $data, Prize $record): array {

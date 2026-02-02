@@ -24,6 +24,11 @@ class EditLotteryEvent extends EditRecord
                 ->label('抽獎分析')
                 ->icon('heroicon-o-chart-bar')
                 ->url(fn (): string => LotteryEventResource::getUrl('analysis', ['record' => $this->record])),
+            Actions\Action::make('manageClaims')
+                ->label('領獎管理')
+                ->icon('heroicon-o-clipboard-document-check')
+                ->color('success')
+                ->url(fn (): string => LotteryEventResource::getUrl('claims', ['record' => $this->record])),
             Actions\Action::make('openFrontendWinners')
                 ->label('前台中獎清單')
                 ->icon('heroicon-o-arrow-top-right-on-square')

@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Mail;
+
+use App\Models\PrizeWinner;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
+
+class PrizeWinnerNotificationMail extends Mailable implements ShouldQueue
+{
+    use Queueable, SerializesModels;
+
+    public string $qrCodeBase64;
+
+    public function __construct(
+        public PrizeWinner $winner
+    ) {
+        $this->onQueue('notifications');
+        $this->qrCodeBase64 = $winner->generateQrCodeBase64();
+    }
+
+    public function envelope(): Envelope
+    {
+        $prizeName = $this->winner->prize->name;
+        $eventName = $this->winner->prize->lotteryEvent->name;
+
+        return new Envelope(
+            subject: "恭喜您中獎！{$eventName} - {$prizeName}",
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(
+            view: 'emails.prize-winner-notification',
+        );
+    }
+
+    public function attachments(): array
+    {
+        return [];
+    }
+}

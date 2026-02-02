@@ -8,8 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class EventRule extends Model
 {
     public const TYPE_INCLUDE_EMPLOYEE = 'include_employee';
+
     public const TYPE_INCLUDE_GROUP = 'include_group';
+
     public const TYPE_EXCLUDE_EMPLOYEE = 'exclude_employee';
+
     public const TYPE_EXCLUDE_GROUP = 'exclude_group';
 
     protected $fillable = [
@@ -23,4 +26,3 @@ class EventRule extends Model
         return $this->belongsTo(LotteryEvent::class);
     }
 }
-

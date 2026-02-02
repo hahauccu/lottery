@@ -8,9 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PrizeRule extends Model
 {
     public const TYPE_INCLUDE_EMPLOYEE = 'include_employee';
+
     public const TYPE_INCLUDE_GROUP = 'include_group';
+
     public const TYPE_EXCLUDE_EMPLOYEE = 'exclude_employee';
+
     public const TYPE_EXCLUDE_GROUP = 'exclude_group';
+
     public const TYPE_EXCLUDE_PRIZE_WINNERS = 'exclude_prize_winners';
 
     protected $fillable = [
@@ -24,4 +28,3 @@ class PrizeRule extends Model
         return $this->belongsTo(Prize::class);
     }
 }
-

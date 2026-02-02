@@ -12,7 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // 排除綠界回調路由的 CSRF 驗證
+        $middleware->validateCsrfTokens(except: [
+            'payment/ecpay/notify',
+            'payment/ecpay/result',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

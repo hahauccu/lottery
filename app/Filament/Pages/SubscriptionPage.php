@@ -2,7 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Payment;
 use App\Models\SubscriptionPlan;
+use App\Services\EcpayService;
 use App\Services\SubscriptionService;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -34,6 +36,8 @@ class SubscriptionPage extends Page
                 'employeeCount' => 0,
                 'availablePlans' => collect(),
                 'isTestMode' => true,
+                'pendingPayments' => collect(),
+                'recentPayments' => collect(),
             ];
         }
 
@@ -44,6 +48,12 @@ class SubscriptionPage extends Page
         $service = app(SubscriptionService::class);
         $availablePlans = $service->getAvailablePlans($organization);
 
+        // 取得最近的付款記錄
+        $recentPayments = Payment::where('organization_id', $organization->id)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
         return [
             'organization' => $organization,
             'subscription' => $subscription,
@@ -51,9 +61,13 @@ class SubscriptionPage extends Page
             'employeeCount' => $employeeCount,
             'availablePlans' => $availablePlans,
             'isTestMode' => $organization->isTestMode(),
+            'recentPayments' => $recentPayments,
         ];
     }
 
+    /**
+     * 發起付款流程
+     */
     public function purchasePlan(int $planId): void
     {
         $organization = Filament::getTenant();
@@ -90,13 +104,34 @@ class SubscriptionPage extends Page
             return;
         }
 
-        $service = app(SubscriptionService::class);
-        $subscription = $service->purchaseSubscription($organization, $plan);
+        // 價格為 0 時直接啟用（免費方案）
+        if ($plan->price <= 0) {
+            $service = app(SubscriptionService::class);
+            $subscription = $service->purchaseSubscription($organization, $plan, '免費方案啟用');
 
-        Notification::make()
-            ->success()
-            ->title('購買成功')
-            ->body("方案：{$plan->name}，到期日：{$subscription->expires_at->format('Y-m-d H:i')}")
-            ->send();
+            Notification::make()
+                ->success()
+                ->title('方案啟用成功')
+                ->body("方案：{$plan->name}，到期日：{$subscription->expires_at->format('Y-m-d H:i')}")
+                ->send();
+
+            return;
+        }
+
+        // 建立付款單並取得綠界表單
+        $ecpayService = app(EcpayService::class);
+        $result = $ecpayService->createPayment($organization, $plan);
+
+        // 記錄日誌
+        \App\Services\EcpayLogger::log('checkout', [
+            'organization_id' => $organization->id,
+            'plan_id' => $plan->id,
+            'payment_id' => $result['payment']->id,
+            'merchant_trade_no' => $result['params']['MerchantTradeNo'],
+            'amount' => $result['params']['TotalAmount'],
+        ]);
+
+        // 透過 JavaScript 提交表單到綠界
+        $this->dispatch('submit-ecpay-form', formHtml: $result['form_html']);
     }
 }

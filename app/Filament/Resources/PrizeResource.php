@@ -91,6 +91,10 @@ class PrizeResource extends Resource
                             ->minValue(3)
                             ->default(5)
                             ->suffix('秒'),
+                        Toggle::make('sound_enabled')
+                            ->label('播放音效')
+                            ->helperText('開啟後抽獎過程會播放音效')
+                            ->default(true),
                         Toggle::make('allow_repeat_within_prize')
                             ->label('同一獎項可重複中獎')
                             ->default(false),

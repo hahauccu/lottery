@@ -92,7 +92,13 @@
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">價格</span>
-                                    <span class="font-semibold text-lg">NT$ {{ number_format($availablePlan->price) }}</span>
+                                    <span class="font-semibold text-lg">
+                                        @if($availablePlan->price > 0)
+                                            NT$ {{ number_format($availablePlan->price) }}
+                                        @else
+                                            免費
+                                        @endif
+                                    </span>
                                 </div>
                             </div>
 
@@ -106,16 +112,97 @@
                                 class="w-full"
                                 :color="$plan && $plan->id === $availablePlan->id ? 'gray' : 'primary'"
                             >
-                                @if($plan && $plan->id === $availablePlan->id)
-                                    續訂
-                                @else
-                                    購買
-                                @endif
+                                <span wire:loading.remove wire:target="purchasePlan({{ $availablePlan->id }})">
+                                    @if($plan && $plan->id === $availablePlan->id)
+                                        續訂
+                                    @elseif($availablePlan->price > 0)
+                                        購買
+                                    @else
+                                        啟用
+                                    @endif
+                                </span>
+                                <span wire:loading wire:target="purchasePlan({{ $availablePlan->id }})">
+                                    處理中...
+                                </span>
                             </x-filament::button>
                         </div>
                     @endforeach
                 </div>
             @endif
         </x-filament::section>
+
+        {{-- 付款記錄 --}}
+        @if($recentPayments->isNotEmpty())
+            <x-filament::section>
+                <x-slot name="heading">
+                    最近付款記錄
+                </x-slot>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="px-4 py-2 text-left text-gray-500 dark:text-gray-400">訂單編號</th>
+                                <th class="px-4 py-2 text-left text-gray-500 dark:text-gray-400">方案</th>
+                                <th class="px-4 py-2 text-right text-gray-500 dark:text-gray-400">金額</th>
+                                <th class="px-4 py-2 text-center text-gray-500 dark:text-gray-400">狀態</th>
+                                <th class="px-4 py-2 text-left text-gray-500 dark:text-gray-400">時間</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($recentPayments as $payment)
+                                <tr class="border-b border-gray-100 dark:border-gray-800">
+                                    <td class="px-4 py-3 font-mono text-xs">{{ $payment->merchant_trade_no }}</td>
+                                    <td class="px-4 py-3">{{ $payment->plan->name ?? '-' }}</td>
+                                    <td class="px-4 py-3 text-right">NT$ {{ number_format($payment->amount) }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if($payment->isPaid())
+                                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                已付款
+                                            </span>
+                                        @elseif($payment->isFailed())
+                                            <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                                失敗
+                                            </span>
+                                        @else
+                                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                                處理中
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-500">
+                                        {{ $payment->created_at->format('Y-m-d H:i') }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </x-filament::section>
+        @endif
     </div>
+
+    {{-- 隱藏的表單容器，用於提交綠界付款 --}}
+    <div id="ecpay-form-container" style="display: none;"></div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('livewire:init', () => {
+            // Livewire 3 事件參數以陣列形式傳遞
+            Livewire.on('submit-ecpay-form', (params) => {
+                const formHtml = params[0]?.formHtml || params.formHtml;
+                const container = document.getElementById('ecpay-form-container');
+                container.innerHTML = formHtml;
+
+                // 短暫延遲後提交表單
+                setTimeout(() => {
+                    const form = container.querySelector('form');
+                    if (form) {
+                        form.submit();
+                    }
+                }, 100);
+            });
+        });
+    </script>
+    @endpush
 </x-filament-panels::page>

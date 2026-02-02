@@ -59,7 +59,7 @@
                             href="{{ $this->downloadUrl }}"
                             class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-primary-400 hover:text-primary-600 dark:border-white/10 dark:bg-gray-900 dark:text-gray-200"
                         >
-                            下載 CSV
+                            下載 Excel
                         </a>
                     @endif
                 </div>

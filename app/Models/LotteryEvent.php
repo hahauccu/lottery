@@ -16,6 +16,7 @@ class LotteryEvent extends Model
         'default_bg_image_path',
         'current_prize_id',
         'is_lottery_open',
+        'show_prizes_preview',
     ];
 
     protected static function booted(): void
@@ -35,6 +36,7 @@ class LotteryEvent extends Model
 
     protected $casts = [
         'is_lottery_open' => 'boolean',
+        'show_prizes_preview' => 'boolean',
     ];
 
     public function organization(): BelongsTo
@@ -59,4 +61,3 @@ class LotteryEvent extends Model
         return $this->belongsTo(Prize::class, 'current_prize_id');
     }
 }
-

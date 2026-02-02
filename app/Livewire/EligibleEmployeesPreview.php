@@ -10,16 +10,27 @@ use Livewire\Component;
 class EligibleEmployeesPreview extends Component
 {
     public string $context = 'event';
+
     public ?int $organizationId = null;
+
     public ?int $eventId = null;
+
     public array $includeEmployeeIds = [];
+
     public array $includeGroupIds = [];
+
     public array $excludeEmployeeIds = [];
+
     public array $excludeGroupIds = [];
+
     public array $excludePrizeIds = [];
+
     public bool $allowRepeatWithinPrize = false;
+
     public ?int $currentPrizeId = null;
+
     public int $page = 1;
+
     public int $perPage = 50;
 
     public function updated($name): void
