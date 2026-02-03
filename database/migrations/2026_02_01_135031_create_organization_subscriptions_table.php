@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
 
-            $table->index(['organization_id', 'status', 'expires_at']);
+            $table->index(['organization_id', 'status', 'expires_at'], 'org_sub_status_expires_index');
         });
     }
 
