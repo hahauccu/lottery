@@ -14,13 +14,10 @@ class PrizeWinnerNotificationMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public string $qrCodeBase64;
-
     public function __construct(
         public PrizeWinner $winner
     ) {
         $this->onQueue('notifications');
-        $this->qrCodeBase64 = $winner->generateQrCodeBase64();
     }
 
     public function envelope(): Envelope

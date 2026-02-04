@@ -137,7 +137,7 @@
 
         <div class="qr-section">
             <h3>領獎 QR Code</h3>
-            <img src="{{ $qrCodeBase64 }}" alt="領獎 QR Code">
+            <img src="{{ $winner->generateQrCodeBase64() }}" alt="領獎 QR Code">
             <p class="instructions">
                 請於領獎時出示此 QR Code，<br>
                 工作人員掃描後即可完成領獎確認。
