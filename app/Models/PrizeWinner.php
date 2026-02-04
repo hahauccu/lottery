@@ -74,8 +74,11 @@ class PrizeWinner extends Model
 
     public function generateQrCodeBase64(): string
     {
-        $svg = $this->generateQrCodeSvg();
+        $png = QrCode::format('png')
+            ->size(200)
+            ->margin(1)
+            ->generate($this->getClaimUrl());
 
-        return 'data:image/svg+xml;base64,'.base64_encode($svg);
+        return 'data:image/png;base64,'.base64_encode($png);
     }
 }

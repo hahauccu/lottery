@@ -4,20 +4,19 @@ namespace App\Mail;
 
 use App\Models\PrizeWinner;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class PrizeWinnerNotificationMail extends Mailable implements ShouldQueue
+class PrizeWinnerNotificationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
         public PrizeWinner $winner
     ) {
-        $this->onQueue('notifications');
+        //
     }
 
     public function envelope(): Envelope

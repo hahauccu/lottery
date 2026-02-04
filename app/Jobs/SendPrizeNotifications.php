@@ -2,12 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Mail\PrizeWinnerNotificationMail;
 use App\Models\Prize;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SendPrizeNotifications implements ShouldQueue
 {
@@ -29,31 +27,21 @@ class SendPrizeNotifications implements ShouldQueue
             return;
         }
 
-        $winners = $prize->winners()
+        $winnerIds = $prize->winners()
             ->whereNull('notified_at')
-            ->with(['employee', 'prize.lotteryEvent'])
-            ->get();
+            ->pluck('id');
 
-        foreach ($winners as $winner) {
-            $email = $winner->employee->email;
+        if ($winnerIds->isEmpty()) {
+            Log::info("SendPrizeNotifications: No winners to notify for prize {$this->prizeId}");
 
-            if (empty($email)) {
-                Log::info("SendPrizeNotifications: Skipping winner {$winner->id} - no email");
+            return;
+        }
 
-                continue;
-            }
+        Log::info("SendPrizeNotifications: Dispatching {$winnerIds->count()} notification jobs for prize {$this->prizeId}");
 
-            try {
-                Mail::to($email)->send(new PrizeWinnerNotificationMail($winner));
-                $winner->update(['notified_at' => now()]);
-
-                Log::info("SendPrizeNotifications: Sent notification to {$email} for winner {$winner->id}");
-            } catch (\Exception $e) {
-                Log::error("SendPrizeNotifications: Failed to send notification to {$email}", [
-                    'winner_id' => $winner->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+        // 為每個中獎者分派獨立的通知 job，可以並行處理
+        foreach ($winnerIds as $winnerId) {
+            SendWinnerNotification::dispatch($winnerId);
         }
     }
 }
