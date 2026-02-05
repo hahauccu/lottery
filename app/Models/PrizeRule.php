@@ -15,6 +15,9 @@ class PrizeRule extends Model
 
     public const TYPE_EXCLUDE_GROUP = 'exclude_group';
 
+    /**
+     * @deprecated Use system groups (exclude_group with event_winners/prize_winners) instead
+     */
     public const TYPE_EXCLUDE_PRIZE_WINNERS = 'exclude_prize_winners';
 
     protected $fillable = [

@@ -37,47 +37,32 @@ class EligibleEmployeesService
         return $query->orderBy('name')->get();
     }
 
-    public function eligibleForPrize(LotteryEvent $event, array $includeEmployeeIds, array $includeGroupIds, array $excludeEmployeeIds, array $excludeGroupIds, array $excludePrizeIds, bool $allowRepeatWithinPrize, ?int $currentPrizeId = null): Collection
+    public function eligibleForPrize(LotteryEvent $event, array $includeEmployeeIds, array $includeGroupIds, array $excludeEmployeeIds, array $excludeGroupIds, bool $allowRepeatWithinPrize, ?int $currentPrizeId = null): Collection
     {
-        $base = $this->eligibleForEvent(
-            $event->organization_id,
-            [],
-            [],
-            [],
-            [],
-        );
-
         $includeEmployeeIds = $this->normalizeIds($includeEmployeeIds);
         $includeGroupIds = $this->normalizeIds($includeGroupIds);
         $excludeEmployeeIds = $this->normalizeIds($excludeEmployeeIds);
         $excludeGroupIds = $this->normalizeIds($excludeGroupIds);
-        $excludePrizeIds = $this->normalizeIds($excludePrizeIds);
 
-        $includeGroupEmployeeIds = $this->employeeIdsForGroups($includeGroupIds);
-        $excludeGroupEmployeeIds = $this->employeeIdsForGroups($excludeGroupIds);
+        // 若未選任何包含 → 可抽人數 = 0
+        if (empty($includeEmployeeIds) && empty($includeGroupIds)) {
+            return collect();
+        }
+
+        $includeGroupEmployeeIds = $this->employeeIdsForGroups($includeGroupIds, $event);
+        $excludeGroupEmployeeIds = $this->employeeIdsForGroups($excludeGroupIds, $event);
 
         $includeIds = $this->mergeIds($includeEmployeeIds, $includeGroupEmployeeIds);
         $excludeIds = $this->mergeIds($excludeEmployeeIds, $excludeGroupEmployeeIds);
 
-        if (! empty($includeIds)) {
-            $base = $base->whereIn('id', $includeIds);
-        }
+        $base = Employee::query()
+            ->where('organization_id', $event->organization_id)
+            ->whereIn('id', $includeIds)
+            ->orderBy('name')
+            ->get();
 
         if (! empty($excludeIds)) {
             $base = $base->whereNotIn('id', $excludeIds);
-        }
-
-        if (! empty($excludePrizeIds)) {
-            $excludedWinnerIds = PrizeWinner::query()
-                ->whereIn('prize_id', $excludePrizeIds)
-                ->pluck('employee_id')
-                ->unique()
-                ->values()
-                ->all();
-
-            if (! empty($excludedWinnerIds)) {
-                $base = $base->whereNotIn('id', $excludedWinnerIds);
-            }
         }
 
         if (! $allowRepeatWithinPrize && $currentPrizeId) {
@@ -104,23 +89,32 @@ class EligibleEmployeesService
             $prize->rules()->where('type', \App\Models\PrizeRule::TYPE_INCLUDE_GROUP)->pluck('ref_id')->all(),
             $prize->rules()->where('type', \App\Models\PrizeRule::TYPE_EXCLUDE_EMPLOYEE)->pluck('ref_id')->all(),
             $prize->rules()->where('type', \App\Models\PrizeRule::TYPE_EXCLUDE_GROUP)->pluck('ref_id')->all(),
-            $prize->rules()->where('type', \App\Models\PrizeRule::TYPE_EXCLUDE_PRIZE_WINNERS)->pluck('ref_id')->all(),
             $prize->allow_repeat_within_prize,
             $prize->id,
         );
     }
 
-    private function employeeIdsForGroups(array $groupIds): array
+    private function employeeIdsForGroups(array $groupIds, ?LotteryEvent $event = null): array
     {
         if (empty($groupIds)) {
             return [];
         }
 
-        return EmployeeGroup::query()
+        $systemGroupService = app(SystemGroupService::class);
+
+        $groups = EmployeeGroup::query()
             ->whereIn('id', $groupIds)
             ->with('employees')
-            ->get()
-            ->flatMap(fn (EmployeeGroup $group) => $group->employees->pluck('id'))
+            ->get();
+
+        return $groups
+            ->flatMap(function (EmployeeGroup $group) use ($systemGroupService) {
+                if ($group->isSystemGroup()) {
+                    return $systemGroupService->getMemberIdsForGroup($group);
+                }
+
+                return $group->employees->pluck('id');
+            })
             ->unique()
             ->values()
             ->all();

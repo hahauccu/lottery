@@ -81,7 +81,8 @@ class EmployeeGroupResource extends Resource
         $tenant = Filament::getTenant();
 
         return parent::getEloquentQuery()
-            ->when($tenant, fn (Builder $query) => $query->where('organization_id', $tenant->getKey()));
+            ->when($tenant, fn (Builder $query) => $query->where('organization_id', $tenant->getKey()))
+            ->whereNull('system_key');
     }
 
     public static function getPages(): array

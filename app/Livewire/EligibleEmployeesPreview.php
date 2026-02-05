@@ -23,8 +23,6 @@ class EligibleEmployeesPreview extends Component
 
     public array $excludeGroupIds = [];
 
-    public array $excludePrizeIds = [];
-
     public bool $allowRepeatWithinPrize = false;
 
     public ?int $currentPrizeId = null;
@@ -90,7 +88,6 @@ class EligibleEmployeesPreview extends Component
                 $this->includeGroupIds,
                 $this->excludeEmployeeIds,
                 $this->excludeGroupIds,
-                $this->excludePrizeIds,
                 $this->allowRepeatWithinPrize,
                 $this->currentPrizeId
             );

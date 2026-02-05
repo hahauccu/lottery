@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\SystemGroupService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,6 +32,10 @@ class LotteryEvent extends Model
             } while (self::where('brand_code', $code)->exists());
 
             $event->brand_code = $code;
+        });
+
+        static::created(function (LotteryEvent $event) {
+            app(SystemGroupService::class)->ensureEventSystemGroups($event);
         });
     }
 

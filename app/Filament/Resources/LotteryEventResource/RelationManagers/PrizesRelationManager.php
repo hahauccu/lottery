@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\EmployeeGroup;
 use App\Models\Prize;
 use App\Models\PrizeRule;
+use App\Services\SystemGroupService;
 use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
@@ -27,7 +28,6 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
 
@@ -44,7 +44,17 @@ class PrizesRelationManager extends RelationManager
                         TextInput::make('name')
                             ->label('獎項名稱')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->unique(
+                                table: Prize::class,
+                                column: 'name',
+                                ignoreRecord: true,
+                                modifyRuleUsing: fn ($rule) => $rule
+                                    ->where('lottery_event_id', $this->getOwnerRecord()->getKey())
+                            )
+                            ->validationMessages([
+                                'unique' => '此活動已有相同名稱的獎項',
+                            ]),
                         TextInput::make('winners_count')
                             ->label('中獎人數')
                             ->numeric()
@@ -119,15 +129,35 @@ class PrizesRelationManager extends RelationManager
                     ])
                     ->columns(2),
                 Section::make('抽獎範圍')
-                    ->description('包含為聯集，排除優先。重複包含不影響抽獎機率。')
+                    ->description('包含為聯集，排除優先。未選任何包含群組或員工時，可抽人數為 0。')
                     ->schema([
                         Select::make('include_group_ids')
                             ->label('包含群組')
-                            ->options(fn () => EmployeeGroup::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
+                            ->options(function () {
+                                $event = $this->getOwnerRecord();
+
+                                $systemGroups = app(SystemGroupService::class)->getSystemGroupsForEvent($event);
+
+                                $customGroups = EmployeeGroup::query()
+                                    ->where('organization_id', Filament::getTenant()?->getKey())
+                                    ->whereNull('system_key')
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id');
+
+                                $options = [];
+
+                                if ($systemGroups->isNotEmpty()) {
+                                    $options['系統群組'] = $systemGroups->mapWithKeys(fn ($g) => [
+                                        $g->id => '🔴 '.$g->name,
+                                    ])->all();
+                                }
+
+                                if ($customGroups->isNotEmpty()) {
+                                    $options['自訂群組'] = $customGroups->all();
+                                }
+
+                                return $options;
+                            })
                             ->multiple()
                             ->searchable()
                             ->preload()
@@ -147,11 +177,31 @@ class PrizesRelationManager extends RelationManager
                             ->dehydrated(false),
                         Select::make('exclude_group_ids')
                             ->label('排除群組')
-                            ->options(fn () => EmployeeGroup::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
+                            ->options(function () {
+                                $event = $this->getOwnerRecord();
+
+                                $systemGroups = app(SystemGroupService::class)->getSystemGroupsForEvent($event);
+
+                                $customGroups = EmployeeGroup::query()
+                                    ->where('organization_id', Filament::getTenant()?->getKey())
+                                    ->whereNull('system_key')
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id');
+
+                                $options = [];
+
+                                if ($systemGroups->isNotEmpty()) {
+                                    $options['系統群組'] = $systemGroups->mapWithKeys(fn ($g) => [
+                                        $g->id => '🔴 '.$g->name,
+                                    ])->all();
+                                }
+
+                                if ($customGroups->isNotEmpty()) {
+                                    $options['自訂群組'] = $customGroups->all();
+                                }
+
+                                return $options;
+                            })
                             ->multiple()
                             ->searchable()
                             ->preload()
@@ -169,20 +219,6 @@ class PrizesRelationManager extends RelationManager
                             ->preload()
                             ->live()
                             ->dehydrated(false),
-                        Select::make('exclude_prize_ids')
-                            ->label('排除其他獎項中獎者')
-                            ->options(fn (?Prize $record) => $this->getOwnerRecord()
-                                ->prizes()
-                                ->when($record, fn (Builder $query) => $query->whereKeyNot($record->getKey()))
-                                ->orderBy('sort_order')
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->live()
-                            ->dehydrated(false),
                         LivewireComponent::make(EligibleEmployeesPreview::class, fn (Get $get, ?Prize $record) => [
                             'context' => 'prize',
                             'organizationId' => Filament::getTenant()?->getKey(),
@@ -191,7 +227,6 @@ class PrizesRelationManager extends RelationManager
                             'includeGroupIds' => $get('include_group_ids') ?? [],
                             'excludeEmployeeIds' => $get('exclude_employee_ids') ?? [],
                             'excludeGroupIds' => $get('exclude_group_ids') ?? [],
-                            'excludePrizeIds' => $get('exclude_prize_ids') ?? [],
                             'allowRepeatWithinPrize' => (bool) ($get('allow_repeat_within_prize') ?? false),
                             'currentPrizeId' => $record?->id,
                         ])
@@ -202,7 +237,6 @@ class PrizesRelationManager extends RelationManager
                                 $get('include_group_ids'),
                                 $get('exclude_employee_ids'),
                                 $get('exclude_group_ids'),
-                                $get('exclude_prize_ids'),
                                 $get('allow_repeat_within_prize'),
                             ])))
                             ->columnSpanFull(),
@@ -351,7 +385,6 @@ class PrizesRelationManager extends RelationManager
             'include_group_ids',
             'exclude_employee_ids',
             'exclude_group_ids',
-            'exclude_prize_ids',
         ]);
     }
 
@@ -372,10 +405,6 @@ class PrizesRelationManager extends RelationManager
                 ->all(),
             'exclude_group_ids' => $record->rules()
                 ->where('type', PrizeRule::TYPE_EXCLUDE_GROUP)
-                ->pluck('ref_id')
-                ->all(),
-            'exclude_prize_ids' => $record->rules()
-                ->where('type', PrizeRule::TYPE_EXCLUDE_PRIZE_WINNERS)
                 ->pluck('ref_id')
                 ->all(),
         ];
@@ -405,10 +434,6 @@ class PrizesRelationManager extends RelationManager
 
         foreach (array_unique($state['exclude_group_ids'] ?? []) as $id) {
             $rules[] = ['type' => PrizeRule::TYPE_EXCLUDE_GROUP, 'ref_id' => $id];
-        }
-
-        foreach (array_unique($state['exclude_prize_ids'] ?? []) as $id) {
-            $rules[] = ['type' => PrizeRule::TYPE_EXCLUDE_PRIZE_WINNERS, 'ref_id' => $id];
         }
 
         return $rules;

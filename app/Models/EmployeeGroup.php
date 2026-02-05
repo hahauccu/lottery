@@ -11,6 +11,9 @@ class EmployeeGroup extends Model
     protected $fillable = [
         'organization_id',
         'name',
+        'system_key',
+        'lottery_event_id',
+        'prize_id',
     ];
 
     public function organization(): BelongsTo
@@ -18,8 +21,23 @@ class EmployeeGroup extends Model
         return $this->belongsTo(Organization::class);
     }
 
+    public function lotteryEvent(): BelongsTo
+    {
+        return $this->belongsTo(LotteryEvent::class);
+    }
+
+    public function prize(): BelongsTo
+    {
+        return $this->belongsTo(Prize::class);
+    }
+
     public function employees(): BelongsToMany
     {
         return $this->belongsToMany(Employee::class, 'employee_group_employee')->withTimestamps();
+    }
+
+    public function isSystemGroup(): bool
+    {
+        return $this->system_key !== null;
     }
 }

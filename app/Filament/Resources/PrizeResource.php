@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\EmployeeGroup;
 use App\Models\LotteryEvent;
 use App\Models\Prize;
+use App\Services\SystemGroupService;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Livewire as LivewireComponent;
@@ -57,7 +58,17 @@ class PrizeResource extends Resource
                         TextInput::make('name')
                             ->label('獎項名稱')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->unique(
+                                table: Prize::class,
+                                column: 'name',
+                                ignoreRecord: true,
+                                modifyRuleUsing: fn ($rule, Get $get, ?Prize $record) => $rule
+                                    ->where('lottery_event_id', $get('lottery_event_id') ?? $record?->lottery_event_id)
+                            )
+                            ->validationMessages([
+                                'unique' => '此活動已有相同名稱的獎項',
+                            ]),
                         TextInput::make('winners_count')
                             ->label('中獎人數')
                             ->numeric()
@@ -128,15 +139,38 @@ class PrizeResource extends Resource
                     ])
                     ->columns(2),
                 Section::make('抽獎範圍')
-                    ->description('包含為聯集，排除優先。重複包含不影響抽獎機率。')
+                    ->description('包含為聯集，排除優先。未選任何包含群組或員工時，可抽人數為 0。')
                     ->schema([
                         Select::make('include_group_ids')
                             ->label('包含群組')
-                            ->options(fn () => EmployeeGroup::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
+                            ->options(function (Get $get) {
+                                $eventId = $get('lottery_event_id');
+                                $event = $eventId ? LotteryEvent::find($eventId) : null;
+
+                                $systemGroups = $event
+                                    ? app(SystemGroupService::class)->getSystemGroupsForEvent($event)
+                                    : collect();
+
+                                $customGroups = EmployeeGroup::query()
+                                    ->where('organization_id', Filament::getTenant()?->getKey())
+                                    ->whereNull('system_key')
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id');
+
+                                $options = [];
+
+                                if ($systemGroups->isNotEmpty()) {
+                                    $options['系統群組'] = $systemGroups->mapWithKeys(fn ($g) => [
+                                        $g->id => '🔴 '.$g->name,
+                                    ])->all();
+                                }
+
+                                if ($customGroups->isNotEmpty()) {
+                                    $options['自訂群組'] = $customGroups->all();
+                                }
+
+                                return $options;
+                            })
                             ->multiple()
                             ->searchable()
                             ->preload()
@@ -156,11 +190,34 @@ class PrizeResource extends Resource
                             ->dehydrated(false),
                         Select::make('exclude_group_ids')
                             ->label('排除群組')
-                            ->options(fn () => EmployeeGroup::query()
-                                ->where('organization_id', Filament::getTenant()?->getKey())
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
+                            ->options(function (Get $get) {
+                                $eventId = $get('lottery_event_id');
+                                $event = $eventId ? LotteryEvent::find($eventId) : null;
+
+                                $systemGroups = $event
+                                    ? app(SystemGroupService::class)->getSystemGroupsForEvent($event)
+                                    : collect();
+
+                                $customGroups = EmployeeGroup::query()
+                                    ->where('organization_id', Filament::getTenant()?->getKey())
+                                    ->whereNull('system_key')
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id');
+
+                                $options = [];
+
+                                if ($systemGroups->isNotEmpty()) {
+                                    $options['系統群組'] = $systemGroups->mapWithKeys(fn ($g) => [
+                                        $g->id => '🔴 '.$g->name,
+                                    ])->all();
+                                }
+
+                                if ($customGroups->isNotEmpty()) {
+                                    $options['自訂群組'] = $customGroups->all();
+                                }
+
+                                return $options;
+                            })
                             ->multiple()
                             ->searchable()
                             ->preload()
@@ -178,18 +235,6 @@ class PrizeResource extends Resource
                             ->preload()
                             ->live()
                             ->dehydrated(false),
-                        Select::make('exclude_prize_ids')
-                            ->label('排除其他獎項中獎者')
-                            ->options(fn (Get $get) => Prize::query()
-                                ->where('lottery_event_id', $get('lottery_event_id'))
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->all())
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->live()
-                            ->dehydrated(false),
                         LivewireComponent::make(EligibleEmployeesPreview::class, fn (Get $get, ?Prize $record) => [
                             'context' => 'prize',
                             'organizationId' => Filament::getTenant()?->getKey(),
@@ -198,7 +243,6 @@ class PrizeResource extends Resource
                             'includeGroupIds' => $get('include_group_ids') ?? [],
                             'excludeEmployeeIds' => $get('exclude_employee_ids') ?? [],
                             'excludeGroupIds' => $get('exclude_group_ids') ?? [],
-                            'excludePrizeIds' => $get('exclude_prize_ids') ?? [],
                             'allowRepeatWithinPrize' => (bool) ($get('allow_repeat_within_prize') ?? false),
                             'currentPrizeId' => $record?->id,
                         ])
@@ -209,7 +253,6 @@ class PrizeResource extends Resource
                                 $get('include_group_ids'),
                                 $get('exclude_employee_ids'),
                                 $get('exclude_group_ids'),
-                                $get('exclude_prize_ids'),
                                 $get('allow_repeat_within_prize'),
                             ])))
                             ->columnSpanFull(),

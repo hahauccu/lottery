@@ -41,6 +41,8 @@ class LotteryDrawService
                 ]));
             }
 
+            $this->syncPrizeWinnersGroupIfCompleted($prize);
+
             return PrizeWinner::query()
                 ->whereKey($created->pluck('id')->all())
                 ->with('employee')
@@ -58,9 +60,18 @@ class LotteryDrawService
             ]));
         }
 
+        $this->syncPrizeWinnersGroupIfCompleted($prize);
+
         return PrizeWinner::query()
             ->whereKey($created->pluck('id')->all())
             ->with('employee')
             ->get();
+    }
+
+    private function syncPrizeWinnersGroupIfCompleted(Prize $prize): void
+    {
+        if ($prize->winners()->count() >= $prize->winners_count) {
+            app(SystemGroupService::class)->syncPrizeWinnersGroup($prize);
+        }
     }
 }
