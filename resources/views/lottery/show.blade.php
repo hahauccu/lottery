@@ -27,19 +27,6 @@
             background-position: center;
         }
 
-        .slot-window {
-            background: rgba(15, 23, 42, 0.55);
-            border: 1px solid rgba(148, 163, 184, 0.20);
-            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-        }
-
-        .slot-reel {
-            font-variant-numeric: tabular-nums;
-            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-        }
-
         .lotto-canvas-wrap {
             width: 100%;
             height: 100%;
@@ -51,10 +38,6 @@
             width: 100%;
             height: 100%;
             display: block;
-        }
-
-        .slot-hint {
-            opacity: 0.85;
         }
 
         .lottery-winners-hidden {
@@ -120,24 +103,10 @@
         </div>
 
         <div id="lottery-stage" class="relative flex min-h-[100svh] flex-col items-center justify-center gap-6 px-6 text-center">
-            <div id="test-overlay" class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center">
-                <div class="absolute inset-0 bg-black/70"></div>
-                <div class="relative mx-auto max-w-4xl px-6 text-center">
-                    <div class="text-xs font-semibold tracking-[0.4em] text-white/80">TEST MODE</div>
-                    <div id="test-overlay-text" class="mt-4 text-5xl font-black tracking-widest text-white sm:text-7xl">
-                        DRAWING
-                    </div>
-                    <div class="mt-5 text-sm text-white/70">（這個效果應該一定看得出來有不同）</div>
-                </div>
-            </div>
-
             <h1 class="text-4xl font-semibold tracking-wider text-white/95 sm:text-6xl" id="event-name">
                 {{ $currentPrize?->name ?? $event->name }}
             </h1>
 
-            <div id="slot-display" class="slot-reel hidden text-3xl font-semibold tracking-widest text-white/90 sm:text-5xl">
-                <span class="text-white/85">抽獎中…</span>
-            </div>
             <div id="lotto-canvas-wrap" class="lotto-canvas-wrap hidden">
                 <canvas id="lotto-canvas" class="lotto-canvas"></canvas>
             </div>
@@ -203,6 +172,32 @@
         </div>
 
     </div>
+
+    {{-- 彈幕容器 --}}
+    <div id="danmaku-container" class="hidden fixed inset-0 pointer-events-none z-20 overflow-hidden"></div>
+
+    <style>
+    .danmaku-item {
+        position: absolute;
+        white-space: nowrap;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: white;
+        text-shadow:
+            -1px -1px 0 rgba(0,0,0,0.8),
+            1px -1px 0 rgba(0,0,0,0.8),
+            -1px 1px 0 rgba(0,0,0,0.8),
+            1px 1px 0 rgba(0,0,0,0.8),
+            0 0 8px rgba(0,0,0,0.6);
+        animation: danmaku-scroll linear forwards;
+        pointer-events: none;
+    }
+
+    @keyframes danmaku-scroll {
+        from { transform: translateX(0); }
+        to { transform: translateX(-120vw); }
+    }
+    </style>
 
 </body>
 </html>

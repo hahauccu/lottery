@@ -10,7 +10,6 @@ const initLottery = () => {
     const eventNameEl = document.getElementById('event-name');
     const winnerListEl = document.getElementById('winner-list');
     const winnersContainerEl = document.getElementById('winners-container');
-    const slotDisplayEl = document.getElementById('slot-display');
     const lottoWrapEl = document.getElementById('lotto-canvas-wrap');
     const lottoCanvasEl = document.getElementById('lotto-canvas');
     const drawButtonEl = document.getElementById('draw-button');
@@ -41,6 +40,12 @@ const initLottery = () => {
         isPrizesPreviewMode: false,
         showPrizesPreview: config.showPrizesPreview ?? false,
         allPrizes: config.allPrizes ?? [],
+    };
+
+    const escapeHtml = (str) => {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     };
 
     const modeLabel = (mode) => (mode === 'one_by_one' ? '逐一抽出' : '一次全抽');
@@ -105,10 +110,10 @@ const initLottery = () => {
         const slice = state.winners.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
         winnerListEl.innerHTML = slice
             .map((winner) => {
-                const details = [winner.employee_email, winner.employee_phone].filter(Boolean).join(' · ');
+                const details = [winner.employee_email, winner.employee_phone].filter(Boolean).map(escapeHtml).join(' · ');
                 return `
                     <li class="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                        <span class="font-semibold">${winner.employee_name ?? ''}</span>
+                        <span class="font-semibold">${escapeHtml(winner.employee_name ?? '')}</span>
                         <span class="text-sm text-slate-200/70">${details}</span>
                     </li>
                 `;
@@ -157,10 +162,6 @@ const initLottery = () => {
         const isBigTreasureChest = isBigTreasureChestStyle(currentStyle);
         const isCanvas = isCanvasStyle(currentStyle);
 
-        if (slotDisplayEl) {
-            slotDisplayEl.classList.toggle('hidden', !state.isDrawing || isCanvas);
-        }
-
         if (lottoWrapEl) {
             lottoWrapEl.classList.toggle('hidden', !isCanvas);
         }
@@ -182,7 +183,7 @@ const initLottery = () => {
                 // eligibleNames 未定義時預設為 0，避免顯示錯誤的卡片數量
                 const eligibleCount = state.eligibleNames?.length ?? 0;
                 const actualCanDraw = Math.min(remaining, eligibleCount);
-                const cardCount = state.currentPrize?.drawMode === 'one_by_one' ? 1 : Math.min(actualCanDraw, 9);
+                const cardCount = state.currentPrize?.drawMode === 'one_by_one' ? Math.min(1, actualCanDraw) : Math.min(actualCanDraw, 9);
                 if (cardCount > 0) {
                     scratchCard.showCards(cardCount);
                 }
@@ -198,7 +199,7 @@ const initLottery = () => {
                 // eligibleNames 未定義時預設為 0，避免顯示錯誤的寶箱數量
                 const eligibleCount = state.eligibleNames?.length ?? 0;
                 const actualCanDraw = Math.min(remaining, eligibleCount);
-                const chestCount = state.currentPrize?.drawMode === 'one_by_one' ? 1 : Math.min(actualCanDraw, 9);
+                const chestCount = state.currentPrize?.drawMode === 'one_by_one' ? Math.min(1, actualCanDraw) : Math.min(actualCanDraw, 9);
                 if (chestCount > 0) {
                     treasureChest.showChests(chestCount);
                 }
@@ -277,8 +278,8 @@ const initLottery = () => {
             if (resultGridEl) {
                 resultGridEl.innerHTML = slice.map((w) => `
                     <div class="winner-card rounded-xl border border-amber-400/30 bg-amber-900/20 p-4 text-center">
-                        <div class="text-xl font-bold text-white">${w.employee_name ?? ''}</div>
-                        <div class="text-sm text-white/60 mt-1">${w.employee_email || ''}</div>
+                        <div class="text-xl font-bold text-white">${escapeHtml(w.employee_name ?? '')}</div>
+                        <div class="text-sm text-white/60 mt-1">${escapeHtml(w.employee_email || '')}</div>
                     </div>
                 `).join('');
             }
@@ -348,7 +349,7 @@ const initLottery = () => {
                 return `
                     <div class="prize-card rounded-xl border ${statusClass} p-5">
                         <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-xl font-bold text-white">${prize.name}</h3>
+                            <h3 class="text-xl font-bold text-white">${escapeHtml(prize.name)}</h3>
                             ${statusText}
                         </div>
                         <div class="text-white/70">
@@ -1097,18 +1098,16 @@ const initLottery = () => {
     const lerp = (start, end, amount) => start + (end - start) * amount;
     const rand = (min, max) => min + Math.random() * (max - min);
     const isLottoAirStyle = (style) => style === 'lotto_air';
-    const isLotto2Style = (style) => style === 'lotto2';
     const isRedPacketStyle = (style) => style === 'red_packet';
     const isScratchCardStyle = (style) => style === 'scratch_card';
     const isTreasureChestStyle = (style) => style === 'treasure_chest';
     const isBigTreasureChestStyle = (style) => style === 'big_treasure_chest';
     const isCanvasStyle = (style) => isLottoAirStyle(style)
-        || isLotto2Style(style)
         || isRedPacketStyle(style)
         || isScratchCardStyle(style)
         || isTreasureChestStyle(style)
         || isBigTreasureChestStyle(style);
-    const isLottoStyle = (style) => isLottoAirStyle(style) || isLotto2Style(style);
+    const isLottoStyle = (style) => isLottoAirStyle(style);
     const mapRange = (value, min, max) => min + (max - min) * ((value - 1) / 9);
     const TAU = Math.PI * 2;
 
@@ -3050,7 +3049,7 @@ const initLottery = () => {
                         }
 
                         // 檢查是否全部揭曉
-                        if (revealedCount >= cards.length && revealResolve) {
+                        if (revealedCount >= cards.filter(c => c.winner).length && revealResolve) {
                             setTimeout(() => {
                                 if (revealResolve) {
                                     revealResolve();
@@ -4739,19 +4738,6 @@ const initLottery = () => {
     // [已刪除舊版 lotto/lotto3 相關函數]
     // 舊版樂透動畫已整合至 lottoAir 模組
 
-    const animateFlash = (element) => {
-        if (!element || !element.animate) return;
-
-        element.animate(
-            [
-                { transform: 'scale(1)', filter: 'brightness(1)' },
-                { transform: 'scale(1.03)', filter: 'brightness(1.35)' },
-                { transform: 'scale(1)', filter: 'brightness(1)' },
-            ],
-            { duration: 750, easing: 'ease' }
-        );
-    };
-
     const animateListItem = (element) => {
         if (!element || !element.animate) return;
 
@@ -4762,176 +4748,6 @@ const initLottery = () => {
             ],
             { duration: 520, easing: 'cubic-bezier(.2,.8,.2,1)' }
         );
-    };
-
-    const revealWithTypewriter = async (text) => {
-        if (!slotDisplayEl) return;
-
-        slotDisplayEl.textContent = '';
-        for (const char of text) {
-            slotDisplayEl.textContent += char;
-            await new Promise((r) => setTimeout(r, 42));
-        }
-    };
-
-    const revealWithScramble = async (text) => {
-        if (!slotDisplayEl) return;
-
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789抽獎中獎';
-        const maxSteps = 18;
-
-        for (let step = 0; step <= maxSteps; step += 1) {
-            const ratio = step / maxSteps;
-            const keep = Math.floor(text.length * ratio);
-            const head = text.slice(0, keep);
-            const tail = Array.from({ length: text.length - keep })
-                .map(() => chars[Math.floor(Math.random() * chars.length)])
-                .join('');
-
-            slotDisplayEl.textContent = head + tail;
-            await new Promise((r) => setTimeout(r, 36));
-        }
-
-        slotDisplayEl.textContent = text;
-    };
-
-    const revealWithFlip = async (text) => {
-        if (!slotDisplayEl || !slotDisplayEl.animate) {
-            if (slotDisplayEl) slotDisplayEl.textContent = text;
-            return;
-        }
-
-        await slotDisplayEl.animate(
-            [{ transform: 'rotateX(0deg)' }, { transform: 'rotateX(90deg)' }],
-            { duration: 240, easing: 'ease-in' }
-        ).finished;
-
-        slotDisplayEl.textContent = text;
-
-        await slotDisplayEl.animate(
-            [{ transform: 'rotateX(90deg)' }, { transform: 'rotateX(0deg)' }],
-            { duration: 260, easing: 'ease-out' }
-        ).finished;
-    };
-
-    const runSpin = async (durationMs = 900) => {
-        if (!slotDisplayEl) return;
-
-        const startedAt = Date.now();
-        let tickCount = 0;
-        while (Date.now() - startedAt < durationMs) {
-            slotDisplayEl.textContent = randomLabel();
-            // 每 3 次播放一次滴答聲（約 120ms）
-            if (tickCount % 3 === 0) {
-                sfx.playSlotTick();
-            }
-            tickCount++;
-            // eslint-disable-next-line no-await-in-loop
-            await new Promise((r) => setTimeout(r, 40));
-        }
-    };
-
-    const testOverlayEl = document.getElementById('test-overlay');
-    const testOverlayTextEl = document.getElementById('test-overlay-text');
-
-    const runTestOverlay = async (finalText) => {
-        if (!testOverlayEl || !testOverlayTextEl || !testOverlayEl.animate) {
-            return;
-        }
-
-        testOverlayEl.classList.remove('hidden');
-        testOverlayEl.classList.add('flex');
-
-        testOverlayTextEl.textContent = 'DRAWING';
-
-        const hue = testOverlayEl.animate(
-            [
-                { filter: 'hue-rotate(0deg) saturate(1.0)', transform: 'scale(1)' },
-                { filter: 'hue-rotate(180deg) saturate(1.4)', transform: 'scale(1.02)' },
-                { filter: 'hue-rotate(360deg) saturate(1.0)', transform: 'scale(1)' },
-            ],
-            { duration: 900, iterations: 1, easing: 'linear' }
-        );
-
-        const shake = testOverlayTextEl.animate(
-            [
-                { transform: 'translateX(0px) scale(1)', letterSpacing: '0.25em' },
-                { transform: 'translateX(-10px) scale(1.03)', letterSpacing: '0.35em' },
-                { transform: 'translateX(10px) scale(1.03)', letterSpacing: '0.35em' },
-                { transform: 'translateX(-8px) scale(1.02)', letterSpacing: '0.30em' },
-                { transform: 'translateX(8px) scale(1.02)', letterSpacing: '0.30em' },
-                { transform: 'translateX(0px) scale(1)', letterSpacing: '0.25em' },
-            ],
-            { duration: 900, iterations: 1, easing: 'cubic-bezier(.2,.8,.2,1)' }
-        );
-
-        const ticker = setInterval(() => {
-            testOverlayTextEl.textContent = randomLabel().replace(' ', '');
-        }, 50);
-
-        await Promise.allSettled([hue.finished, shake.finished]);
-        clearInterval(ticker);
-
-        testOverlayTextEl.textContent = finalText;
-
-        await testOverlayTextEl.animate(
-            [
-                { transform: 'scale(1)', filter: 'brightness(1)' },
-                { transform: 'scale(1.12)', filter: 'brightness(1.5)' },
-                { transform: 'scale(1)', filter: 'brightness(1)' },
-            ],
-            { duration: 520, easing: 'ease' }
-        ).finished;
-
-        await new Promise((r) => setTimeout(r, 250));
-
-        testOverlayEl.classList.add('hidden');
-        testOverlayEl.classList.remove('flex');
-    };
-
-    const revealWithRoulette = async (text) => {
-        if (!slotDisplayEl) return;
-
-        const totalDuration = 1200;
-        const startedAt = Date.now();
-        let interval = 80;
-
-        while (Date.now() - startedAt < totalDuration) {
-            slotDisplayEl.textContent = randomLabel();
-            // eslint-disable-next-line no-await-in-loop
-            await new Promise((r) => setTimeout(r, interval));
-
-            const progress = (Date.now() - startedAt) / totalDuration;
-            interval = 80 + progress * 180;
-        }
-
-        slotDisplayEl.textContent = text;
-    };
-
-    const revealWinner = async (winnerName, delayMs = 0) => {
-        if (!slotDisplayEl) return null;
-
-        const name = winnerName || '（未知）';
-        let revealedBall = null;
-
-        if (style === 'test') {
-            await runTestOverlay(name);
-            slotDisplayEl.textContent = name;
-        } else if (style === 'typewriter') {
-            await revealWithTypewriter(name);
-        } else if (style === 'scramble') {
-            await revealWithScramble(name);
-        } else if (style === 'flip') {
-            await revealWithFlip(name);
-        } else if (style === 'roulette') {
-            await revealWithRoulette(name);
-        } else {
-            await runSpin(950);
-            slotDisplayEl.textContent = name;
-        }
-
-        animateFlash(slotDisplayEl);
-        return revealedBall;
     };
 
     const draw = async () => {
@@ -4955,9 +4771,8 @@ const initLottery = () => {
 
         render();
 
-        const style = state.currentPrize?.animationStyle ?? 'slot';
+        const style = state.currentPrize?.animationStyle ?? 'lotto_air';
         const useLottoAir = isLottoAirStyle(style);
-        const useLotto2 = isLotto2Style(style);
         const useRedPacket = isRedPacketStyle(style);
         const useScratchCard = isScratchCardStyle(style);
         const useTreasureChest = isTreasureChestStyle(style);
@@ -4965,24 +4780,10 @@ const initLottery = () => {
 
         // 用於追蹤持續播放的音效
         let ballRumbleSound = null;
-        let drumRollSound = null;
 
         try {
-            const minSpin = (useLottoAir || useLotto2 || useRedPacket || useScratchCard || useTreasureChest || useBigTreasureChest)
-                ? Promise.resolve()
-                : runSpin(700);
             startDrawAudio();
             lottoTimerLabel = '';
-
-            // lotto2: 先啟動混合動畫，不等待 API 回應
-            if (useLotto2) {
-                lottoAir.ensureReady();
-                if (state.eligibleNames?.length) {
-                    lottoAir.ensureCount(state.eligibleNames.length);
-                }
-                lottoAir.start();
-                ballRumbleSound = sfx.playBallRumble();
-            }
 
             // 紅包雨：先啟動飄落動畫
             if (useRedPacket) {
@@ -5017,12 +4818,7 @@ const initLottery = () => {
                 body: JSON.stringify({}),
             });
 
-            await minSpin;
-
             if (!response.ok) {
-                if (useLotto2) {
-                    lottoAir.slowStopMachine();
-                }
                 if (useRedPacket) {
                     redPacketRain.stop();
                 }
@@ -5044,9 +4840,6 @@ const initLottery = () => {
             const winners = data?.winners ?? [];
 
             if (winners.length === 0) {
-                if (useLotto2) {
-                    lottoAir.slowStopMachine();
-                }
                 if (useRedPacket) {
                     redPacketRain.stop();
                 }
@@ -5059,10 +4852,6 @@ const initLottery = () => {
                 if (useBigTreasureChest) {
                     bigTreasureChest.stop();
                 }
-                if (slotDisplayEl && !useLottoAir && !useLotto2 && !useRedPacket && !useScratchCard && !useTreasureChest && !useBigTreasureChest) {
-                    slotDisplayEl.textContent = '沒有更多中獎者';
-                    animateFlash(slotDisplayEl);
-                }
                 // 可抽人數已用盡但名額未滿，若有中獎者則進入 resultMode
                 if (state.winners?.length > 0 && !isPrizeCompleted()) {
                     setTimeout(() => resultMode.show(), 2000);
@@ -5070,46 +4859,7 @@ const initLottery = () => {
                 return;
             }
 
-            if (useLotto2) {
-                // lotto2: API 回應後設定中獎者，等待抽球，最後緩慢停止
-                lottoAir.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
-                if (state.currentPrize?.drawMode === 'one_by_one') {
-                    lottoAir.setWinners([winners[0]?.employee_name ?? randomLabel()], {
-                        resetBalls: false,
-                        resetPicked: false,
-                    });
-                    // eslint-disable-next-line no-await-in-loop
-                    await lottoAir.waitForNextPick();
-                    state.winners = [...state.winners, winners[0]];
-                    render();
-
-                    const lastItem = winnerListEl?.lastElementChild;
-                    if (lastItem) {
-                        animateListItem(lastItem);
-                    }
-                } else {
-                    lottoAir.setWinners(
-                        winners.map((w) => w.employee_name ?? randomLabel()),
-                        { resetBalls: false, resetPicked: false }
-                    );
-                    for (const winner of winners) {
-                        // eslint-disable-next-line no-await-in-loop
-                        await lottoAir.waitForNextPick();
-                        state.winners = [...state.winners, winner];
-                        render();
-
-                        const lastItem = winnerListEl?.lastElementChild;
-                        if (lastItem) {
-                            animateListItem(lastItem);
-                        }
-
-                        // eslint-disable-next-line no-await-in-loop
-                        await new Promise((r) => setTimeout(r, 220));
-                    }
-                }
-                // 緩慢停止動畫
-                lottoAir.slowStopMachine();
-            } else if (useLottoAir) {
+            if (useLottoAir) {
                 lottoAir.ensureReady();
                 lottoAir.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
                 ballRumbleSound = sfx.playBallRumble();
@@ -5385,28 +5135,9 @@ const initLottery = () => {
                     await new Promise((r) => setTimeout(r, settleDelay));
                     bigTreasureChest.prepareNext();
                 }
-            } else {
-                const totalDuration = 10000;
-                const perWinnerDelay = Math.max(1200, Math.floor(totalDuration / Math.max(1, winners.length)));
-
-                for (const winner of winners) {
-                    // eslint-disable-next-line no-await-in-loop
-                    await revealWinner(winner.employee_name, perWinnerDelay);
-
-                    state.winners = [...state.winners, winner];
-                    render();
-
-                    const lastItem = winnerListEl?.lastElementChild;
-                    if (lastItem) {
-                        animateListItem(lastItem);
-                    }
-
-                    // eslint-disable-next-line no-await-in-loop
-                    await new Promise((r) => setTimeout(r, 220));
-                }
             }
         } catch {
-            if (useLotto2) {
+            if (useLottoAir) {
                 lottoAir.slowStopMachine();
             }
             if (useRedPacket) {
@@ -5425,13 +5156,13 @@ const initLottery = () => {
         } finally {
             // 停止持續播放的音效
             ballRumbleSound?.stop();
-            drumRollSound?.stop();
             stopDrawAudio();
             state.isDrawing = false;
             render();
 
             // 延遲檢查是否抽完，切換到結果模式
-            if (isPrizeCompleted()) {
+            const exhausted = (state.eligibleNames?.length === 0) && !isPrizeCompleted() && (state.winners?.length > 0);
+            if (isPrizeCompleted() || exhausted) {
                 sfx.playVictory();
                 setTimeout(() => resultMode.show(), 2000);
             }
@@ -5546,6 +5277,9 @@ const initLottery = () => {
         } else {
             lottoAir.stop();
         }
+        if (!isRedPacketStyle(nextPrize?.animationStyle)) {
+            redPacketRain.stop();
+        }
         if (!isScratchCardStyle(nextPrize?.animationStyle)) {
             scratchCard.stop();
         }
@@ -5609,6 +5343,12 @@ const initLottery = () => {
         window.Echo.channel(`lottery.${config.brandCode}`)
             .listen('.lottery.updated', (payload) => {
                 console.log('[lottery] websocket: lottery.updated', payload);
+
+                // 更新彈幕開關狀態（不受抽獎狀態影響）
+                if (payload.event?.danmaku_enabled !== undefined) {
+                    updateDanmakuContainer(payload.event.danmaku_enabled);
+                }
+
                 // 抽獎進行中不處理，避免狀態衝突
                 if (state.isDrawing) {
                     console.log('[lottery] ignored lottery.updated during drawing');
@@ -5658,10 +5398,70 @@ const initLottery = () => {
                         setTimeout(() => resultMode.show(), 2000);
                     }
                 }
+            })
+            .listen('.danmaku.sent', (payload) => {
+                console.log('[lottery] websocket: danmaku.sent', payload);
+                showDanmaku(payload.employee_name, payload.message);
             });
     }
 
     setInterval(pollPayload, 5000);
+
+    // ========== 彈幕功能 ==========
+    const danmakuContainer = document.getElementById('danmaku-container');
+    let danmakuLanes = [];
+    const laneCount = 5;
+    const laneHeight = 60;
+
+    const updateDanmakuContainer = (enabled) => {
+        if (!danmakuContainer) return;
+        danmakuContainer.classList.toggle('hidden', !enabled);
+    };
+
+    const showDanmaku = (employeeName, message) => {
+        if (!danmakuContainer || danmakuContainer.classList.contains('hidden')) {
+            return;
+        }
+
+        const laneIndex = findAvailableLane();
+        const top = 100 + laneIndex * laneHeight;
+
+        const danmakuEl = document.createElement('div');
+        danmakuEl.className = 'danmaku-item';
+        danmakuEl.style.top = `${top}px`;
+        danmakuEl.style.right = '0';
+        danmakuEl.textContent = `${employeeName}: ${message}`;
+
+        const duration = 8 + message.length * 0.05;
+        danmakuEl.style.animationDuration = `${duration}s`;
+
+        danmakuContainer.appendChild(danmakuEl);
+        danmakuLanes[laneIndex] = Date.now();
+
+        setTimeout(() => {
+            danmakuEl.remove();
+        }, duration * 1000);
+    };
+
+    const findAvailableLane = () => {
+        const now = Date.now();
+        const minGap = 2000;
+
+        let bestLane = 0;
+        let oldestTime = now;
+
+        for (let i = 0; i < laneCount; i++) {
+            const lastUsed = danmakuLanes[i] || 0;
+            if (now - lastUsed > minGap && lastUsed < oldestTime) {
+                oldestTime = lastUsed;
+                bestLane = i;
+            }
+        }
+
+        return bestLane;
+    };
+
+    updateDanmakuContainer(config.danmakuEnabled ?? false);
 
     render();
     if (isLottoAirStyle(state.currentPrize?.animationStyle)) {
