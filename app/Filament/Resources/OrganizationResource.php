@@ -22,6 +22,11 @@ use Filament\Tables\Table;
 
 class OrganizationResource extends Resource
 {
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->is_admin ?? false;
+    }
+
     protected static ?string $model = Organization::class;
 
     protected static bool $isScopedToTenant = false;

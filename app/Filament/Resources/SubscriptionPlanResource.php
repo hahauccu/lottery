@@ -18,6 +18,11 @@ use Filament\Tables\Table;
 
 class SubscriptionPlanResource extends Resource
 {
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->is_admin ?? false;
+    }
+
     protected static ?string $model = SubscriptionPlan::class;
 
     protected static bool $isScopedToTenant = false;
