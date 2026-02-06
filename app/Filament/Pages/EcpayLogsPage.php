@@ -13,9 +13,14 @@ class EcpayLogsPage extends Page
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationLabel = 'ECPay 日誌';
+    protected static ?string $navigationLabel = '系統日誌';
 
-    protected static ?string $title = 'ECPay 付款日誌';
+    protected static ?string $title = '系統日誌';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->is_admin ?? false;
+    }
 
     protected static ?string $navigationGroup = '系統管理';
 

@@ -34,11 +34,7 @@ class EcpayLogReader
                     $hours = $this->getDirectories($dayPath);
 
                     foreach ($hours as $hour) {
-                        $logFile = $dayPath.'/'.$hour.'/ecpay.log';
-
-                        if (! file_exists($logFile)) {
-                            continue;
-                        }
+                        $hourPath = $dayPath.'/'.$hour;
 
                         // 檢查日期範圍
                         $logDate = "{$year}-{$month}-{$day}";
@@ -49,9 +45,17 @@ class EcpayLogReader
                             continue;
                         }
 
-                        // 讀取日誌檔案
-                        $entries = $this->parseLogFile($logFile, $type);
-                        $logs = $logs->merge($entries);
+                        // 讀取 ecpay.log 和 admin.log
+                        foreach (['ecpay.log', 'admin.log'] as $logFilename) {
+                            $logFile = $hourPath.'/'.$logFilename;
+
+                            if (! file_exists($logFile)) {
+                                continue;
+                            }
+
+                            $entries = $this->parseLogFile($logFile, $type);
+                            $logs = $logs->merge($entries);
+                        }
                     }
                 }
             }
@@ -95,6 +99,17 @@ class EcpayLogReader
     {
         $data = $entry['data'] ?? [];
         $type = $entry['type'] ?? 'unknown';
+
+        if ($type === 'admin_action') {
+            return [
+                'time' => $entry['time'] ?? null,
+                'type' => $type,
+                'merchant_trade_no' => $data['user'] ?? null,
+                'amount' => null,
+                'status' => 'info',
+                'data' => $data,
+            ];
+        }
 
         // 提取常用欄位
         $merchantTradeNo = $data['merchant_trade_no']
@@ -182,6 +197,7 @@ class EcpayLogReader
             'notify' => '背景通知',
             'notify_result' => '通知處理結果',
             'result' => '前台返回',
+            'admin_action' => '後台操作',
         ];
     }
 }

@@ -36,6 +36,7 @@
                             <option value="notify">背景通知</option>
                             <option value="notify_result">通知處理結果</option>
                             <option value="result">前台返回</option>
+                            <option value="admin_action">後台操作</option>
                         </x-filament::input.select>
                     </x-filament::input.wrapper>
                 </div>
@@ -84,6 +85,7 @@
                                             'notify' => ['label' => '背景通知', 'color' => 'warning'],
                                             'notify_result' => ['label' => '通知處理', 'color' => 'gray'],
                                             'result' => ['label' => '前台返回', 'color' => 'success'],
+                                            'admin_action' => ['label' => '後台操作', 'color' => 'primary'],
                                             default => ['label' => $log['type'], 'color' => 'gray'],
                                         };
                                     @endphp
@@ -91,18 +93,33 @@
                                         {{ $typeConfig['label'] }}
                                     </x-filament::badge>
 
-                                    {{-- 訂單編號 --}}
-                                    @if($log['merchant_trade_no'])
-                                        <div class="font-mono text-sm truncate">
-                                            {{ $log['merchant_trade_no'] }}
-                                        </div>
-                                    @endif
+                                    @if($log['type'] === 'admin_action')
+                                        {{-- 使用者名稱 --}}
+                                        @if($log['merchant_trade_no'])
+                                            <div class="text-sm font-medium truncate">
+                                                {{ $log['merchant_trade_no'] }}
+                                            </div>
+                                        @endif
+                                        {{-- 請求 URL --}}
+                                        @if($log['data']['url'] ?? null)
+                                            <div class="font-mono text-xs text-gray-500 truncate max-w-xs">
+                                                {{ $log['data']['url'] }}
+                                            </div>
+                                        @endif
+                                    @else
+                                        {{-- 訂單編號 --}}
+                                        @if($log['merchant_trade_no'])
+                                            <div class="font-mono text-sm truncate">
+                                                {{ $log['merchant_trade_no'] }}
+                                            </div>
+                                        @endif
 
-                                    {{-- 金額 --}}
-                                    @if($log['amount'])
-                                        <div class="text-sm font-medium">
-                                            NT$ {{ number_format($log['amount']) }}
-                                        </div>
+                                        {{-- 金額 --}}
+                                        @if($log['amount'])
+                                            <div class="text-sm font-medium">
+                                                NT$ {{ number_format($log['amount']) }}
+                                            </div>
+                                        @endif
                                     @endif
                                 </div>
 
@@ -113,6 +130,7 @@
                                             'pending' => ['label' => '等待中', 'color' => 'warning'],
                                             'success' => ['label' => '成功', 'color' => 'success'],
                                             'failed' => ['label' => '失敗', 'color' => 'danger'],
+                                            'info' => ['label' => '記錄', 'color' => 'info'],
                                             default => ['label' => '未知', 'color' => 'gray'],
                                         };
                                     @endphp
