@@ -161,8 +161,7 @@ class PrizesRelationManager extends RelationManager
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->live()
-                            ->dehydrated(false),
+                            ->live(),
                         Select::make('include_employee_ids')
                             ->label('包含員工')
                             ->options(fn () => Employee::query()
@@ -173,8 +172,7 @@ class PrizesRelationManager extends RelationManager
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->live()
-                            ->dehydrated(false),
+                            ->live(),
                         Select::make('exclude_group_ids')
                             ->label('排除群組')
                             ->options(function () {
@@ -205,8 +203,7 @@ class PrizesRelationManager extends RelationManager
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->live()
-                            ->dehydrated(false),
+                            ->live(),
                         Select::make('exclude_employee_ids')
                             ->label('排除員工')
                             ->options(fn () => Employee::query()
@@ -217,8 +214,7 @@ class PrizesRelationManager extends RelationManager
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->live()
-                            ->dehydrated(false),
+                            ->live(),
                         LivewireComponent::make(EligibleEmployeesPreview::class, fn (Get $get, ?Prize $record) => [
                             'context' => 'prize',
                             'organizationId' => Filament::getTenant()?->getKey(),
