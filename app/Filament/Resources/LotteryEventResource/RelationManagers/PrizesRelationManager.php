@@ -293,6 +293,15 @@ class PrizesRelationManager extends RelationManager
 
                         return $record;
                     }),
+                \Filament\Tables\Actions\Action::make('switch_to_preview')
+                    ->label('切換至預覽畫面')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->action(function (): void {
+                        $event = $this->getOwnerRecord();
+                        $event->update(['current_prize_id' => null]);
+                        LotteryBroadcaster::dispatchUpdate($event->refresh());
+                    }),
             ])
             ->actions([
                 \Filament\Tables\Actions\Action::make('set_current')

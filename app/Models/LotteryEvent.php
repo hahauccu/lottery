@@ -38,6 +38,10 @@ class LotteryEvent extends Model
         static::created(function (LotteryEvent $event) {
             app(SystemGroupService::class)->ensureEventSystemGroups($event);
         });
+
+        static::updated(function (LotteryEvent $event) {
+            \Illuminate\Support\Facades\Cache::forget("winners:{$event->brand_code}");
+        });
     }
 
     protected $casts = [
