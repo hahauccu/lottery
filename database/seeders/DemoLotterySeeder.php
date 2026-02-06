@@ -98,6 +98,30 @@ class DemoLotterySeeder extends Seeder
             ],
         ];
 
+        $animationStyles = [
+            'lotto_air',
+            'lotto2',
+            'red_packet',
+            'scratch_card',
+            'treasure_chest',
+        ];
+
+        for ($i = 1; $i <= 20; $i++) {
+            $winnersCount = ($i % 3 === 0) ? 2 : 1;
+            $drawMode = $winnersCount > 1
+                ? Prize::DRAW_MODE_ALL_AT_ONCE
+                : Prize::DRAW_MODE_ONE_BY_ONE;
+            $prizeDefs[] = [
+                'name' => sprintf('加碼獎%02d', $i),
+                'winners_count' => $winnersCount,
+                'draw_mode' => $drawMode,
+                'animation_style' => $animationStyles[($i - 1) % count($animationStyles)],
+                'lotto_hold_seconds' => 5,
+                'allow_repeat_within_prize' => false,
+                'sort_order' => 5 + $i,
+            ];
+        }
+
         $prizeIds = [];
         foreach ($prizeDefs as $data) {
             $prize = Prize::updateOrCreate(
