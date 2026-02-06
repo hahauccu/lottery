@@ -9,6 +9,7 @@ use App\Models\EmployeeGroup;
 use App\Models\Prize;
 use App\Models\PrizeRule;
 use App\Services\SystemGroupService;
+use App\Services\EligibleEmployeesService;
 use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
@@ -308,6 +309,30 @@ class PrizesRelationManager extends RelationManager
                     ->label('設為目前獎項')
                     ->requiresConfirmation()
                     ->action(function (Prize $record): void {
+                        $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'big_treasure_chest'];
+
+                        if (! in_array($record->animation_style, $validStyles, true)) {
+                            Notification::make()
+                                ->danger()
+                                ->title('無法設為目前獎項')
+                                ->body("動畫風格「{$record->animation_style}」已不支援，請先編輯獎項選擇有效的動畫。")
+                                ->send();
+
+                            return;
+                        }
+
+                        $eligible = app(EligibleEmployeesService::class)->eligibleForStoredPrize($record);
+
+                        if ($eligible->isEmpty()) {
+                            Notification::make()
+                                ->danger()
+                                ->title('無法設為目前獎項')
+                                ->body('此獎項沒有可抽人員，請先設定包含群組或員工。')
+                                ->send();
+
+                            return;
+                        }
+
                         $event = $this->getOwnerRecord();
                         $event->update(['current_prize_id' => $record->getKey()]);
 
