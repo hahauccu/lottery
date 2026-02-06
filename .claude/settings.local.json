@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(./vendor/bin/pint:*)",
+      "Bash(php artisan test:*)",
+      "Bash(php artisan:*)",
+      "Bash(composer require:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+      "Bash(npx vite build:*)",
+      "Bash(php -l:*)"
     ]
   }
 }

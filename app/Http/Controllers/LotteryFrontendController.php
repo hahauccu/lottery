@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\DanmakuSent;
 use App\Events\PrizeWinnersUpdated;
+use App\Models\Employee;
 use App\Models\LotteryEvent;
 use App\Models\Prize;
 use App\Services\EligibleEmployeesService;
@@ -11,6 +13,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class LotteryFrontendController extends Controller
@@ -85,6 +90,7 @@ class LotteryFrontendController extends Controller
                 'won_at' => optional($winner->won_at)->toDateTimeString(),
             ])->values()->all(),
             'eligibleNames' => $eligibleNames,
+            'danmakuEnabled' => $event->danmaku_enabled,
             'csrfToken' => csrf_token(),
             'drawUrl' => route('lottery.draw', ['brandCode' => $event->brand_code]),
             'winnersUrl' => route('lottery.winners', ['brandCode' => $event->brand_code]),
@@ -189,6 +195,57 @@ class LotteryFrontendController extends Controller
                 'sequence' => $winner->sequence,
                 'won_at' => optional($winner->won_at)->toDateTimeString(),
             ])->values()->all(),
+        ]);
+    }
+
+    public function sendDanmaku(Request $request, string $brandCode): JsonResponse
+    {
+        $event = LotteryEvent::where('brand_code', $brandCode)->firstOrFail();
+
+        if (! $event->danmaku_enabled) {
+            return response()->json(['message' => 'danmaku_disabled'], 403);
+        }
+
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+            'message' => 'required|string|min:1|max:100',
+        ]);
+
+        $employee = Employee::query()
+            ->where('organization_id', $event->organization_id)
+            ->where('email', $validated['email'])
+            ->first();
+
+        if (! $employee) {
+            throw ValidationException::withMessages([
+                'email' => '找不到對應的員工資料，請確認您的 Email 正確',
+            ]);
+        }
+
+        $rateLimitKey = 'danmaku:'.$brandCode.':'.$validated['email'];
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            $seconds = RateLimiter::availableIn($rateLimitKey);
+            throw ValidationException::withMessages([
+                'message' => "發送太頻繁，請等待 {$seconds} 秒後再試",
+            ]);
+        }
+
+        RateLimiter::hit($rateLimitKey, 10);
+
+        $cleanMessage = strip_tags($validated['message']);
+        $cleanMessage = Str::limit($cleanMessage, 100, '');
+
+        event(new DanmakuSent(
+            $brandCode,
+            $employee->name,
+            $cleanMessage,
+            Str::uuid()->toString()
+        ));
+
+        return response()->json([
+            'success' => true,
+            'cooldown_seconds' => 10,
         ]);
     }
 }

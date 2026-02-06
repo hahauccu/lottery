@@ -54,6 +54,10 @@ class LotteryEventResource extends Resource
                             ->label('顯示獎項預覽')
                             ->helperText('啟用後前台會顯示所有獎項資訊（無當前獎項時自動顯示，或手動開啟）')
                             ->default(false),
+                        Toggle::make('danmaku_enabled')
+                            ->label('啟用彈幕')
+                            ->helperText('啟用後員工可在中獎清單頁面發送彈幕至抽獎頁面')
+                            ->default(false),
                         FileUpload::make('default_bg_image_path')
                             ->label('預設背景圖')
                             ->disk('public')
@@ -92,6 +96,11 @@ class LotteryEventResource extends Resource
                     }),
                 ToggleColumn::make('show_prizes_preview')
                     ->label('顯示獎項預覽')
+                    ->afterStateUpdated(function (LotteryEvent $record): void {
+                        LotteryBroadcaster::dispatchUpdate($record->refresh());
+                    }),
+                ToggleColumn::make('danmaku_enabled')
+                    ->label('彈幕')
                     ->afterStateUpdated(function (LotteryEvent $record): void {
                         LotteryBroadcaster::dispatchUpdate($record->refresh());
                     }),

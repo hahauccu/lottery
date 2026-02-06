@@ -20,6 +20,9 @@ Route::post('/{brandCode}/draw', [LotteryFrontendController::class, 'draw'])
     ->name('lottery.draw');
 Route::get('/{brandCode}/winners', [LotteryFrontendController::class, 'winners'])
     ->name('lottery.winners');
+Route::post('/{brandCode}/danmaku', [LotteryFrontendController::class, 'sendDanmaku'])
+    ->name('lottery.danmaku')
+    ->middleware('throttle:danmaku');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

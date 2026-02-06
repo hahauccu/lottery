@@ -18,6 +18,7 @@ class LotteryEvent extends Model
         'current_prize_id',
         'is_lottery_open',
         'show_prizes_preview',
+        'danmaku_enabled',
     ];
 
     protected static function booted(): void
@@ -42,6 +43,7 @@ class LotteryEvent extends Model
     protected $casts = [
         'is_lottery_open' => 'boolean',
         'show_prizes_preview' => 'boolean',
+        'danmaku_enabled' => 'boolean',
     ];
 
     public function organization(): BelongsTo
