@@ -27,6 +27,7 @@ const initLottery = () => {
     const prizesPreviewModeEl = document.getElementById('prizes-preview-mode');
     const prizesPreviewListEl = document.getElementById('prizes-preview-list');
     const prizesPreviewTotalEl = document.getElementById('prizes-preview-total');
+    const prizesPreviewPageInfoEl = document.getElementById('prizes-preview-page-info');
     const testModeWatermarkEl = document.getElementById('test-mode-watermark');
 
     let state = {
@@ -311,8 +312,13 @@ const initLottery = () => {
         return { show, hide, renderPage };
     })();
 
-    // 獎項預覽模式
+    // 獎項預覽模式（輪播）
     const prizesPreviewMode = (() => {
+        const perPage = 6;
+        const interval = 5000;
+        let pageIndex = 0;
+        let pageTimer = null;
+
         const show = () => {
             if (!prizesPreviewModeEl) return;
             stageEl?.classList.add('hidden');
@@ -320,7 +326,7 @@ const initLottery = () => {
             prizesPreviewModeEl.classList.remove('hidden');
             state.isPrizesPreviewMode = true;
             state.isResultMode = false;
-            render_();
+            renderPage(true);
         };
 
         const hide = () => {
@@ -328,9 +334,26 @@ const initLottery = () => {
             prizesPreviewModeEl.classList.add('hidden');
             stageEl?.classList.remove('hidden');
             state.isPrizesPreviewMode = false;
+            stopTimer();
         };
 
-        const render_ = () => {
+        const stopTimer = () => {
+            if (pageTimer) {
+                clearInterval(pageTimer);
+                pageTimer = null;
+            }
+        };
+
+        const startTimer = (totalPages) => {
+            stopTimer();
+            if (totalPages <= 1) return;
+            pageTimer = setInterval(() => {
+                pageIndex = (pageIndex + 1) % totalPages;
+                renderPage(false);
+            }, interval);
+        };
+
+        const renderPage = (reset = false) => {
             if (!prizesPreviewListEl) return;
 
             const prizes = state.allPrizes ?? [];
@@ -338,7 +361,14 @@ const initLottery = () => {
                 prizesPreviewTotalEl.textContent = prizes.length;
             }
 
-            prizesPreviewListEl.innerHTML = prizes.map((prize) => {
+            const totalPages = Math.max(1, Math.ceil(prizes.length / perPage));
+            if (reset) pageIndex = 0;
+            if (pageIndex >= totalPages) pageIndex = 0;
+
+            const start = pageIndex * perPage;
+            const pagePrizes = prizes.slice(start, start + perPage);
+
+            prizesPreviewListEl.innerHTML = pagePrizes.map((prize) => {
                 const isComplete = prize.drawnCount >= prize.winnersCount;
                 const statusClass = isComplete
                     ? 'border-green-500/40 bg-green-900/20'
@@ -361,9 +391,17 @@ const initLottery = () => {
                     </div>
                 `;
             }).join('');
+
+            if (prizesPreviewPageInfoEl) {
+                prizesPreviewPageInfoEl.textContent = totalPages > 1
+                    ? `第 ${pageIndex + 1} / ${totalPages} 頁`
+                    : '';
+            }
+
+            if (reset) startTimer(totalPages);
         };
 
-        return { show, hide, render: render_ };
+        return { show, hide, render: renderPage };
     })();
 
     // 初始化獎項預覽頁面的 QR Code

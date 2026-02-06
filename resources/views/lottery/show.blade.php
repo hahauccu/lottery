@@ -140,7 +140,8 @@
             <div class="relative z-10 w-full max-w-5xl px-6">
                 <h2 class="text-center text-4xl font-bold text-white mb-2">今日獎項</h2>
                 <p class="text-center text-white/60 mb-8">共 <span id="prizes-preview-total">0</span> 個獎項</p>
-                <div id="prizes-preview-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2"></div>
+                <div id="prizes-preview-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <p id="prizes-preview-page-info" class="mt-4 text-center text-white/50"></p>
 
                 <!-- QR Code 區塊 -->
                 <div class="mt-8 flex flex-col items-center">
@@ -174,7 +175,7 @@
     </div>
 
     {{-- 彈幕容器 --}}
-    <div id="danmaku-container" class="hidden fixed inset-0 pointer-events-none z-20 overflow-hidden"></div>
+    <div id="danmaku-container" class="hidden fixed inset-0 pointer-events-none z-50 overflow-hidden"></div>
 
     <style>
     .danmaku-item {
