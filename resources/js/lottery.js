@@ -215,7 +215,7 @@ const initLottery = () => {
         }
 
         if (drawButtonEl) {
-            drawButtonEl.disabled = !state.isOpen || !state.currentPrize || state.isDrawing;
+            drawButtonEl.disabled = !state.isOpen || !state.currentPrize || state.isDrawing || state.isPrizesPreviewMode;
         }
 
         if (drawProgressEl) {
@@ -4789,7 +4789,7 @@ const initLottery = () => {
     };
 
     const draw = async () => {
-        if (!state.isOpen || !state.currentPrize || !config.drawUrl) {
+        if (!state.isOpen || !state.currentPrize || !config.drawUrl || state.isPrizesPreviewMode) {
             sfx.playError();
             return;
         }
@@ -5358,6 +5358,9 @@ const initLottery = () => {
         if (state.isPrizesPreviewMode) {
             prizesPreviewMode.render();
         }
+
+        // showPrizesPreview 是一次性信號，處理完後重設
+        state.showPrizesPreview = false;
     };
 
     const pollPayload = async () => {

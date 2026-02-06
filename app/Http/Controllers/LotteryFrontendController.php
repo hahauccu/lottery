@@ -67,7 +67,7 @@ class LotteryFrontendController extends Controller
             'eventName' => $event->name,
             'isOpen' => $event->is_lottery_open,
             'isTestMode' => $isTestMode,
-            'showPrizesPreview' => $event->show_prizes_preview,
+            'showPrizesPreview' => false,
             'allPrizes' => $allPrizes,
             'currentPrize' => $currentPrize ? [
                 'id' => $currentPrize->id,
