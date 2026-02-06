@@ -58,6 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         clearErrors();
 
+        if (getCooldownEndTime() > Date.now()) return;
+
         const email = emailInput.value.trim();
         const message = messageInput.value.trim();
         if (!email || !message) return;
