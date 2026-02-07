@@ -5308,6 +5308,19 @@ const initLottery = () => {
             : (payload.eligible_names ?? state.eligibleNames ?? []); // 同獎項：保留舊值
         pageIndex = 0;
 
+        // 更新背景圖片
+        const newBgUrl = payload.bg_url ?? payload.bgUrl ?? null;
+        const root = document.getElementById('lottery-root');
+        if (root) {
+            if (newBgUrl) {
+                root.style.setProperty('--lottery-bg-url', `url('${newBgUrl}')`);
+                root.classList.add('has-image');
+            } else {
+                root.style.removeProperty('--lottery-bg-url');
+                root.classList.remove('has-image');
+            }
+        }
+
         updateTitle(payload.current_prize?.name ?? payload.event?.name);
         render();
         if (isLottoStyle(nextPrize?.animationStyle)) {

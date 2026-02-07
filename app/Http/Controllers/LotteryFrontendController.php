@@ -65,6 +65,7 @@ class LotteryFrontendController extends Controller
             'brandCode' => $event->brand_code,
             'eventId' => $event->id,
             'eventName' => $event->name,
+            'bgUrl' => $bgUrl,
             'isOpen' => $event->is_lottery_open,
             'isTestMode' => $isTestMode,
             'showPrizesPreview' => false,
@@ -107,6 +108,7 @@ class LotteryFrontendController extends Controller
                     'show_prizes_preview' => $event->show_prizes_preview,
                     'current_prize_id' => $event->current_prize_id,
                 ],
+                'bg_url' => $bgUrl,
                 'all_prizes' => $allPrizes,
                 'current_prize' => $currentPrize ? [
                     'id' => $currentPrize->id,

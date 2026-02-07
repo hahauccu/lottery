@@ -55,6 +55,9 @@ class LotteryEventUpdated implements ShouldBroadcastNow
                 'drawnCount' => $prize->winners()->count(),
             ])->all();
 
+        $bgPath = $currentPrize?->bg_image_path ?: $this->event->default_bg_image_path;
+        $bgUrl = $bgPath ? asset('storage/'.$bgPath) : null;
+
         return [
             'event' => [
                 'id' => $this->event->id,
@@ -65,6 +68,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
                 'danmaku_enabled' => $this->event->danmaku_enabled,
                 'current_prize_id' => $this->event->current_prize_id,
             ],
+            'bg_url' => $bgUrl,
             'all_prizes' => $allPrizes,
             'current_prize' => $currentPrize ? [
                 'id' => $currentPrize->id,
