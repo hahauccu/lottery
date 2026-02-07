@@ -10,7 +10,8 @@
       "Bash(git commit:*)",
       "Bash(git fetch:*)",
       "Bash(npx vite build:*)",
-      "Bash(php -l:*)"
+      "Bash(php -l:*)",
+      "Bash(du:*)"
     ]
   }
 }
