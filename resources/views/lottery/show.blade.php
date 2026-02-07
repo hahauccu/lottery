@@ -22,7 +22,7 @@
         }
 
         .lottery-bg.has-image {
-            background-image: linear-gradient(180deg, rgba(3, 7, 18, 0.30), rgba(0, 0, 0, 0.45)), var(--lottery-bg-url);
+            background-image: linear-gradient(180deg, rgba(3, 7, 18, 0.10), rgba(0, 0, 0, 0.15)), var(--lottery-bg-url);
             background-size: cover;
             background-position: center;
         }
@@ -136,7 +136,7 @@
 
         <!-- 獎項預覽模式 -->
         <div id="prizes-preview-mode" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center">
-            <div class="absolute inset-0 bg-black/60"></div>
+            <div class="absolute inset-0 bg-black/10"></div>
             <div class="relative z-10 w-full max-w-5xl px-6">
                 <h2 class="text-center text-4xl font-bold text-white mb-2">今日獎項</h2>
                 <p class="text-center text-white/60 mb-8">共 <span id="prizes-preview-total">0</span> 個獎項</p>
@@ -155,7 +155,7 @@
 
         <!-- 結果展示模式 -->
         <div id="result-mode" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center">
-            <div class="absolute inset-0 bg-black/60"></div>
+            <div class="absolute inset-0 bg-black/10"></div>
             <div class="relative z-10 w-full flex flex-col items-center justify-center px-6">
                 <!-- 獎項標題 -->
                 <div class="mb-8 text-center">
