@@ -67,6 +67,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
                 'show_prizes_preview' => $this->event->show_prizes_preview,
                 'danmaku_enabled' => $this->event->danmaku_enabled,
                 'current_prize_id' => $this->event->current_prize_id,
+                'is_prize_switching' => $this->event->is_prize_switching,
             ],
             'bg_url' => $bgUrl,
             'all_prizes' => $allPrizes,

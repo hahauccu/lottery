@@ -19,6 +19,8 @@ class LotteryEvent extends Model
         'is_lottery_open',
         'show_prizes_preview',
         'danmaku_enabled',
+        'is_prize_switching',
+        'prize_switched_at',
     ];
 
     protected static function booted(): void
@@ -48,6 +50,8 @@ class LotteryEvent extends Model
         'is_lottery_open' => 'boolean',
         'show_prizes_preview' => 'boolean',
         'danmaku_enabled' => 'boolean',
+        'is_prize_switching' => 'boolean',
+        'prize_switched_at' => 'datetime',
     ];
 
     public function organization(): BelongsTo

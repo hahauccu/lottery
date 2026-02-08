@@ -9,6 +9,7 @@ use App\Models\LotteryEvent;
 use App\Models\Prize;
 use App\Services\EligibleEmployeesService;
 use App\Services\LotteryDrawService;
+use App\Support\LotteryBroadcaster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -95,6 +96,7 @@ class LotteryFrontendController extends Controller
             'csrfToken' => csrf_token(),
             'drawUrl' => route('lottery.draw', ['brandCode' => $event->brand_code]),
             'winnersUrl' => route('lottery.winners', ['brandCode' => $event->brand_code]),
+            'switchAckUrl' => route('lottery.switch-ack', ['brandCode' => $event->brand_code]),
         ];
 
         if ($request->boolean('payload')) {
@@ -107,6 +109,7 @@ class LotteryFrontendController extends Controller
                     'is_test_mode' => $isTestMode,
                     'show_prizes_preview' => $event->show_prizes_preview,
                     'current_prize_id' => $event->current_prize_id,
+                    'is_prize_switching' => $event->is_prize_switching,
                 ],
                 'bg_url' => $bgUrl,
                 'all_prizes' => $allPrizes,
@@ -171,6 +174,10 @@ class LotteryFrontendController extends Controller
             return response()->json(['message' => 'lottery_closed'], 403);
         }
 
+        if ($event->is_prize_switching) {
+            return response()->json(['message' => 'prize_switching'], 423);
+        }
+
         if (! $event->currentPrize) {
             return response()->json(['message' => 'no_prize_selected'], 422);
         }
@@ -198,6 +205,21 @@ class LotteryFrontendController extends Controller
                 'won_at' => optional($winner->won_at)->toDateTimeString(),
             ])->values()->all(),
         ]);
+    }
+
+    public function switchAck(string $brandCode): JsonResponse
+    {
+        $event = LotteryEvent::where('brand_code', $brandCode)->firstOrFail();
+
+        if (! $event->is_prize_switching) {
+            return response()->json(['message' => 'not_switching']);
+        }
+
+        $event->update(['is_prize_switching' => false]);
+
+        LotteryBroadcaster::dispatchUpdate($event->refresh());
+
+        return response()->json(['message' => 'ack_ok']);
     }
 
     public function sendDanmaku(Request $request, string $brandCode): JsonResponse

@@ -37,6 +37,7 @@ const initLottery = () => {
         winners: config.winners ?? [],
         eligibleNames: config.eligibleNames ?? [],
         isDrawing: false,
+        isSwitching: false,
         isResultMode: false,
         isPrizesPreviewMode: false,
         showPrizesPreview: config.showPrizesPreview ?? false,
@@ -215,7 +216,7 @@ const initLottery = () => {
         }
 
         if (drawButtonEl) {
-            drawButtonEl.disabled = !state.isOpen || !state.currentPrize || state.isDrawing || state.isPrizesPreviewMode;
+            drawButtonEl.disabled = !state.isOpen || !state.currentPrize || state.isDrawing || state.isPrizesPreviewMode || state.isSwitching;
         }
 
         if (drawProgressEl) {
@@ -5293,6 +5294,7 @@ const initLottery = () => {
 
         state.isOpen = payload.event?.is_lottery_open ?? state.isOpen;
         state.isTestMode = payload.event?.is_test_mode ?? state.isTestMode;
+        state.isSwitching = payload.event?.is_prize_switching ?? false;
         state.showPrizesPreview = payload.event?.show_prizes_preview ?? state.showPrizesPreview;
         state.allPrizes = payload.all_prizes ?? state.allPrizes ?? [];
 
@@ -5376,6 +5378,21 @@ const initLottery = () => {
 
         // showPrizesPreview 是一次性信號，處理完後重設
         state.showPrizesPreview = false;
+
+        // 獎項切換中 → 回報前端已載入
+        if (payload.event?.is_prize_switching && config.switchAckUrl) {
+            fetch(config.switchAckUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': config.csrfToken,
+                },
+            }).then(res => {
+                console.log('[lottery] switch-ack sent, status:', res.status);
+            }).catch(err => {
+                console.error('[lottery] switch-ack failed:', err);
+            });
+        }
     };
 
     const pollPayload = async () => {

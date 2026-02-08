@@ -8,8 +8,8 @@ use App\Models\Employee;
 use App\Models\EmployeeGroup;
 use App\Models\Prize;
 use App\Models\PrizeRule;
-use App\Services\SystemGroupService;
 use App\Services\EligibleEmployeesService;
+use App\Services\SystemGroupService;
 use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
@@ -308,7 +308,7 @@ class PrizesRelationManager extends RelationManager
                 \Filament\Tables\Actions\Action::make('set_current')
                     ->label('設為目前獎項')
                     ->requiresConfirmation()
-                    ->action(function (Prize $record): void {
+                    ->action(function (Prize $record, $livewire): void {
                         $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'big_treasure_chest'];
 
                         if (! in_array($record->animation_style, $validStyles, true)) {
@@ -334,10 +334,59 @@ class PrizesRelationManager extends RelationManager
                         }
 
                         $event = $this->getOwnerRecord();
-                        $event->update(['current_prize_id' => $record->getKey()]);
+                        $event->update([
+                            'current_prize_id' => $record->getKey(),
+                            'is_prize_switching' => true,
+                            'prize_switched_at' => now(),
+                        ]);
 
                         LotteryBroadcaster::dispatchUpdate($event->refresh());
-                    }),
+
+                        Notification::make()
+                            ->title('切換中…')
+                            ->info()
+                            ->persistent()
+                            ->id('prize-switching')
+                            ->send();
+
+                        $brandCode = $event->brand_code;
+                        $livewire->js("
+                            (function() {
+                                let attempts = 0;
+                                const maxAttempts = 10;
+                                const pollId = setInterval(async () => {
+                                    attempts++;
+                                    try {
+                                        const res = await fetch('/{$brandCode}/lottery?payload=1');
+                                        const data = await res.json();
+                                        if (!data.event?.is_prize_switching) {
+                                            clearInterval(pollId);
+                                            new FilamentNotification()
+                                                .title('切換成功')
+                                                .icon('heroicon-o-check-circle')
+                                                .iconColor('success')
+                                                .send();
+                                            document.querySelectorAll('[wire\\\\:notification\\\\.id=\"prize-switching\"]')
+                                                .forEach(el => el.remove());
+                                            \$wire.\$refresh();
+                                        }
+                                    } catch (e) { console.error('[switch-poll]', e); }
+                                    if (attempts >= maxAttempts) {
+                                        clearInterval(pollId);
+                                        fetch('/{$brandCode}/switch-ack', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content } }).catch(() => {});
+                                        new FilamentNotification()
+                                            .title('切換失敗')
+                                            .body('前端未回報載入完成，請確認前端頁面是否正常運作。')
+                                            .icon('heroicon-o-x-circle')
+                                            .iconColor('danger')
+                                            .send();
+                                        \$wire.\$refresh();
+                                    }
+                                }, 1000);
+                            })();
+                        ");
+                    })
+                    ->disabled(fn () => $this->getOwnerRecord()->is_prize_switching),
                 \Filament\Tables\Actions\Action::make('send_notifications')
                     ->label('發送中獎通知')
                     ->icon('heroicon-o-envelope')
