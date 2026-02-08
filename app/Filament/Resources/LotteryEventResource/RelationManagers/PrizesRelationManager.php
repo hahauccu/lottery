@@ -334,6 +334,12 @@ class PrizesRelationManager extends RelationManager
                         }
 
                         $event = $this->getOwnerRecord();
+
+                        // 如果正在切換中，先強制清除舊的切換狀態
+                        if ($event->is_prize_switching) {
+                            $event->update(['is_prize_switching' => false]);
+                        }
+
                         $event->update([
                             'current_prize_id' => $record->getKey(),
                             'is_prize_switching' => true,
@@ -351,16 +357,22 @@ class PrizesRelationManager extends RelationManager
 
                         $brandCode = $event->brand_code;
                         $livewire->js("
+                            // 清理舊的輪詢 timer
+                            if (window.__prizeSwitchPollId) {
+                                clearInterval(window.__prizeSwitchPollId);
+                                window.__prizeSwitchPollId = null;
+                            }
                             (function() {
                                 let attempts = 0;
                                 const maxAttempts = 10;
-                                const pollId = setInterval(async () => {
+                                window.__prizeSwitchPollId = setInterval(async () => {
                                     attempts++;
                                     try {
                                         const res = await fetch('/{$brandCode}/lottery?payload=1');
                                         const data = await res.json();
                                         if (!data.event?.is_prize_switching) {
-                                            clearInterval(pollId);
+                                            clearInterval(window.__prizeSwitchPollId);
+                                            window.__prizeSwitchPollId = null;
                                             new FilamentNotification()
                                                 .title('切換成功')
                                                 .icon('heroicon-o-check-circle')
@@ -372,7 +384,8 @@ class PrizesRelationManager extends RelationManager
                                         }
                                     } catch (e) { console.error('[switch-poll]', e); }
                                     if (attempts >= maxAttempts) {
-                                        clearInterval(pollId);
+                                        clearInterval(window.__prizeSwitchPollId);
+                                        window.__prizeSwitchPollId = null;
                                         fetch('/{$brandCode}/switch-ack', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content } }).catch(() => {});
                                         new FilamentNotification()
                                             .title('切換失敗')

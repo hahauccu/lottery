@@ -44,6 +44,8 @@ const initLottery = () => {
         allPrizes: config.allPrizes ?? [],
     };
 
+    let lastAckPrizeId = null;
+
     const escapeHtml = (str) => {
         if (!str) return '';
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -5379,8 +5381,10 @@ const initLottery = () => {
         // showPrizesPreview 是一次性信號，處理完後重設
         state.showPrizesPreview = false;
 
-        // 獎項切換中 → 回報前端已載入
-        if (payload.event?.is_prize_switching && config.switchAckUrl) {
+        // 獎項切換中 → 回報前端已載入（防抖：同一獎項只發送一次）
+        const ackPrizeId = payload.current_prize?.id;
+        if (payload.event?.is_prize_switching && config.switchAckUrl && ackPrizeId && ackPrizeId !== lastAckPrizeId) {
+            lastAckPrizeId = ackPrizeId;
             fetch(config.switchAckUrl, {
                 method: 'POST',
                 headers: {
@@ -5388,9 +5392,10 @@ const initLottery = () => {
                     'X-CSRF-TOKEN': config.csrfToken,
                 },
             }).then(res => {
-                console.log('[lottery] switch-ack sent, status:', res.status);
+                console.log('[lottery] switch-ack sent, status:', res.status, 'prizeId:', ackPrizeId);
             }).catch(err => {
                 console.error('[lottery] switch-ack failed:', err);
+                lastAckPrizeId = null; // 失敗時重設，允許重試
             });
         }
     };
