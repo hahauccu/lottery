@@ -1947,14 +1947,16 @@ const initLottery = () => {
             }
         };
 
-        const ensureReady = () => {
+        const ensureReady = (forceReset = false) => {
             syncCountFromEligible();
             // 只在以下情況重置：
-            // 1. 沒有 canvas context
-            // 2. 球還沒初始化
-            // 3. 球數不對且沒有已抽出的球（避免 one_by_one 模式重置收納盤）
+            // 1. forceReset（切換獎項時強制清除舊狀態）
+            // 2. 沒有 canvas context
+            // 3. 球還沒初始化
+            // 4. 球數不對且沒有已抽出的球（避免 one_by_one 模式重置收納盤）
             const hasOutBalls = airState.balls.some((b) => b.out);
-            const needsReset = !airState.ctx
+            const needsReset = forceReset
+                || !airState.ctx
                 || !airState.balls.length
                 || (airState.balls.length !== lottoAirConfig.count && !hasOutBalls);
             if (needsReset) {
@@ -5324,7 +5326,7 @@ const initLottery = () => {
         updateTitle(payload.current_prize?.name ?? payload.event?.name);
         render();
         if (isLottoStyle(nextPrize?.animationStyle)) {
-            lottoAir.ensureReady();
+            lottoAir.ensureReady(prizeChanged);
         } else {
             lottoAir.stop();
         }

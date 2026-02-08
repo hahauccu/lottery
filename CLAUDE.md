@@ -121,6 +121,8 @@ if (state.currentPrize?.drawMode !== 'one_by_one' || !state.winners?.length) {
 - [ ] 分批處理時（如超過 9 個），注意 WebSocket 事件可能在批次間到達
 - [ ] 動畫結束後檢查 `isPrizeCompleted()` 或 `isExhausted` 決定是否進入結果模式
 - [ ] `applyLotteryPayload()` 中加入動畫停止邏輯
+- [ ] `stop()` 必須清除所有內部狀態（balls、picked、pending、particles 等），不能只停動畫迴圈
+- [ ] `applyLotteryPayload()` 中切換同風格獎項時，必須強制 reset（參考 `lottoAir.ensureReady(prizeChanged)`）
 
 ### 5. 後端事件廣播
 
