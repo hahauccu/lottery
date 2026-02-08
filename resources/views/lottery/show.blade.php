@@ -92,7 +92,7 @@
 <body class="h-[100svh] overflow-hidden bg-black text-white">
     <div
         id="lottery-root"
-        class="lottery-bg relative {{ $bgUrl ? 'has-image' : '' }}"
+        class="lottery-bg relative min-h-[100svh] {{ $bgUrl ? 'has-image' : '' }}"
         @if ($bgUrl) style="--lottery-bg-url: url('{{ $bgUrl }}');" @endif
     >
         <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/35"></div>
