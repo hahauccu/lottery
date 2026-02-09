@@ -1,7 +1,15 @@
 const initLottery = () => {
+    // 防止重複初始化（Vite HMR 會重新執行模組）
+    if (window.__lotteryInitialized) {
+        console.warn('[lottery] initLottery() already executed, skipping');
+        return;
+    }
+    window.__lotteryInitialized = true;
+
     const config = window.LotteryConfig;
 
     if (!config) {
+        window.__lotteryInitialized = false;
         return;
     }
 
@@ -44,7 +52,11 @@ const initLottery = () => {
         allPrizes: config.allPrizes ?? [],
     };
 
-    let lastAckPrizeId = null;
+    // 使用全域追蹤 ACK 狀態（避免多個閉包各自獨立追蹤）
+    if (!window.__lotteryAckState) {
+        window.__lotteryAckState = { lastPrizeId: null, pending: false };
+    }
+    const ackState = window.__lotteryAckState;
 
     const escapeHtml = (str) => {
         if (!str) return '';
@@ -5395,10 +5407,13 @@ const initLottery = () => {
         // showPrizesPreview 是一次性信號，處理完後重設
         state.showPrizesPreview = false;
 
-        // 獎項切換中 → 回報前端已載入（防抖：同一獎項只發送一次）
+        // 獎項切換中 → 回報前端已載入（全域防抖：同一獎項只發送一次，且等前一個完成）
         const ackPrizeId = payload.current_prize?.id;
-        if (payload.event?.is_prize_switching && config.switchAckUrl && ackPrizeId && ackPrizeId !== lastAckPrizeId) {
-            lastAckPrizeId = ackPrizeId;
+        if (payload.event?.is_prize_switching && config.switchAckUrl && ackPrizeId
+            && ackPrizeId !== ackState.lastPrizeId && !ackState.pending) {
+            ackState.lastPrizeId = ackPrizeId;
+            ackState.pending = true;
+            console.log('[lottery] sending switch-ack for prizeId:', ackPrizeId);
             fetch(config.switchAckUrl, {
                 method: 'POST',
                 headers: {
@@ -5409,7 +5424,9 @@ const initLottery = () => {
                 console.log('[lottery] switch-ack sent, status:', res.status, 'prizeId:', ackPrizeId);
             }).catch(err => {
                 console.error('[lottery] switch-ack failed:', err);
-                lastAckPrizeId = null; // 失敗時重設，允許重試
+                ackState.lastPrizeId = null; // 失敗時重設，允許重試
+            }).finally(() => {
+                ackState.pending = false;
             });
         }
     };
@@ -5504,7 +5521,11 @@ const initLottery = () => {
             });
     }
 
-    setInterval(pollPayload, 5000);
+    // 清除舊的輪詢計時器（以防萬一）
+    if (window.__lotteryPollTimer) {
+        clearInterval(window.__lotteryPollTimer);
+    }
+    window.__lotteryPollTimer = setInterval(pollPayload, 5000);
 
     // ========== 彈幕功能 ==========
     const danmakuContainer = document.getElementById('danmaku-container');
