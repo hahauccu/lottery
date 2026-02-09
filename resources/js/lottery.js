@@ -5417,7 +5417,8 @@ const initLottery = () => {
         }
     };
 
-    if (window.Echo && config.brandCode) {
+    if (window.Echo && config.brandCode && !window.__lotteryEchoRegistered) {
+        window.__lotteryEchoRegistered = true;
         window.Echo.channel(`lottery.${config.brandCode}`)
             .listen('.lottery.updated', (payload) => {
                 console.log('[lottery] websocket: lottery.updated', payload);

@@ -335,11 +335,6 @@ class PrizesRelationManager extends RelationManager
 
                         $event = $this->getOwnerRecord();
 
-                        // 如果正在切換中，先強制清除舊的切換狀態
-                        if ($event->is_prize_switching) {
-                            $event->update(['is_prize_switching' => false]);
-                        }
-
                         $event->update([
                             'current_prize_id' => $record->getKey(),
                             'is_prize_switching' => true,

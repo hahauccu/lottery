@@ -215,11 +215,28 @@ class LotteryFrontendController extends Controller
             return response()->json(['message' => 'not_switching']);
         }
 
-        $event->update(['is_prize_switching' => false]);
+        // 用 Cache lock 確保冪等性（5 秒內只處理第一次 ACK）
+        $lockKey = "switch-ack:{$event->id}";
+        $lock = Cache::lock($lockKey, 5);
 
-        LotteryBroadcaster::dispatchUpdate($event->refresh());
+        if (! $lock->get()) {
+            return response()->json(['message' => 'ack_already_processing']);
+        }
 
-        return response()->json(['message' => 'ack_ok']);
+        try {
+            // 再次檢查（取得 lock 後可能已被其他請求處理）
+            $event->refresh();
+            if (! $event->is_prize_switching) {
+                return response()->json(['message' => 'not_switching']);
+            }
+
+            $event->update(['is_prize_switching' => false]);
+            LotteryBroadcaster::dispatchUpdate($event->refresh());
+
+            return response()->json(['message' => 'ack_ok']);
+        } finally {
+            $lock->release();
+        }
     }
 
     public function sendDanmaku(Request $request, string $brandCode): JsonResponse
