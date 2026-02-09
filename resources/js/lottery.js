@@ -5420,6 +5420,7 @@ const initLottery = () => {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': config.csrfToken,
                 },
+                body: JSON.stringify({ prize_id: ackPrizeId }),
             }).then(res => {
                 console.log('[lottery] switch-ack sent, status:', res.status, 'prizeId:', ackPrizeId);
             }).catch(err => {

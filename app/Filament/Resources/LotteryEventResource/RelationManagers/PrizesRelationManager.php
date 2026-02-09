@@ -242,6 +242,15 @@ class PrizesRelationManager extends RelationManager
             ]);
     }
 
+    public function forceResetSwitching(): void
+    {
+        $event = $this->getOwnerRecord();
+        if ($event->is_prize_switching) {
+            $event->update(['is_prize_switching' => false]);
+            LotteryBroadcaster::dispatchUpdate($event->refresh());
+        }
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -381,7 +390,7 @@ class PrizesRelationManager extends RelationManager
                                     if (attempts >= maxAttempts) {
                                         clearInterval(window.__prizeSwitchPollId);
                                         window.__prizeSwitchPollId = null;
-                                        fetch('/{$brandCode}/switch-ack', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content } }).catch(() => {});
+                                        \$wire.call('forceResetSwitching');
                                         new FilamentNotification()
                                             .title('切換失敗')
                                             .body('前端未回報載入完成，請確認前端頁面是否正常運作。')

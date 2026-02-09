@@ -215,6 +215,12 @@ class LotteryFrontendController extends Controller
             return response()->json(['message' => 'not_switching']);
         }
 
+        // 驗證 prize_id：確保 ACK 對應的是當前正在切換的獎項
+        $prizeId = request()->input('prize_id');
+        if ($prizeId && (int) $prizeId !== $event->current_prize_id) {
+            return response()->json(['message' => 'prize_mismatch']);
+        }
+
         // 用 Cache lock 確保冪等性（5 秒內只處理第一次 ACK）
         $lockKey = "switch-ack:{$event->id}";
         $lock = Cache::lock($lockKey, 5);
