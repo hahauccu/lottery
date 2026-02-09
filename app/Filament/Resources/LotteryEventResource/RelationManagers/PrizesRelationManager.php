@@ -381,9 +381,8 @@ class PrizesRelationManager extends RelationManager
                                                 .title('切換成功')
                                                 .icon('heroicon-o-check-circle')
                                                 .iconColor('success')
+                                                .id('prize-switching')
                                                 .send();
-                                            document.querySelectorAll('[wire\\\\:notification\\\\.id=\"prize-switching\"]')
-                                                .forEach(el => el.remove());
                                             \$wire.\$refresh();
                                         }
                                     } catch (e) { console.error('[switch-poll]', e); }
@@ -396,6 +395,7 @@ class PrizesRelationManager extends RelationManager
                                             .body('前端未回報載入完成，請確認前端頁面是否正常運作。')
                                             .icon('heroicon-o-x-circle')
                                             .iconColor('danger')
+                                            .id('prize-switching')
                                             .send();
                                         \$wire.\$refresh();
                                     }
