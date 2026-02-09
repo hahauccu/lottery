@@ -215,9 +215,10 @@ class LotteryFrontendController extends Controller
             return response()->json(['message' => 'not_switching']);
         }
 
-        // 驗證 prize_id：確保 ACK 對應的是當前正在切換的獎項
+        // 驗證 prize_id：確保 ACK 對應的是當前正在切換的獎項（含預覽模式 prize_id=null）
         $prizeId = request()->input('prize_id');
-        if ($prizeId && (int) $prizeId !== $event->current_prize_id) {
+        $hasPrizeId = request()->has('prize_id');
+        if ($hasPrizeId && (int) $prizeId !== (int) $event->current_prize_id) {
             return response()->json(['message' => 'prize_mismatch']);
         }
 

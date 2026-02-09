@@ -5408,8 +5408,8 @@ const initLottery = () => {
         state.showPrizesPreview = false;
 
         // 獎項切換中 → 回報前端已載入（全域防抖：同一獎項只發送一次，且等前一個完成）
-        const ackPrizeId = payload.current_prize?.id;
-        if (payload.event?.is_prize_switching && config.switchAckUrl && ackPrizeId
+        const ackPrizeId = payload.current_prize?.id ?? 'preview';
+        if (payload.event?.is_prize_switching && config.switchAckUrl
             && ackPrizeId !== ackState.lastPrizeId && !ackState.pending) {
             ackState.lastPrizeId = ackPrizeId;
             ackState.pending = true;
@@ -5420,7 +5420,7 @@ const initLottery = () => {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': config.csrfToken,
                 },
-                body: JSON.stringify({ prize_id: ackPrizeId }),
+                body: JSON.stringify({ prize_id: payload.current_prize?.id ?? null }),
             }).then(res => {
                 console.log('[lottery] switch-ack sent, status:', res.status, 'prizeId:', ackPrizeId);
             }).catch(err => {

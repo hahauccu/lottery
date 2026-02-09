@@ -307,11 +307,67 @@ class PrizesRelationManager extends RelationManager
                     ->label('切換至預覽畫面')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
-                    ->action(function (): void {
+                    ->action(function ($livewire): void {
                         $event = $this->getOwnerRecord();
-                        $event->update(['current_prize_id' => null]);
+                        $event->update([
+                            'current_prize_id' => null,
+                            'is_prize_switching' => true,
+                            'prize_switched_at' => now(),
+                        ]);
                         LotteryBroadcaster::dispatchUpdate($event->refresh());
-                    }),
+
+                        Notification::make()
+                            ->title('切換中…')
+                            ->info()
+                            ->persistent()
+                            ->id('prize-switching')
+                            ->send();
+
+                        $brandCode = $event->brand_code;
+                        $livewire->js("
+                            // 清理舊的輪詢 timer
+                            if (window.__prizeSwitchPollId) {
+                                clearInterval(window.__prizeSwitchPollId);
+                                window.__prizeSwitchPollId = null;
+                            }
+                            (function() {
+                                let attempts = 0;
+                                const maxAttempts = 10;
+                                window.__prizeSwitchPollId = setInterval(async () => {
+                                    attempts++;
+                                    try {
+                                        const res = await fetch('/{$brandCode}/lottery?payload=1');
+                                        const data = await res.json();
+                                        if (!data.event?.is_prize_switching) {
+                                            clearInterval(window.__prizeSwitchPollId);
+                                            window.__prizeSwitchPollId = null;
+                                            new FilamentNotification()
+                                                .title('切換成功')
+                                                .icon('heroicon-o-check-circle')
+                                                .iconColor('success')
+                                                .id('prize-switching')
+                                                .send();
+                                            \$wire.\$refresh();
+                                        }
+                                    } catch (e) { console.error('[switch-poll]', e); }
+                                    if (attempts >= maxAttempts) {
+                                        clearInterval(window.__prizeSwitchPollId);
+                                        window.__prizeSwitchPollId = null;
+                                        \$wire.call('forceResetSwitching');
+                                        new FilamentNotification()
+                                            .title('切換失敗')
+                                            .body('前端未回報載入完成，請確認前端頁面是否正常運作。')
+                                            .icon('heroicon-o-x-circle')
+                                            .iconColor('danger')
+                                            .id('prize-switching')
+                                            .send();
+                                        \$wire.\$refresh();
+                                    }
+                                }, 1000);
+                            })();
+                        ");
+                    })
+                    ->disabled(fn () => $this->getOwnerRecord()->is_prize_switching),
             ])
             ->actions([
                 \Filament\Tables\Actions\Action::make('set_current')
