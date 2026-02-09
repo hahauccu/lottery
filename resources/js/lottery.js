@@ -4794,7 +4794,14 @@ const initLottery = () => {
     };
 
     const draw = async () => {
-        if (!state.isOpen || !state.currentPrize || !config.drawUrl || state.isPrizesPreviewMode) {
+        if (!state.isOpen || !state.currentPrize || !config.drawUrl || state.isPrizesPreviewMode || state.isSwitching) {
+            sfx.playError();
+            return;
+        }
+
+        // 檢查是否有可抽人員
+        if (!state.eligibleNames || state.eligibleNames.length === 0) {
+            console.warn('[lottery] no eligible employees to draw');
             sfx.playError();
             return;
         }
@@ -4883,6 +4890,7 @@ const initLottery = () => {
             const winners = data?.winners ?? [];
 
             if (winners.length === 0) {
+                console.warn('[lottery] no winners returned from /draw');
                 if (useRedPacket) {
                     redPacketRain.stop();
                 }
@@ -4895,10 +4903,13 @@ const initLottery = () => {
                 if (useBigTreasureChest) {
                     bigTreasureChest.stop();
                 }
+                state.isDrawing = false;
+                sfx.playError();
                 // 可抽人數已用盡但名額未滿，若有中獎者則進入 resultMode
                 if (state.winners?.length > 0 && !isPrizeCompleted()) {
                     setTimeout(() => resultMode.show(), 2000);
                 }
+                render();
                 return;
             }
 
@@ -5281,7 +5292,8 @@ const initLottery = () => {
         }
     });
 
-    const applyLotteryPayload = (payload) => {
+    const applyLotteryPayload = (payload, options = {}) => {
+        const { skipWinnersUpdate = false } = options;
         const nextPrize = payload.current_prize
             ? {
                 id: payload.current_prize.id,
@@ -5308,7 +5320,9 @@ const initLottery = () => {
         const prizeChanged = nextPrize?.id !== state.currentPrize?.id;
 
         state.currentPrize = nextPrize;
-        state.winners = payload.winners ?? [];
+        if (!skipWinnersUpdate) {
+            state.winners = payload.winners ?? [];
+        }
         state.eligibleNames = prizeChanged
             ? (payload.eligible_names ?? []) // 獎項變更：使用新值或清空
             : (payload.eligible_names ?? state.eligibleNames ?? []); // 同獎項：保留舊值
@@ -5401,7 +5415,8 @@ const initLottery = () => {
     };
 
     const pollPayload = async () => {
-        if (state.isDrawing) return;
+        // 抽獎期間仍輪詢，但只更新切換狀態（不覆蓋 winners）
+        const skipWinnersUpdate = state.isDrawing;
         const url = new URL(window.location.href);
         url.searchParams.set('payload', '1');
 
@@ -5411,7 +5426,7 @@ const initLottery = () => {
             });
             if (!response.ok) return;
             const payload = await response.json();
-            applyLotteryPayload(payload);
+            applyLotteryPayload(payload, { skipWinnersUpdate });
         } catch {
             // ignore
         }
@@ -5428,9 +5443,14 @@ const initLottery = () => {
                     updateDanmakuContainer(payload.event.danmaku_enabled);
                 }
 
-                // 抽獎進行中不處理，避免狀態衝突
+                // 抽獎進行中：只處理獎項切換信息，不更新 winners
                 if (state.isDrawing) {
-                    console.log('[lottery] ignored lottery.updated during drawing');
+                    if (payload.event?.is_prize_switching !== undefined) {
+                        console.log('[lottery] processing switch update during drawing');
+                        applyLotteryPayload(payload, { skipWinnersUpdate: true });
+                    } else {
+                        console.log('[lottery] ignored lottery.updated during drawing');
+                    }
                     return;
                 }
                 applyLotteryPayload(payload);
