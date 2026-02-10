@@ -5373,6 +5373,17 @@ const initLottery = () => {
             bigTreasureChest.stop();
         }
 
+        // 獎項變更時，清空 canvas 避免舊動畫殘留
+        if (prizeChanged && lottoCanvasEl) {
+            const ctx = lottoCanvasEl.getContext('2d');
+            if (ctx) {
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.clearRect(0, 0, lottoCanvasEl.width, lottoCanvasEl.height);
+                ctx.restore();
+            }
+        }
+
         // 模式切換邏輯：獎項預覽優先於結果展示
         const isCompleted = payload.current_prize?.is_completed ?? isPrizeCompleted();
         // 可抽人數用盡（名額未滿但沒有人可抽）且有中獎者
