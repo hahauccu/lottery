@@ -30,6 +30,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
 
 class PrizesRelationManager extends RelationManager
@@ -251,6 +252,17 @@ class PrizesRelationManager extends RelationManager
         }
     }
 
+    protected function frontendIsReady(string $brandCode): bool
+    {
+        $cacheKey = "lottery-ready:{$brandCode}";
+        $lastSeen = Cache::get($cacheKey);
+        if (! $lastSeen) {
+            return false;
+        }
+
+        return (now()->timestamp - (int) $lastSeen) <= 12;
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -309,6 +321,16 @@ class PrizesRelationManager extends RelationManager
                     ->color('gray')
                     ->action(function ($livewire): void {
                         $event = $this->getOwnerRecord();
+                        $brandCode = $event->brand_code;
+                        if (! $this->frontendIsReady($brandCode)) {
+                            Notification::make()
+                                ->danger()
+                                ->title('無法切換預覽')
+                                ->body('前台尚未就緒或離線，請先開啟抽獎頁面。')
+                                ->send();
+
+                            return;
+                        }
                         $event->update([
                             'current_prize_id' => null,
                             'is_prize_switching' => true,
@@ -323,7 +345,6 @@ class PrizesRelationManager extends RelationManager
                             ->id('prize-switching')
                             ->send();
 
-                        $brandCode = $event->brand_code;
                         $livewire->js("
                             // 清理舊的輪詢 timer
                             if (window.__prizeSwitchPollId) {
@@ -399,6 +420,16 @@ class PrizesRelationManager extends RelationManager
                         }
 
                         $event = $this->getOwnerRecord();
+                        $brandCode = $event->brand_code;
+                        if (! $this->frontendIsReady($brandCode)) {
+                            Notification::make()
+                                ->danger()
+                                ->title('無法設為目前獎項')
+                                ->body('前台尚未就緒或離線，請先開啟抽獎頁面。')
+                                ->send();
+
+                            return;
+                        }
 
                         $event->update([
                             'current_prize_id' => $record->getKey(),
@@ -415,7 +446,6 @@ class PrizesRelationManager extends RelationManager
                             ->id('prize-switching')
                             ->send();
 
-                        $brandCode = $event->brand_code;
                         $livewire->js("
                             // 清理舊的輪詢 timer
                             if (window.__prizeSwitchPollId) {

@@ -22,6 +22,8 @@ Route::get('/{brandCode}/winners', [LotteryFrontendController::class, 'winners']
     ->name('lottery.winners');
 Route::post('/{brandCode}/switch-ack', [LotteryFrontendController::class, 'switchAck'])
     ->name('lottery.switch-ack');
+Route::post('/{brandCode}/ready', [LotteryFrontendController::class, 'ready'])
+    ->name('lottery.ready');
 Route::post('/{brandCode}/danmaku', [LotteryFrontendController::class, 'sendDanmaku'])
     ->name('lottery.danmaku')
     ->middleware('throttle:danmaku');

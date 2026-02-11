@@ -5460,6 +5460,20 @@ const initLottery = () => {
         danmakuContainer.classList.toggle('hidden', !enabled);
     };
 
+    const sendReadyPing = () => {
+        if (!config.readyUrl) return;
+        if (document.visibilityState === 'hidden') return;
+        fetch(config.readyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': config.csrfToken,
+            },
+            body: JSON.stringify({ ts: Date.now() }),
+            keepalive: true,
+        }).catch(() => {});
+    };
+
     const showDanmaku = (employeeName, message) => {
         if (!danmakuContainer || danmakuContainer.classList.contains('hidden')) {
             return;
@@ -5504,6 +5518,17 @@ const initLottery = () => {
     };
 
     updateDanmakuContainer(config.danmakuEnabled ?? false);
+
+    sendReadyPing();
+    if (window.__lotteryReadyTimer) {
+        clearInterval(window.__lotteryReadyTimer);
+    }
+    window.__lotteryReadyTimer = setInterval(sendReadyPing, 5000);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            sendReadyPing();
+        }
+    });
 
     state.needsAnimationReset = true;
     render();

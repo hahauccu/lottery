@@ -97,6 +97,7 @@ class LotteryFrontendController extends Controller
             'drawUrl' => route('lottery.draw', ['brandCode' => $event->brand_code]),
             'winnersUrl' => route('lottery.winners', ['brandCode' => $event->brand_code]),
             'switchAckUrl' => route('lottery.switch-ack', ['brandCode' => $event->brand_code]),
+            'readyUrl' => route('lottery.ready', ['brandCode' => $event->brand_code]),
         ];
 
         if ($request->boolean('payload')) {
@@ -204,6 +205,19 @@ class LotteryFrontendController extends Controller
                 'sequence' => $winner->sequence,
                 'won_at' => optional($winner->won_at)->toDateTimeString(),
             ])->values()->all(),
+        ]);
+    }
+
+    public function ready(string $brandCode): JsonResponse
+    {
+        LotteryEvent::where('brand_code', $brandCode)->firstOrFail();
+
+        $cacheKey = "lottery-ready:{$brandCode}";
+        Cache::put($cacheKey, now()->timestamp, now()->addSeconds(20));
+
+        return response()->json([
+            'ok' => true,
+            'ts' => now()->timestamp,
         ]);
     }
 
