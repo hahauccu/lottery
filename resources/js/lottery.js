@@ -23,6 +23,7 @@ const initLottery = () => {
     const drawButtonEl = document.getElementById('draw-button');
     const drawProgressEl = document.getElementById('draw-progress');
     const stageEl = document.getElementById('lottery-stage');
+    const switchingMaskEl = document.getElementById('switching-mask');
 
     // 結果展示模式元素
     const resultModeEl = document.getElementById('result-mode');
@@ -50,6 +51,41 @@ const initLottery = () => {
         isPrizesPreviewMode: false,
         showPrizesPreview: config.showPrizesPreview ?? false,
         allPrizes: config.allPrizes ?? [],
+        needsAnimationReset: false,
+    };
+
+    const switchingMask = (() => {
+        let hideTimer = null;
+        const show = () => {
+            if (!switchingMaskEl) return;
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }
+            switchingMaskEl.classList.add('is-visible');
+        };
+        const hide = (delay = 240) => {
+            if (!switchingMaskEl) return;
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+            }
+            hideTimer = setTimeout(() => {
+                switchingMaskEl.classList.remove('is-visible');
+            }, delay);
+        };
+        return { show, hide };
+    })();
+
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const clearCanvas = () => {
+        if (!lottoCanvasEl) return;
+        const ctx = lottoCanvasEl.getContext('2d');
+        if (!ctx) return;
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, lottoCanvasEl.width, lottoCanvasEl.height);
+        ctx.restore();
     };
 
     // 使用全域追蹤 ACK 狀態（避免多個閉包各自獨立追蹤）
@@ -171,66 +207,26 @@ const initLottery = () => {
         updateTitle(state.currentPrize?.name ?? config.eventName);
 
         const currentStyle = state.currentPrize?.animationStyle;
-        const isLotto = isLottoStyle(currentStyle);
-        const isRedPacket = isRedPacketStyle(currentStyle);
-        const isScratchCard = isScratchCardStyle(currentStyle);
-        const isTreasureChest = isTreasureChestStyle(currentStyle);
-        const isBigTreasureChest = isBigTreasureChestStyle(currentStyle);
         const isCanvas = isCanvasStyle(currentStyle);
 
         if (lottoWrapEl) {
             lottoWrapEl.classList.toggle('hidden', !isCanvas);
         }
 
-        if (isLotto) {
-            lottoAir.ensureReady();
-        }
-
-        if (isRedPacket) {
-            redPacketRain.ensureReady();
-        }
-
-        if (isScratchCard) {
-            scratchCard.ensureReady();
-            // 一開始就顯示刮刮卡（不等抽獎）
-            if (!state.isDrawing) {
-                const remaining = Math.max(0, (state.currentPrize?.winnersCount ?? 1) - (state.winners?.length ?? 0));
-                // 考慮實際可抽人數（資格限制）
-                // eligibleNames 未定義時預設為 0，避免顯示錯誤的卡片數量
-                const eligibleCount = state.eligibleNames?.length ?? 0;
-                const actualCanDraw = Math.min(remaining, eligibleCount);
-                const cardCount = state.currentPrize?.drawMode === 'one_by_one' ? Math.min(1, actualCanDraw) : Math.min(actualCanDraw, 9);
-                if (cardCount > 0) {
-                    scratchCard.showCards(cardCount);
-                }
-            }
-        }
-
-        if (isTreasureChest) {
-            treasureChest.ensureReady();
-            // 一開始就顯示寶箱（不等抽獎）
-            if (!state.isDrawing) {
-                const remaining = Math.max(0, (state.currentPrize?.winnersCount ?? 1) - (state.winners?.length ?? 0));
-                // 考慮實際可抽人數（資格限制）
-                // eligibleNames 未定義時預設為 0，避免顯示錯誤的寶箱數量
-                const eligibleCount = state.eligibleNames?.length ?? 0;
-                const actualCanDraw = Math.min(remaining, eligibleCount);
-                const chestCount = state.currentPrize?.drawMode === 'one_by_one' ? Math.min(1, actualCanDraw) : Math.min(actualCanDraw, 9);
-                if (chestCount > 0) {
-                    treasureChest.showChests(chestCount);
-                }
-            }
-        }
-
-        if (isBigTreasureChest) {
-            bigTreasureChest.ensureReady();
-            if (!state.isDrawing) {
-                bigTreasureChest.showChest();
-            }
+        const driver = getAnimationDriver(currentStyle);
+        const canPrepareIdle = !state.isDrawing && !state.isResultMode && !state.isPrizesPreviewMode && !state.isSwitching;
+        if (canPrepareIdle) {
+            driver.prepareIdle({ forceReset: state.needsAnimationReset });
+            state.needsAnimationReset = false;
         }
 
         if (drawButtonEl) {
-            drawButtonEl.disabled = !state.isOpen || !state.currentPrize || state.isDrawing || state.isPrizesPreviewMode || state.isSwitching;
+            drawButtonEl.disabled = !state.isOpen
+                || !state.currentPrize
+                || state.isDrawing
+                || state.isPrizesPreviewMode
+                || state.isSwitching
+                || state.isResultMode;
         }
 
         if (drawProgressEl) {
@@ -264,6 +260,9 @@ const initLottery = () => {
 
         const show = () => {
             if (!resultModeEl) return;
+            stopAllAnimations();
+            clearCanvas();
+            switchingMask.hide(0);
             stageEl?.classList.add('hidden');
             resultModeEl.classList.remove('hidden');
             state.isResultMode = true;
@@ -336,6 +335,9 @@ const initLottery = () => {
 
         const show = () => {
             if (!prizesPreviewModeEl) return;
+            stopAllAnimations();
+            clearCanvas();
+            switchingMask.hide(0);
             stageEl?.classList.add('hidden');
             resultModeEl?.classList.add('hidden');
             prizesPreviewModeEl.classList.remove('hidden');
@@ -4789,6 +4791,253 @@ const initLottery = () => {
         };
     })();
 
+    const stopAllAnimations = () => {
+        lottoAir.stop();
+        redPacketRain.stop();
+        scratchCard.stop();
+        treasureChest.stop();
+        bigTreasureChest.stop();
+    };
+
+    const appendWinner = (winner) => {
+        state.winners = [...state.winners, winner];
+        render();
+        const lastItem = winnerListEl?.lastElementChild;
+        if (lastItem) {
+            animateListItem(lastItem);
+        }
+    };
+
+    const getIdleSlotCount = (max) => {
+        const remaining = Math.max(0, (state.currentPrize?.winnersCount ?? 0) - (state.winners?.length ?? 0));
+        const eligibleCount = state.eligibleNames?.length ?? 0;
+        return Math.max(0, Math.min(remaining, eligibleCount, max));
+    };
+
+    const animationDrivers = {
+        lotto_air: {
+            prepareIdle: ({ forceReset = false } = {}) => {
+                lottoAir.ensureReady(forceReset);
+            },
+            prepareToDraw: () => {
+                lottoAir.ensureReady();
+                lottoAir.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+                if (state.currentPrize?.drawMode === 'one_by_one' && state.eligibleNames?.length) {
+                    lottoAir.ensureCount(state.eligibleNames.length);
+                }
+            },
+            revealWinners: async (winners) => {
+                if (state.currentPrize?.drawMode === 'one_by_one') {
+                    lottoAir.setWinners([winners[0]?.employee_name ?? randomLabel()], {
+                        resetBalls: false,
+                        resetPicked: false,
+                    });
+                    lottoAir.startDraw();
+                    await lottoAir.waitForNextPick();
+                    appendWinner(winners[0]);
+                } else {
+                    lottoAir.setWinners(winners.map((winner) => winner.employee_name ?? randomLabel()));
+                    lottoAir.startDraw();
+                    for (const winner of winners) {
+                        await lottoAir.waitForNextPick();
+                        appendWinner(winner);
+                        await delay(220);
+                    }
+                }
+            },
+            stop: () => lottoAir.stop(),
+        },
+        red_packet: {
+            prepareIdle: () => {
+                redPacketRain.ensureReady();
+            },
+            prepareToDraw: () => {
+                redPacketRain.ensureReady();
+                redPacketRain.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+                redPacketRain.start();
+            },
+            revealWinners: async (winners) => {
+                if (state.currentPrize?.drawMode === 'one_by_one') {
+                    redPacketRain.setWinner(winners[0]?.employee_name ?? '???');
+                    await redPacketRain.waitForReveal();
+                    appendWinner(winners[0]);
+                    await delay(1500);
+                    redPacketRain.stop();
+                } else {
+                    for (let i = 0; i < winners.length; i++) {
+                        const winner = winners[i];
+                        redPacketRain.setWinner(winner.employee_name ?? '???');
+                        await redPacketRain.waitForReveal();
+                        appendWinner(winner);
+                        if (i < winners.length - 1) {
+                            await delay(800);
+                            redPacketRain.prepareNext();
+                            await delay(600);
+                        }
+                    }
+                    await delay(1500);
+                    redPacketRain.stop();
+                }
+            },
+            stop: () => redPacketRain.stop(),
+        },
+        scratch_card: {
+            prepareIdle: () => {
+                scratchCard.ensureReady();
+                if (!state.isDrawing) {
+                    const cardCount = state.currentPrize?.drawMode === 'one_by_one'
+                        ? Math.min(1, getIdleSlotCount(1))
+                        : Math.min(getIdleSlotCount(9), 9);
+                    if (cardCount > 0) {
+                        scratchCard.showCards(cardCount);
+                    }
+                }
+            },
+            prepareToDraw: () => {
+                scratchCard.ensureReady();
+                scratchCard.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+            },
+            revealWinners: async (winners) => {
+                if (state.currentPrize?.drawMode === 'one_by_one') {
+                    scratchCard.setWinner(winners[0]?.employee_name ?? '???');
+                    await scratchCard.waitForReveal();
+                    appendWinner(winners[0]);
+                    await delay(1200);
+                    scratchCard.prepareNext();
+                } else {
+                    let processedCount = 0;
+                    while (processedCount < winners.length) {
+                        const batchStart = processedCount;
+                        const batchCount = Math.min(winners.length - processedCount, 9);
+                        const batchWinners = winners.slice(batchStart, batchStart + batchCount);
+                        scratchCard.showCards(batchCount);
+                        scratchCard.setWinners(batchWinners.map((w) => w.employee_name ?? '???'));
+                        const scratchOrder = shuffle(Array.from({ length: batchCount }, (_, i) => i));
+                        for (let i = 0; i < batchCount; i++) {
+                            const cardIndex = scratchOrder[i];
+                            await scratchCard.scratchSingleCard(cardIndex);
+                            appendWinner(batchWinners[cardIndex]);
+                            if (i < batchCount - 1) {
+                                await delay(1500);
+                            }
+                        }
+                        processedCount += batchCount;
+                        if (processedCount < winners.length) {
+                            await delay(1500);
+                        }
+                    }
+                    await delay(1500);
+                    scratchCard.prepareNext();
+                }
+            },
+            stop: () => scratchCard.stop(),
+        },
+        treasure_chest: {
+            prepareIdle: () => {
+                treasureChest.ensureReady();
+                if (!state.isDrawing) {
+                    const chestCount = state.currentPrize?.drawMode === 'one_by_one'
+                        ? Math.min(1, getIdleSlotCount(1))
+                        : Math.min(getIdleSlotCount(9), 9);
+                    if (chestCount > 0) {
+                        treasureChest.showChests(chestCount);
+                    }
+                }
+            },
+            prepareToDraw: () => {
+                treasureChest.ensureReady();
+                treasureChest.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+            },
+            revealWinners: async (winners) => {
+                if (state.currentPrize?.drawMode === 'one_by_one') {
+                    treasureChest.setWinner(winners[0]?.employee_name ?? '???');
+                    await treasureChest.waitForReveal();
+                    appendWinner(winners[0]);
+                    await delay(1500);
+                    treasureChest.prepareNext();
+                } else {
+                    let processedCount = 0;
+                    while (processedCount < winners.length) {
+                        const batchStart = processedCount;
+                        const batchCount = Math.min(winners.length - processedCount, 9);
+                        const batchWinners = winners.slice(batchStart, batchStart + batchCount);
+                        treasureChest.showChests(batchCount);
+                        treasureChest.setWinners(batchWinners.map((w) => w.employee_name ?? '???'));
+                        const openOrder = shuffle(Array.from({ length: batchCount }, (_, i) => i));
+                        for (let i = 0; i < batchCount; i++) {
+                            const chestIndex = openOrder[i];
+                            await treasureChest.openSingleChest(chestIndex);
+                            appendWinner(batchWinners[chestIndex]);
+                            if (i < batchCount - 1) {
+                                await delay(1000);
+                            }
+                        }
+                        processedCount += batchCount;
+                        if (processedCount < winners.length) {
+                            await delay(1500);
+                        }
+                    }
+                    await delay(1500);
+                    treasureChest.prepareNext();
+                }
+            },
+            stop: () => treasureChest.stop(),
+        },
+        big_treasure_chest: {
+            prepareIdle: () => {
+                bigTreasureChest.ensureReady();
+                if (!state.isDrawing) {
+                    bigTreasureChest.showChest();
+                }
+            },
+            prepareToDraw: () => {
+                bigTreasureChest.ensureReady();
+                bigTreasureChest.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+            },
+            revealWinners: async (winners) => {
+                const settleDelay = 380;
+                const gapDelay = 480;
+                if (state.currentPrize?.drawMode === 'one_by_one') {
+                    bigTreasureChest.setWinner(winners[0]?.employee_name ?? '???');
+                    await bigTreasureChest.waitForReveal();
+                    appendWinner(winners[0]);
+                    await delay(settleDelay);
+                    bigTreasureChest.prepareNext();
+                } else {
+                    for (let i = 0; i < winners.length; i++) {
+                        const winner = winners[i];
+                        bigTreasureChest.setWinner(winner.employee_name ?? '???');
+                        await bigTreasureChest.waitForReveal();
+                        appendWinner(winner);
+                        if (i < winners.length - 1) {
+                            await delay(gapDelay);
+                            bigTreasureChest.prepareNext();
+                            await delay(400);
+                        }
+                    }
+                    await delay(settleDelay);
+                    bigTreasureChest.prepareNext();
+                }
+            },
+            stop: () => bigTreasureChest.stop(),
+        },
+        fallback: {
+            prepareIdle: () => {},
+            prepareToDraw: () => {},
+            revealWinners: async () => {},
+            stop: () => {},
+        },
+    };
+
+    const getAnimationDriver = (style) => {
+        if (isLottoAirStyle(style)) return animationDrivers.lotto_air;
+        if (isRedPacketStyle(style)) return animationDrivers.red_packet;
+        if (isScratchCardStyle(style)) return animationDrivers.scratch_card;
+        if (isTreasureChestStyle(style)) return animationDrivers.treasure_chest;
+        if (isBigTreasureChestStyle(style)) return animationDrivers.big_treasure_chest;
+        return animationDrivers.fallback;
+    };
+
 
     // [已刪除舊版 lotto/lotto3 相關函數]
     // 舊版樂透動畫已整合至 lottoAir 模組
@@ -4806,7 +5055,7 @@ const initLottery = () => {
     };
 
     const draw = async () => {
-        if (!state.isOpen || !state.currentPrize || !config.drawUrl || state.isPrizesPreviewMode || state.isSwitching) {
+        if (!state.isOpen || !state.currentPrize || !config.drawUrl || state.isPrizesPreviewMode || state.isSwitching || state.isResultMode) {
             sfx.playError();
             return;
         }
@@ -4834,41 +5083,17 @@ const initLottery = () => {
         render();
 
         const style = state.currentPrize?.animationStyle ?? 'lotto_air';
-        const useLottoAir = isLottoAirStyle(style);
-        const useRedPacket = isRedPacketStyle(style);
-        const useScratchCard = isScratchCardStyle(style);
-        const useTreasureChest = isTreasureChestStyle(style);
-        const useBigTreasureChest = isBigTreasureChestStyle(style);
-
-        // 用於追蹤持續播放的音效
+        const driver = getAnimationDriver(style);
+        const isLotto = isLottoStyle(style);
         let ballRumbleSound = null;
 
         try {
             startDrawAudio();
             lottoTimerLabel = '';
 
-            // 紅包雨：先啟動飄落動畫
-            if (useRedPacket) {
-                redPacketRain.ensureReady();
-                redPacketRain.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
-                redPacketRain.start();
-            }
-
-            // 刮刮樂：卡片已經在 render() 時顯示，這裡只設定秒數
-            if (useScratchCard) {
-                scratchCard.ensureReady();
-                scratchCard.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
-            }
-
-            // 寶箱：寶箱已經在 render() 時顯示，這裡只設定秒數
-            if (useTreasureChest) {
-                treasureChest.ensureReady();
-                treasureChest.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
-            }
-
-            if (useBigTreasureChest) {
-                bigTreasureChest.ensureReady();
-                bigTreasureChest.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+            await driver.prepareToDraw();
+            if (isLotto) {
+                ballRumbleSound = sfx.playBallRumble();
             }
 
             const response = await fetch(config.drawUrl, {
@@ -4881,18 +5106,7 @@ const initLottery = () => {
             });
 
             if (!response.ok) {
-                if (useRedPacket) {
-                    redPacketRain.stop();
-                }
-                if (useScratchCard) {
-                    scratchCard.stop();
-                }
-                if (useTreasureChest) {
-                    treasureChest.stop();
-                }
-                if (useBigTreasureChest) {
-                    bigTreasureChest.stop();
-                }
+                driver.stop();
                 state.isDrawing = false;
                 render();
                 return;
@@ -4903,18 +5117,7 @@ const initLottery = () => {
 
             if (winners.length === 0) {
                 console.warn('[lottery] no winners returned from /draw');
-                if (useRedPacket) {
-                    redPacketRain.stop();
-                }
-                if (useScratchCard) {
-                    scratchCard.stop();
-                }
-                if (useTreasureChest) {
-                    treasureChest.stop();
-                }
-                if (useBigTreasureChest) {
-                    bigTreasureChest.stop();
-                }
+                driver.stop();
                 state.isDrawing = false;
                 sfx.playError();
                 // 可抽人數已用盡但名額未滿，若有中獎者則進入 resultMode
@@ -4925,298 +5128,12 @@ const initLottery = () => {
                 return;
             }
 
-            if (useLottoAir) {
-                lottoAir.ensureReady();
-                lottoAir.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
-                ballRumbleSound = sfx.playBallRumble();
-                if (state.currentPrize?.drawMode === 'one_by_one') {
-                    if (state.eligibleNames?.length) {
-                        lottoAir.ensureCount(state.eligibleNames.length);
-                    }
-                    lottoAir.setWinners([winners[0]?.employee_name ?? randomLabel()], {
-                        resetBalls: false,
-                        resetPicked: false,
-                    });
-                    lottoAir.startDraw();
-                    // eslint-disable-next-line no-await-in-loop
-                    await lottoAir.waitForNextPick();
-                    state.winners = [...state.winners, winners[0]];
-                    render();
-
-                    const lastItem = winnerListEl?.lastElementChild;
-                    if (lastItem) {
-                        animateListItem(lastItem);
-                    }
-                } else {
-                    lottoAir.setWinners(winners.map((winner) => winner.employee_name ?? randomLabel()));
-                    lottoAir.startDraw();
-                    for (const winner of winners) {
-                        // eslint-disable-next-line no-await-in-loop
-                        await lottoAir.waitForNextPick();
-                        state.winners = [...state.winners, winner];
-                        render();
-
-                        const lastItem = winnerListEl?.lastElementChild;
-                        if (lastItem) {
-                            animateListItem(lastItem);
-                        }
-
-                        // eslint-disable-next-line no-await-in-loop
-                        await new Promise((r) => setTimeout(r, 220));
-                    }
-                }
-            } else if (useRedPacket) {
-                // 紅包雨：設定中獎者並等待揭曉
-                if (state.currentPrize?.drawMode === 'one_by_one') {
-                    // 逐一抽出模式
-                    redPacketRain.setWinner(winners[0]?.employee_name ?? '???');
-                    await redPacketRain.waitForReveal();
-                    state.winners = [...state.winners, winners[0]];
-                    render();
-
-                    const lastItem = winnerListEl?.lastElementChild;
-                    if (lastItem) {
-                        animateListItem(lastItem);
-                    }
-
-                    // 等待一下再停止動畫
-                    await new Promise((r) => setTimeout(r, 1500));
-                    redPacketRain.stop();
-                } else {
-                    // 一次全抽模式：紅包雨持續，依序揭曉每個中獎者
-                    for (let i = 0; i < winners.length; i++) {
-                        const winner = winners[i];
-                        redPacketRain.setWinner(winner.employee_name ?? '???');
-                        // eslint-disable-next-line no-await-in-loop
-                        await redPacketRain.waitForReveal();
-                        state.winners = [...state.winners, winner];
-                        render();
-
-                        const lastItem = winnerListEl?.lastElementChild;
-                        if (lastItem) {
-                            animateListItem(lastItem);
-                        }
-
-                        // 如果還有下一位中獎者，準備下一輪（不停止雨）
-                        if (i < winners.length - 1) {
-                            // eslint-disable-next-line no-await-in-loop
-                            await new Promise((r) => setTimeout(r, 800));
-                            redPacketRain.prepareNext();
-                            // 等待紅包補充
-                            // eslint-disable-next-line no-await-in-loop
-                            await new Promise((r) => setTimeout(r, 600));
-                        }
-                    }
-
-                    // 最後一位揭曉後等待一下再停止動畫
-                    await new Promise((r) => setTimeout(r, 1500));
-                    redPacketRain.stop();
-                }
-            } else if (useScratchCard) {
-                // 刮刮樂：設定中獎者並等待刮除揭曉
-                if (state.currentPrize?.drawMode === 'one_by_one') {
-                    // 逐一抽出模式：單張卡片
-                    scratchCard.setWinner(winners[0]?.employee_name ?? '???');
-                    await scratchCard.waitForReveal();
-                    state.winners = [...state.winners, winners[0]];
-                    render();
-
-                    const lastItem = winnerListEl?.lastElementChild;
-                    if (lastItem) {
-                        animateListItem(lastItem);
-                    }
-
-                    // 等待一下再準備下一張
-                    await new Promise((r) => setTimeout(r, 1200));
-                    scratchCard.prepareNext();
-                } else {
-                    // 一次全抽模式：分批顯示，逐一刮開
-                    let processedCount = 0;
-
-                    while (processedCount < winners.length) {
-                        // 計算本批數量（最多 9 張）
-                        const batchStart = processedCount;
-                        const batchCount = Math.min(winners.length - processedCount, 9);
-                        const batchWinners = winners.slice(batchStart, batchStart + batchCount);
-
-                        // 顯示本批卡片
-                        scratchCard.showCards(batchCount);
-                        scratchCard.setWinners(batchWinners.map((w) => w.employee_name ?? '???'));
-
-                        // 建立隨機刮開順序 (Fisher-Yates)
-                        const scratchOrder = Array.from({ length: batchCount }, (_, i) => i);
-                        for (let i = scratchOrder.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [scratchOrder[i], scratchOrder[j]] = [scratchOrder[j], scratchOrder[i]];
-                        }
-
-                        // 逐一刮開每張卡片（隨機順序）
-                        for (let i = 0; i < batchCount; i++) {
-                            const cardIndex = scratchOrder[i];
-                            // eslint-disable-next-line no-await-in-loop
-                            await scratchCard.scratchSingleCard(cardIndex);
-
-                            // 加入中獎者列表
-                            state.winners = [...state.winners, batchWinners[cardIndex]];
-                            render();
-
-                            const lastItem = winnerListEl?.lastElementChild;
-                            if (lastItem) {
-                                animateListItem(lastItem);
-                            }
-
-                            // 間隔 1.5 秒（最後一個不用等）
-                            if (i < batchCount - 1) {
-                                // eslint-disable-next-line no-await-in-loop
-                                await new Promise((r) => setTimeout(r, 1500));
-                            }
-                        }
-
-                        processedCount += batchCount;
-
-                        // 如果還有下一批，等待後重新顯示
-                        if (processedCount < winners.length) {
-                            // eslint-disable-next-line no-await-in-loop
-                            await new Promise((r) => setTimeout(r, 1500));
-                        }
-                    }
-
-                    // 最後等待一下再重置
-                    await new Promise((r) => setTimeout(r, 1500));
-                    scratchCard.prepareNext();
-                }
-            } else if (useTreasureChest) {
-                // 寶箱：設定中獎者並等待開啟揭曉
-                if (state.currentPrize?.drawMode === 'one_by_one') {
-                    // 逐一抽出模式：單個寶箱
-                    treasureChest.setWinner(winners[0]?.employee_name ?? '???');
-                    await treasureChest.waitForReveal();
-                    state.winners = [...state.winners, winners[0]];
-                    render();
-
-                    const lastItem = winnerListEl?.lastElementChild;
-                    if (lastItem) {
-                        animateListItem(lastItem);
-                    }
-
-                    // 等待一下再準備下一個
-                    await new Promise((r) => setTimeout(r, 1500));
-                    treasureChest.prepareNext();
-                } else {
-                    // 一次全抽模式：分批顯示，逐一開啟
-                    let processedCount = 0;
-
-                    while (processedCount < winners.length) {
-                        // 計算本批數量（最多 9 個）
-                        const batchStart = processedCount;
-                        const batchCount = Math.min(winners.length - processedCount, 9);
-                        const batchWinners = winners.slice(batchStart, batchStart + batchCount);
-
-                        // 顯示本批寶箱
-                        treasureChest.showChests(batchCount);
-                        treasureChest.setWinners(batchWinners.map((w) => w.employee_name ?? '???'));
-
-                        // 建立隨機開啟順序
-                        const openOrder = Array.from({ length: batchCount }, (_, i) => i);
-                        for (let i = openOrder.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [openOrder[i], openOrder[j]] = [openOrder[j], openOrder[i]];
-                        }
-
-                        // 逐一開啟每個寶箱（隨機順序）
-                        for (let i = 0; i < batchCount; i++) {
-                            const chestIndex = openOrder[i];
-                            // eslint-disable-next-line no-await-in-loop
-                            await treasureChest.openSingleChest(chestIndex);
-
-                            // 加入中獎者列表
-                            state.winners = [...state.winners, batchWinners[chestIndex]];
-                            render();
-
-                            const lastItem = winnerListEl?.lastElementChild;
-                            if (lastItem) {
-                                animateListItem(lastItem);
-                            }
-
-                            // 間隔 1 秒（最後一個不用等）
-                            if (i < batchCount - 1) {
-                                // eslint-disable-next-line no-await-in-loop
-                                await new Promise((r) => setTimeout(r, 1000));
-                            }
-                        }
-
-                        processedCount += batchCount;
-
-                        // 如果還有下一批，等待後重新顯示
-                        if (processedCount < winners.length) {
-                            // eslint-disable-next-line no-await-in-loop
-                            await new Promise((r) => setTimeout(r, 1500));
-                        }
-                    }
-
-                    // 最後等待一下再清除
-                    await new Promise((r) => setTimeout(r, 1500));
-                    treasureChest.prepareNext();
-                }
-            } else if (useBigTreasureChest) {
-                const settleDelay = 380;
-                const gapDelay = 480;
-
-                if (state.currentPrize?.drawMode === 'one_by_one') {
-                    bigTreasureChest.setWinner(winners[0]?.employee_name ?? '???');
-                    await bigTreasureChest.waitForReveal();
-                    state.winners = [...state.winners, winners[0]];
-                    render();
-
-                    const lastItem = winnerListEl?.lastElementChild;
-                    if (lastItem) {
-                        animateListItem(lastItem);
-                    }
-
-                    await new Promise((r) => setTimeout(r, settleDelay));
-                    bigTreasureChest.prepareNext();
-                } else {
-                    for (let i = 0; i < winners.length; i++) {
-                        const winner = winners[i];
-                        bigTreasureChest.setWinner(winner.employee_name ?? '???');
-                        // eslint-disable-next-line no-await-in-loop
-                        await bigTreasureChest.waitForReveal();
-                        state.winners = [...state.winners, winner];
-                        render();
-
-                        const lastItem = winnerListEl?.lastElementChild;
-                        if (lastItem) {
-                            animateListItem(lastItem);
-                        }
-
-                        if (i < winners.length - 1) {
-                            // eslint-disable-next-line no-await-in-loop
-                            await new Promise((r) => setTimeout(r, gapDelay));
-                            bigTreasureChest.prepareNext();
-                            // eslint-disable-next-line no-await-in-loop
-                            await new Promise((r) => setTimeout(r, 400));
-                        }
-                    }
-
-                    await new Promise((r) => setTimeout(r, settleDelay));
-                    bigTreasureChest.prepareNext();
-                }
-            }
+            await driver.revealWinners(winners);
         } catch {
-            if (useLottoAir) {
+            if (isLotto) {
                 lottoAir.slowStopMachine();
-            }
-            if (useRedPacket) {
-                redPacketRain.stop();
-            }
-            if (useScratchCard) {
-                scratchCard.stop();
-            }
-            if (useTreasureChest) {
-                treasureChest.stop();
-            }
-            if (useBigTreasureChest) {
-                bigTreasureChest.stop();
+            } else {
+                driver.stop();
             }
             return null;
         } finally {
@@ -5306,6 +5223,7 @@ const initLottery = () => {
 
     const applyLotteryPayload = (payload, options = {}) => {
         const { skipWinnersUpdate = false } = options;
+        const previousPrizeId = state.currentPrize?.id ?? null;
         const nextPrize = payload.current_prize
             ? {
                 id: payload.current_prize.id,
@@ -5318,19 +5236,26 @@ const initLottery = () => {
             }
             : null;
 
+        const nextIsSwitching = payload.event?.is_prize_switching ?? false;
+        const prizeChanged = nextPrize?.id !== previousPrizeId;
+        if (nextIsSwitching || prizeChanged) {
+            switchingMask.show();
+        }
+
         state.isOpen = payload.event?.is_lottery_open ?? state.isOpen;
         state.isTestMode = payload.event?.is_test_mode ?? state.isTestMode;
-        state.isSwitching = payload.event?.is_prize_switching ?? false;
+        state.isSwitching = nextIsSwitching;
         state.showPrizesPreview = payload.event?.show_prizes_preview ?? state.showPrizesPreview;
         state.allPrizes = payload.all_prizes ?? state.allPrizes ?? [];
+        if (prizeChanged) {
+            state.needsAnimationReset = true;
+        }
 
         if (nextPrize) {
             nextPrize.musicUrl = payload.current_prize?.music_url ?? nextPrize.musicUrl;
         }
 
         // 獎項變更時強制清空 eligibleNames，避免使用舊獎項的資格名單
-        const prizeChanged = nextPrize?.id !== state.currentPrize?.id;
-
         state.currentPrize = nextPrize;
         if (!skipWinnersUpdate) {
             state.winners = payload.winners ?? [];
@@ -5353,36 +5278,17 @@ const initLottery = () => {
             }
         }
 
-        updateTitle(payload.current_prize?.name ?? payload.event?.name);
-        render();
-        if (isLottoStyle(nextPrize?.animationStyle)) {
-            lottoAir.ensureReady(prizeChanged);
-        } else {
-            lottoAir.stop();
-        }
-        if (!isRedPacketStyle(nextPrize?.animationStyle)) {
-            redPacketRain.stop();
-        }
-        if (!isScratchCardStyle(nextPrize?.animationStyle)) {
-            scratchCard.stop();
-        }
-        if (!isTreasureChestStyle(nextPrize?.animationStyle)) {
-            treasureChest.stop();
-        }
-        if (!isBigTreasureChestStyle(nextPrize?.animationStyle)) {
-            bigTreasureChest.stop();
+        if (!state.isDrawing && (prizeChanged || nextIsSwitching || state.showPrizesPreview)) {
+            stopAllAnimations();
+            clearCanvas();
         }
 
-        // 獎項變更時，清空 canvas 避免舊動畫殘留
-        if (prizeChanged && lottoCanvasEl) {
-            const ctx = lottoCanvasEl.getContext('2d');
-            if (ctx) {
-                ctx.save();
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.clearRect(0, 0, lottoCanvasEl.width, lottoCanvasEl.height);
-                ctx.restore();
-            }
+        if (prizeChanged && state.isResultMode) {
+            resultMode.hide();
         }
+
+        updateTitle(payload.current_prize?.name ?? payload.event?.name);
+        render();
 
         // 模式切換邏輯：獎項預覽優先於結果展示
         const isCompleted = payload.current_prize?.is_completed ?? isPrizeCompleted();
@@ -5417,6 +5323,10 @@ const initLottery = () => {
 
         // showPrizesPreview 是一次性信號，處理完後重設
         state.showPrizesPreview = false;
+
+        if (!state.isSwitching) {
+            switchingMask.hide();
+        }
 
         // 獎項切換中 → 回報前端已載入（全域防抖：同一獎項只發送一次，且等前一個完成）
         const ackPrizeId = payload.current_prize?.id ?? 'preview';
@@ -5595,10 +5505,8 @@ const initLottery = () => {
 
     updateDanmakuContainer(config.danmakuEnabled ?? false);
 
+    state.needsAnimationReset = true;
     render();
-    if (isLottoAirStyle(state.currentPrize?.animationStyle)) {
-        lottoAir.ensureReady();
-    }
 
     // 初始化時檢查顯示模式
     const initialWantPreview = shouldShowPrizesPreview();

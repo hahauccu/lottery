@@ -45,6 +45,31 @@
             visibility: hidden;
         }
 
+        #switching-mask {
+            position: absolute;
+            inset: 0;
+            z-index: 35;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.85);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 360ms ease;
+        }
+
+        #switching-mask.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #switching-mask .switching-mask__text {
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.35em;
+        }
+
         /* 測試模式浮水印 */
         #test-mode-watermark {
             position: fixed;
@@ -90,15 +115,19 @@
     </style>
 </head>
 <body class="h-[100svh] overflow-hidden bg-black text-white">
-    <div
-        id="lottery-root"
-        class="lottery-bg relative min-h-[100svh] {{ $bgUrl ? 'has-image' : '' }}"
-        @if ($bgUrl) style="--lottery-bg-url: url('{{ $bgUrl }}');" @endif
-    >
-        <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/35"></div>
+        <div
+            id="lottery-root"
+            class="lottery-bg relative min-h-[100svh] {{ $bgUrl ? 'has-image' : '' }}"
+            @if ($bgUrl) style="--lottery-bg-url: url('{{ $bgUrl }}');" @endif
+        >
+            <div class="absolute inset-0 bg-gradient-to-b from-black/10 via-black/5 to-black/35"></div>
 
-        <!-- 測試模式浮水印 -->
-        <div id="test-mode-watermark" class="hidden">
+            <div id="switching-mask" aria-hidden="true">
+                <div class="switching-mask__text">切換中…</div>
+            </div>
+
+            <!-- 測試模式浮水印 -->
+            <div id="test-mode-watermark" class="hidden">
             <div class="watermark-text">抽獎測試中</div>
         </div>
 
