@@ -5325,7 +5325,8 @@ const initLottery = () => {
         state.showPrizesPreview = false;
 
         if (!state.isSwitching) {
-            switchingMask.hide();
+            // 獎項變更時給動畫更多時間初始化（1.2 秒），一般情況維持原速
+            switchingMask.hide(prizeChanged ? 1200 : 240);
         }
 
         // 獎項切換中 → 回報前端已載入（全域防抖：同一獎項只發送一次，且等前一個完成）
