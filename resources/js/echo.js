@@ -13,5 +13,6 @@ window.Echo = new Echo({
     wsPort: Number(import.meta.env.VITE_REVERB_PORT ?? (useTLS ? 443 : 80)),
     wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 443),
     forceTLS: useTLS,
-    enabledTransports: useTLS ? ['wss'] : ['ws'],
+    // pusher-js transport 名稱應為 "ws"；TLS 由 forceTLS 決定是否升級為 wss。
+    enabledTransports: ['ws'],
 });
