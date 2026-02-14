@@ -104,6 +104,28 @@ const initLottery = () => {
 
     let pageIndex = 0;
     let pageTimer = null;
+    let resultModeTimer = null;
+    let drawRunId = 0;
+
+    const clearResultModeTimer = () => {
+        if (resultModeTimer) {
+            clearTimeout(resultModeTimer);
+            resultModeTimer = null;
+        }
+    };
+
+    const scheduleResultModeShow = (delayMs = 2000) => {
+        clearResultModeTimer();
+        resultModeTimer = setTimeout(() => {
+            resultModeTimer = null;
+            if (state.isDrawing || state.isSwitching || state.isPrizesPreviewMode) {
+                return;
+            }
+            if (!shouldShowPrizesPreview()) {
+                resultMode.show();
+            }
+        }, delayMs);
+    };
 
     const getPageSize = () => {
         if (!winnerListEl) {
@@ -260,6 +282,7 @@ const initLottery = () => {
 
         const show = () => {
             if (!resultModeEl) return;
+            clearResultModeTimer();
             stopAllAnimations();
             clearCanvas();
             switchingMask.hide(0);
@@ -270,6 +293,7 @@ const initLottery = () => {
         };
 
         const hide = () => {
+            clearResultModeTimer();
             stopTimer();
             if (!resultModeEl) return;
             resultModeEl.classList.add('hidden');
@@ -335,6 +359,7 @@ const initLottery = () => {
 
         const show = () => {
             if (!prizesPreviewModeEl) return;
+            clearResultModeTimer();
             stopAllAnimations();
             clearCanvas();
             switchingMask.hide(0);
@@ -4800,6 +4825,8 @@ const initLottery = () => {
     };
 
     const appendWinner = (winner) => {
+        if (!state.isDrawing) return;
+        if (!winner) return;
         state.winners = [...state.winners, winner];
         render();
         const lastItem = winnerListEl?.lastElementChild;
@@ -4826,7 +4853,11 @@ const initLottery = () => {
                     lottoAir.ensureCount(state.eligibleNames.length);
                 }
             },
-            revealWinners: async (winners) => {
+            revealWinners: async (winners, runtime = {}) => {
+                const append = runtime.appendWinner ?? appendWinner;
+                const isRunStale = runtime.isRunStale ?? (() => false);
+                if (isRunStale()) return;
+
                 if (state.currentPrize?.drawMode === 'one_by_one') {
                     lottoAir.setWinners([winners[0]?.employee_name ?? randomLabel()], {
                         resetBalls: false,
@@ -4834,14 +4865,17 @@ const initLottery = () => {
                     });
                     lottoAir.startDraw();
                     await lottoAir.waitForNextPick();
-                    appendWinner(winners[0]);
+                    if (isRunStale()) return;
+                    append(winners[0]);
                 } else {
                     lottoAir.setWinners(winners.map((winner) => winner.employee_name ?? randomLabel()));
                     lottoAir.startDraw();
                     for (const winner of winners) {
                         await lottoAir.waitForNextPick();
-                        appendWinner(winner);
+                        if (isRunStale()) return;
+                        append(winner);
                         await delay(220);
+                        if (isRunStale()) return;
                     }
                 }
             },
@@ -4856,26 +4890,36 @@ const initLottery = () => {
                 redPacketRain.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
                 redPacketRain.start();
             },
-            revealWinners: async (winners) => {
+            revealWinners: async (winners, runtime = {}) => {
+                const append = runtime.appendWinner ?? appendWinner;
+                const isRunStale = runtime.isRunStale ?? (() => false);
+                if (isRunStale()) return;
+
                 if (state.currentPrize?.drawMode === 'one_by_one') {
                     redPacketRain.setWinner(winners[0]?.employee_name ?? '???');
                     await redPacketRain.waitForReveal();
-                    appendWinner(winners[0]);
+                    if (isRunStale()) return;
+                    append(winners[0]);
                     await delay(1500);
+                    if (isRunStale()) return;
                     redPacketRain.stop();
                 } else {
                     for (let i = 0; i < winners.length; i++) {
                         const winner = winners[i];
                         redPacketRain.setWinner(winner.employee_name ?? '???');
                         await redPacketRain.waitForReveal();
-                        appendWinner(winner);
+                        if (isRunStale()) return;
+                        append(winner);
                         if (i < winners.length - 1) {
                             await delay(800);
+                            if (isRunStale()) return;
                             redPacketRain.prepareNext();
                             await delay(600);
+                            if (isRunStale()) return;
                         }
                     }
                     await delay(1500);
+                    if (isRunStale()) return;
                     redPacketRain.stop();
                 }
             },
@@ -4897,16 +4941,23 @@ const initLottery = () => {
                 scratchCard.ensureReady();
                 scratchCard.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
             },
-            revealWinners: async (winners) => {
+            revealWinners: async (winners, runtime = {}) => {
+                const append = runtime.appendWinner ?? appendWinner;
+                const isRunStale = runtime.isRunStale ?? (() => false);
+                if (isRunStale()) return;
+
                 if (state.currentPrize?.drawMode === 'one_by_one') {
                     scratchCard.setWinner(winners[0]?.employee_name ?? '???');
                     await scratchCard.waitForReveal();
-                    appendWinner(winners[0]);
+                    if (isRunStale()) return;
+                    append(winners[0]);
                     await delay(1200);
+                    if (isRunStale()) return;
                     scratchCard.prepareNext();
                 } else {
                     let processedCount = 0;
                     while (processedCount < winners.length) {
+                        if (isRunStale()) return;
                         const batchStart = processedCount;
                         const batchCount = Math.min(winners.length - processedCount, 9);
                         const batchWinners = winners.slice(batchStart, batchStart + batchCount);
@@ -4916,17 +4967,21 @@ const initLottery = () => {
                         for (let i = 0; i < batchCount; i++) {
                             const cardIndex = scratchOrder[i];
                             await scratchCard.scratchSingleCard(cardIndex);
-                            appendWinner(batchWinners[cardIndex]);
+                            if (isRunStale()) return;
+                            append(batchWinners[cardIndex]);
                             if (i < batchCount - 1) {
                                 await delay(1500);
+                                if (isRunStale()) return;
                             }
                         }
                         processedCount += batchCount;
                         if (processedCount < winners.length) {
                             await delay(1500);
+                            if (isRunStale()) return;
                         }
                     }
                     await delay(1500);
+                    if (isRunStale()) return;
                     scratchCard.prepareNext();
                 }
             },
@@ -4948,16 +5003,23 @@ const initLottery = () => {
                 treasureChest.ensureReady();
                 treasureChest.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
             },
-            revealWinners: async (winners) => {
+            revealWinners: async (winners, runtime = {}) => {
+                const append = runtime.appendWinner ?? appendWinner;
+                const isRunStale = runtime.isRunStale ?? (() => false);
+                if (isRunStale()) return;
+
                 if (state.currentPrize?.drawMode === 'one_by_one') {
                     treasureChest.setWinner(winners[0]?.employee_name ?? '???');
                     await treasureChest.waitForReveal();
-                    appendWinner(winners[0]);
+                    if (isRunStale()) return;
+                    append(winners[0]);
                     await delay(1500);
+                    if (isRunStale()) return;
                     treasureChest.prepareNext();
                 } else {
                     let processedCount = 0;
                     while (processedCount < winners.length) {
+                        if (isRunStale()) return;
                         const batchStart = processedCount;
                         const batchCount = Math.min(winners.length - processedCount, 9);
                         const batchWinners = winners.slice(batchStart, batchStart + batchCount);
@@ -4967,17 +5029,21 @@ const initLottery = () => {
                         for (let i = 0; i < batchCount; i++) {
                             const chestIndex = openOrder[i];
                             await treasureChest.openSingleChest(chestIndex);
-                            appendWinner(batchWinners[chestIndex]);
+                            if (isRunStale()) return;
+                            append(batchWinners[chestIndex]);
                             if (i < batchCount - 1) {
                                 await delay(1000);
+                                if (isRunStale()) return;
                             }
                         }
                         processedCount += batchCount;
                         if (processedCount < winners.length) {
                             await delay(1500);
+                            if (isRunStale()) return;
                         }
                     }
                     await delay(1500);
+                    if (isRunStale()) return;
                     treasureChest.prepareNext();
                 }
             },
@@ -4994,28 +5060,38 @@ const initLottery = () => {
                 bigTreasureChest.ensureReady();
                 bigTreasureChest.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
             },
-            revealWinners: async (winners) => {
+            revealWinners: async (winners, runtime = {}) => {
+                const append = runtime.appendWinner ?? appendWinner;
+                const isRunStale = runtime.isRunStale ?? (() => false);
+                if (isRunStale()) return;
+
                 const settleDelay = 380;
                 const gapDelay = 480;
                 if (state.currentPrize?.drawMode === 'one_by_one') {
                     bigTreasureChest.setWinner(winners[0]?.employee_name ?? '???');
                     await bigTreasureChest.waitForReveal();
-                    appendWinner(winners[0]);
+                    if (isRunStale()) return;
+                    append(winners[0]);
                     await delay(settleDelay);
+                    if (isRunStale()) return;
                     bigTreasureChest.prepareNext();
                 } else {
                     for (let i = 0; i < winners.length; i++) {
                         const winner = winners[i];
                         bigTreasureChest.setWinner(winner.employee_name ?? '???');
                         await bigTreasureChest.waitForReveal();
-                        appendWinner(winner);
+                        if (isRunStale()) return;
+                        append(winner);
                         if (i < winners.length - 1) {
                             await delay(gapDelay);
+                            if (isRunStale()) return;
                             bigTreasureChest.prepareNext();
                             await delay(400);
+                            if (isRunStale()) return;
                         }
                     }
                     await delay(settleDelay);
+                    if (isRunStale()) return;
                     bigTreasureChest.prepareNext();
                 }
             },
@@ -5073,6 +5149,14 @@ const initLottery = () => {
 
         sfx.playButtonClick();
         state.isDrawing = true;
+        clearResultModeTimer();
+
+        const runId = ++drawRunId;
+        const isRunStale = () => runId !== drawRunId;
+        const appendWinnerForRun = (winner) => {
+            if (isRunStale() || !state.isDrawing) return;
+            appendWinner(winner);
+        };
 
         // 抽獎開始前清空中獎名單（避免顯示上一次結果）
         // one_by_one 模式且已有中獎者時才保留
@@ -5105,6 +5189,10 @@ const initLottery = () => {
                 body: JSON.stringify({}),
             });
 
+            if (isRunStale()) {
+                return;
+            }
+
             if (!response.ok) {
                 driver.stop();
                 state.isDrawing = false;
@@ -5113,6 +5201,9 @@ const initLottery = () => {
             }
 
             const data = await response.json();
+            if (isRunStale()) {
+                return;
+            }
             const winners = data?.winners ?? [];
 
             if (winners.length === 0) {
@@ -5122,13 +5213,16 @@ const initLottery = () => {
                 sfx.playError();
                 // 可抽人數已用盡但名額未滿，若有中獎者則進入 resultMode
                 if (state.winners?.length > 0 && !isPrizeCompleted()) {
-                    setTimeout(() => resultMode.show(), 2000);
+                    scheduleResultModeShow();
                 }
                 render();
                 return;
             }
 
-            await driver.revealWinners(winners);
+            await driver.revealWinners(winners, {
+                appendWinner: appendWinnerForRun,
+                isRunStale,
+            });
         } catch {
             if (isLotto) {
                 lottoAir.slowStopMachine();
@@ -5137,8 +5231,13 @@ const initLottery = () => {
             }
             return null;
         } finally {
-            // 停止持續播放的音效
             ballRumbleSound?.stop();
+
+            if (isRunStale()) {
+                return;
+            }
+
+            // 停止持續播放的音效
             stopDrawAudio();
             state.isDrawing = false;
             render();
@@ -5147,7 +5246,7 @@ const initLottery = () => {
             const exhausted = (state.eligibleNames?.length === 0) && !isPrizeCompleted() && (state.winners?.length > 0);
             if (isPrizeCompleted() || exhausted) {
                 sfx.playVictory();
-                setTimeout(() => resultMode.show(), 2000);
+                scheduleResultModeShow();
             }
         }
     };
@@ -5238,6 +5337,19 @@ const initLottery = () => {
 
         const nextIsSwitching = payload.event?.is_prize_switching ?? false;
         const prizeChanged = nextPrize?.id !== previousPrizeId;
+
+        if (prizeChanged) {
+            clearResultModeTimer();
+
+            if (state.isDrawing) {
+                console.warn('[lottery] prize changed during drawing, aborting stale draw flow');
+                drawRunId += 1;
+                state.isDrawing = false;
+                stopDrawAudio();
+                stopAllAnimations();
+            }
+        }
+
         if (nextIsSwitching || prizeChanged) {
             switchingMask.show();
         }
@@ -5257,7 +5369,8 @@ const initLottery = () => {
 
         // 獎項變更時強制清空 eligibleNames，避免使用舊獎項的資格名單
         state.currentPrize = nextPrize;
-        if (!skipWinnersUpdate) {
+        const shouldSkipWinnersUpdate = skipWinnersUpdate && !prizeChanged;
+        if (!shouldSkipWinnersUpdate) {
             state.winners = payload.winners ?? [];
         }
         state.eligibleNames = prizeChanged
@@ -5291,34 +5404,36 @@ const initLottery = () => {
         render();
 
         // 模式切換邏輯：獎項預覽優先於結果展示
-        const isCompleted = payload.current_prize?.is_completed ?? isPrizeCompleted();
-        // 可抽人數用盡（名額未滿但沒有人可抽）且有中獎者
-        const isExhausted = payload.current_prize?.is_exhausted && state.winners?.length > 0;
-        const shouldShowResult = isCompleted || isExhausted;
-        const wantPreview = shouldShowPrizesPreview();
+        if (!state.isDrawing) {
+            const isCompleted = payload.current_prize?.is_completed ?? isPrizeCompleted();
+            // 可抽人數用盡（名額未滿但沒有人可抽）且有中獎者
+            const isExhausted = payload.current_prize?.is_exhausted && state.winners?.length > 0;
+            const shouldShowResult = isCompleted || isExhausted;
+            const wantPreview = shouldShowPrizesPreview();
 
-        if (wantPreview && !state.isPrizesPreviewMode) {
-            // 顯示獎項預覽
-            prizesPreviewMode.show();
-        } else if (!wantPreview && state.isPrizesPreviewMode) {
-            // 隱藏獎項預覽
-            prizesPreviewMode.hide();
-            // 檢查是否需要顯示結果模式
-            if (shouldShowResult) {
-                resultMode.show();
+            if (wantPreview && !state.isPrizesPreviewMode) {
+                // 顯示獎項預覽
+                prizesPreviewMode.show();
+            } else if (!wantPreview && state.isPrizesPreviewMode) {
+                // 隱藏獎項預覽
+                prizesPreviewMode.hide();
+                // 檢查是否需要顯示結果模式
+                if (shouldShowResult) {
+                    resultMode.show();
+                }
+            } else if (!wantPreview) {
+                // 不在預覽模式時，處理結果展示模式
+                if (shouldShowResult && !state.isResultMode) {
+                    resultMode.show();
+                } else if (!shouldShowResult && state.isResultMode) {
+                    resultMode.hide();
+                }
             }
-        } else if (!wantPreview) {
-            // 不在預覽模式時，處理結果展示模式
-            if (shouldShowResult && !state.isResultMode) {
-                resultMode.show();
-            } else if (!shouldShowResult && state.isResultMode) {
-                resultMode.hide();
-            }
-        }
 
-        // 如果在預覽模式，更新內容
-        if (state.isPrizesPreviewMode) {
-            prizesPreviewMode.render();
+            // 如果在預覽模式，更新內容
+            if (state.isPrizesPreviewMode) {
+                prizesPreviewMode.render();
+            }
         }
 
         // showPrizesPreview 是一次性信號，處理完後重設
@@ -5433,7 +5548,7 @@ const initLottery = () => {
                 // 若獎項已完成或可抽人數用盡，進入結果模式
                 if (payload.is_completed || (payload.is_exhausted && state.winners?.length > 0)) {
                     if (!state.isResultMode && !shouldShowPrizesPreview()) {
-                        setTimeout(() => resultMode.show(), 2000);
+                        scheduleResultModeShow();
                     }
                 }
             })
