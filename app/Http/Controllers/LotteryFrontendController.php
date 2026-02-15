@@ -98,6 +98,7 @@ class LotteryFrontendController extends Controller
             'winnersUrl' => route('lottery.winners', ['brandCode' => $event->brand_code]),
             'switchAckUrl' => route('lottery.switch-ack', ['brandCode' => $event->brand_code]),
             'readyUrl' => route('lottery.ready', ['brandCode' => $event->brand_code]),
+            'drawingStateUrl' => route('lottery.drawing-state', ['brandCode' => $event->brand_code]),
         ];
 
         if ($request->boolean('payload')) {
@@ -183,6 +184,10 @@ class LotteryFrontendController extends Controller
             return response()->json(['message' => 'no_prize_selected'], 422);
         }
 
+        if ($runId = $request->input('run_id')) {
+            Cache::put("lottery-drawing:{$brandCode}", $runId, now()->addSeconds(15));
+        }
+
         $winners = app(LotteryDrawService::class)->drawCurrentPrize($event);
 
         if ($winners->isEmpty()) {
@@ -219,6 +224,29 @@ class LotteryFrontendController extends Controller
             'ok' => true,
             'ts' => now()->timestamp,
         ]);
+    }
+
+    public function drawingState(Request $request, string $brandCode): JsonResponse
+    {
+        LotteryEvent::where('brand_code', $brandCode)->firstOrFail();
+
+        $request->validate([
+            'is_drawing' => 'required|boolean',
+            'run_id' => 'required|string|max:64',
+        ]);
+
+        $cacheKey = "lottery-drawing:{$brandCode}";
+
+        if ($request->boolean('is_drawing')) {
+            Cache::put($cacheKey, $request->input('run_id'), now()->addSeconds(15));
+        } else {
+            // 只有相同 run_id 才能解鎖（防舊請求覆蓋新狀態）
+            if (Cache::get($cacheKey) === $request->input('run_id')) {
+                Cache::forget($cacheKey);
+            }
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     public function switchAck(string $brandCode): JsonResponse

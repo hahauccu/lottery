@@ -252,6 +252,11 @@ class PrizesRelationManager extends RelationManager
         }
     }
 
+    protected function frontendIsDrawing(string $brandCode): bool
+    {
+        return Cache::has("lottery-drawing:{$brandCode}");
+    }
+
     protected function frontendIsReady(string $brandCode): bool
     {
         $cacheKey = "lottery-ready:{$brandCode}";
@@ -327,6 +332,15 @@ class PrizesRelationManager extends RelationManager
                                 ->danger()
                                 ->title('無法切換預覽')
                                 ->body('前台尚未就緒或離線，請先開啟抽獎頁面。')
+                                ->send();
+
+                            return;
+                        }
+                        if ($this->frontendIsDrawing($brandCode)) {
+                            Notification::make()
+                                ->danger()
+                                ->title('無法切換預覽')
+                                ->body('抽獎進行中，請等待完成後再切換。')
                                 ->send();
 
                             return;
@@ -426,6 +440,16 @@ class PrizesRelationManager extends RelationManager
                                 ->danger()
                                 ->title('無法設為目前獎項')
                                 ->body('前台尚未就緒或離線，請先開啟抽獎頁面。')
+                                ->send();
+
+                            return;
+                        }
+
+                        if ($this->frontendIsDrawing($brandCode)) {
+                            Notification::make()
+                                ->danger()
+                                ->title('無法切換獎項')
+                                ->body('抽獎進行中，請等待完成後再切換。')
                                 ->send();
 
                             return;

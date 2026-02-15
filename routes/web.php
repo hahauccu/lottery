@@ -24,6 +24,8 @@ Route::post('/{brandCode}/switch-ack', [LotteryFrontendController::class, 'switc
     ->name('lottery.switch-ack');
 Route::post('/{brandCode}/ready', [LotteryFrontendController::class, 'ready'])
     ->name('lottery.ready');
+Route::post('/{brandCode}/drawing-state', [LotteryFrontendController::class, 'drawingState'])
+    ->name('lottery.drawing-state');
 Route::post('/{brandCode}/danmaku', [LotteryFrontendController::class, 'sendDanmaku'])
     ->name('lottery.danmaku')
     ->middleware('throttle:danmaku');

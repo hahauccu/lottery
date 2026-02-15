@@ -5151,6 +5151,9 @@ const initLottery = () => {
         state.isDrawing = true;
         clearResultModeTimer();
 
+        const backendRunId = generateBackendRunId();
+        startDrawingHeartbeat(backendRunId);
+
         const runId = ++drawRunId;
         const isRunStale = () => runId !== drawRunId;
         const appendWinnerForRun = (winner) => {
@@ -5186,7 +5189,7 @@ const initLottery = () => {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': config.csrfToken,
                 },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ run_id: backendRunId }),
             });
 
             if (isRunStale()) {
@@ -5195,6 +5198,7 @@ const initLottery = () => {
 
             if (!response.ok) {
                 driver.stop();
+                stopDrawingHeartbeat();
                 state.isDrawing = false;
                 render();
                 return;
@@ -5209,6 +5213,7 @@ const initLottery = () => {
             if (winners.length === 0) {
                 console.warn('[lottery] no winners returned from /draw');
                 driver.stop();
+                stopDrawingHeartbeat();
                 state.isDrawing = false;
                 sfx.playError();
                 // 可抽人數已用盡但名額未滿，若有中獎者則進入 resultMode
@@ -5224,6 +5229,7 @@ const initLottery = () => {
                 isRunStale,
             });
         } catch {
+            stopDrawingHeartbeat();
             if (isLotto) {
                 lottoAir.slowStopMachine();
             } else {
@@ -5239,6 +5245,7 @@ const initLottery = () => {
 
             // 停止持續播放的音效
             stopDrawAudio();
+            stopDrawingHeartbeat();
             state.isDrawing = false;
             render();
 
@@ -5343,6 +5350,7 @@ const initLottery = () => {
 
             if (state.isDrawing) {
                 console.warn('[lottery] prize changed during drawing, aborting stale draw flow');
+                stopDrawingHeartbeat();
                 drawRunId += 1;
                 state.isDrawing = false;
                 stopDrawAudio();
@@ -5587,6 +5595,41 @@ const initLottery = () => {
             body: JSON.stringify({ ts: Date.now() }),
             keepalive: true,
         }).catch(() => {});
+    };
+
+    // --- Drawing heartbeat management ---
+    let drawingHeartbeatTimer = null;
+    let currentDrawBackendRunId = null;
+
+    const generateBackendRunId = () =>
+        `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const sendDrawingState = (isDrawing, runId) => {
+        if (!config.drawingStateUrl) return;
+        fetch(config.drawingStateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': config.csrfToken },
+            body: JSON.stringify({ is_drawing: isDrawing, run_id: runId }),
+            keepalive: true,
+        }).catch(() => {});
+    };
+
+    const startDrawingHeartbeat = (runId) => {
+        stopDrawingHeartbeat();
+        currentDrawBackendRunId = runId;
+        sendDrawingState(true, runId);
+        drawingHeartbeatTimer = setInterval(() => sendDrawingState(true, runId), 1000);
+    };
+
+    const stopDrawingHeartbeat = () => {
+        if (drawingHeartbeatTimer) {
+            clearInterval(drawingHeartbeatTimer);
+            drawingHeartbeatTimer = null;
+        }
+        if (currentDrawBackendRunId) {
+            sendDrawingState(false, currentDrawBackendRunId);
+            currentDrawBackendRunId = null;
+        }
     };
 
     const showDanmaku = (employeeName, message) => {
