@@ -2698,6 +2698,34 @@ const initLottery = () => {
             }
         };
 
+        const showIdlePackets = (forceReset = false) => {
+            ensureReady();
+            if (!ctx || canvasRect.width === 0) return;
+
+            if (packets.length > 0 && !forceReset && phase === 'idle_display') return;
+
+            if (running) return;
+
+            cleanup();
+            phase = 'idle_display';
+
+            const { width, height } = canvasRect;
+            const count = Math.max(12, Math.floor((width * height) / 12000));
+
+            for (let i = 0; i < count; i++) {
+                const p = createPacket();
+                p.x = rand(60, width - 60);
+                p.y = rand(40, height - 40);
+                p.rotation = rand(-0.25, 0.25);
+                p.scale = rand(0.7, 1.1);
+                p.vy = 0;
+                p.vx = 0;
+                packets.push(p);
+            }
+
+            drawFrame();
+        };
+
         return {
             start,
             stop,
@@ -2706,6 +2734,7 @@ const initLottery = () => {
             prepareNext,
             setHoldSeconds,
             ensureReady,
+            showIdlePackets,
             resize: () => {
                 if (resizeCanvas() && running) {
                     drawFrame();
@@ -4882,8 +4911,8 @@ const initLottery = () => {
             stop: () => lottoAir.stop(),
         },
         red_packet: {
-            prepareIdle: () => {
-                redPacketRain.ensureReady();
+            prepareIdle: ({ forceReset = false } = {}) => {
+                redPacketRain.showIdlePackets(forceReset);
             },
             prepareToDraw: () => {
                 redPacketRain.ensureReady();
