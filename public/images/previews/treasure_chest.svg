@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bgGradient4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#12121a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="chestGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b4513;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#654321;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lockGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="goldGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:0.5" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="450" fill="url(#bgGradient4)"/>
+
+  <!-- Treasure chest -->
+  <g transform="translate(400, 200)">
+    <!-- Chest body -->
+    <rect x="-90" y="-40" width="180" height="100" rx="6" fill="url(#chestGradient)" stroke="#5a2d0c" stroke-width="2"/>
+
+    <!-- Chest top (curved lid) -->
+    <path d="M -90 -40 Q -90 -70 -60 -85 L 60 -85 Q 90 -70 90 -40" fill="url(#chestGradient)" stroke="#5a2d0c" stroke-width="2"/>
+
+    <!-- Lid shine -->
+    <ellipse cx="0" cy="-65" rx="70" ry="25" fill="#d2691e" opacity="0.4"/>
+
+    <!-- Metal bands -->
+    <rect x="-85" y="-15" width="170" height="8" rx="2" fill="#a89968" opacity="0.8"/>
+    <rect x="-85" y="25" width="170" height="8" rx="2" fill="#a89968" opacity="0.8"/>
+
+    <!-- Rivets on bands -->
+    <circle cx="-60" cy="-11" r="2.5" fill="#d4af37" opacity="0.9"/>
+    <circle cx="-20" cy="-11" r="2.5" fill="#d4af37" opacity="0.9"/>
+    <circle cx="20" cy="-11" r="2.5" fill="#d4af37" opacity="0.9"/>
+    <circle cx="60" cy="-11" r="2.5" fill="#d4af37" opacity="0.9"/>
+
+    <circle cx="-60" cy="29" r="2.5" fill="#d4af37" opacity="0.9"/>
+    <circle cx="-20" cy="29" r="2.5" fill="#d4af37" opacity="0.9"/>
+    <circle cx="20" cy="29" r="2.5" fill="#d4af37" opacity="0.9"/>
+    <circle cx="60" cy="29" r="2.5" fill="#d4af37" opacity="0.9"/>
+
+    <!-- Lock (front) -->
+    <rect x="-28" y="0" width="56" height="45" rx="4" fill="url(#lockGradient)" opacity="0.9" stroke="#a16207" stroke-width="1.5"/>
+
+    <!-- Lock shape detail -->
+    <circle cx="0" cy="20" r="15" fill="none" stroke="#d97706" stroke-width="2" opacity="0.7"/>
+
+    <!-- Keyhole -->
+    <circle cx="0" cy="20" r="4" fill="#12121a" opacity="0.9"/>
+
+    <!-- Gold glow around chest -->
+    <ellipse cx="0" cy="0" rx="100" ry="60" fill="url(#goldGlow)"/>
+
+    <!-- Sparkles -->
+    <circle cx="-50" cy="-60" r="3" fill="#fbbf24" opacity="0.8"/>
+    <circle cx="50" cy="-65" r="2.5" fill="#f59e0b" opacity="0.7"/>
+    <circle cx="0" cy="55" r="2" fill="#fbbf24" opacity="0.6"/>
+  </g>
+
+  <!-- Label -->
+  <text x="400" y="410" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#f59e0b" text-anchor="middle">寶箱</text>
+</svg>

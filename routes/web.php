@@ -8,7 +8,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return response('', 204);
+    return view('home');
 });
 
 Route::get('/claim/{token}', [ClaimController::class, 'verify'])

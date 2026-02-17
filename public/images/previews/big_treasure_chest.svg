@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bgGradient5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#12121a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bigChestGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a0522d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#654321;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bigLockGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="bigGoldGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#fcd34d;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="450" fill="url(#bgGradient5)"/>
+
+  <!-- Large treasure chest (bigger than regular) -->
+  <g transform="translate(400, 210)">
+    <!-- Chest body (larger) -->
+    <rect x="-130" y="-60" width="260" height="140" rx="10" fill="url(#bigChestGradient)" stroke="#4a2410" stroke-width="3"/>
+
+    <!-- Chest top (curved lid) -->
+    <path d="M -130 -60 Q -130 -110 -80 -135 L 80 -135 Q 130 -110 130 -60" fill="url(#bigChestGradient)" stroke="#4a2410" stroke-width="3"/>
+
+    <!-- Lid shine (larger) -->
+    <ellipse cx="0" cy="-95" rx="100" ry="35" fill="#d2691e" opacity="0.5"/>
+
+    <!-- Metal bands (3 bands for bigger chest) -->
+    <rect x="-125" y="-35" width="250" height="12" rx="3" fill="#c9b037" opacity="0.85" stroke="#a89968" stroke-width="1"/>
+    <rect x="-125" y="25" width="250" height="12" rx="3" fill="#c9b037" opacity="0.85" stroke="#a89968" stroke-width="1"/>
+    <rect x="-125" y="65" width="250" height="12" rx="3" fill="#c9b037" opacity="0.85" stroke="#a89968" stroke-width="1"/>
+
+    <!-- Rivets on bands (more rivets) -->
+    <circle cx="-90" cy="-29" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="-40" cy="-29" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="10" cy="-29" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="60" cy="-29" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="110" cy="-29" r="3" fill="#ffd700" opacity="0.95"/>
+
+    <circle cx="-90" cy="31" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="-40" cy="31" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="10" cy="31" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="60" cy="31" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="110" cy="31" r="3" fill="#ffd700" opacity="0.95"/>
+
+    <circle cx="-90" cy="71" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="-40" cy="71" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="10" cy="71" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="60" cy="71" r="3" fill="#ffd700" opacity="0.95"/>
+    <circle cx="110" cy="71" r="3" fill="#ffd700" opacity="0.95"/>
+
+    <!-- Large lock (center front) -->
+    <rect x="-50" y="5" width="100" height="70" rx="6" fill="url(#bigLockGradient)" opacity="0.95" stroke="#b45309" stroke-width="2"/>
+
+    <!-- Lock shape detail (larger) -->
+    <circle cx="0" cy="35" r="22" fill="none" stroke="#d97706" stroke-width="2.5" opacity="0.8"/>
+
+    <!-- Keyhole (larger) -->
+    <circle cx="0" cy="35" r="6" fill="#12121a" opacity="0.95"/>
+    <rect x="-3" y="43" width="6" height="12" fill="#12121a" opacity="0.95"/>
+
+    <!-- Big gold glow around chest -->
+    <ellipse cx="0" cy="0" rx="150" ry="90" fill="url(#bigGoldGlow)"/>
+
+    <!-- Larger sparkles -->
+    <circle cx="-90" cy="-110" r="4" fill="#fbbf24" opacity="0.9"/>
+    <circle cx="90" cy="-115" r="3.5" fill="#f59e0b" opacity="0.8"/>
+    <circle cx="-110" cy="80" r="3" fill="#fcd34d" opacity="0.7"/>
+    <circle cx="110" cy="75" r="3" fill="#fbbf24" opacity="0.7"/>
+    <circle cx="0" cy="90" r="2.5" fill="#f59e0b" opacity="0.6"/>
+
+    <!-- Corner decorations -->
+    <rect x="-135" y="-65" width="20" height="20" rx="3" fill="#d4af37" opacity="0.6"/>
+    <rect x="115" y="-65" width="20" height="20" rx="3" fill="#d4af37" opacity="0.6"/>
+  </g>
+
+  <!-- Label -->
+  <text x="400" y="410" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#fbbf24" text-anchor="middle">大寶箱</text>
+</svg>
