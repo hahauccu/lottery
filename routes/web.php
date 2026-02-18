@@ -11,6 +11,10 @@ Route::get('/', function () {
     return view('home');
 });
 
+// Route::get('/home1', function () {
+//     return view('home1');
+// })->name('home1');
+
 Route::get('/claim/{token}', [ClaimController::class, 'verify'])
     ->name('claim.verify');
 
