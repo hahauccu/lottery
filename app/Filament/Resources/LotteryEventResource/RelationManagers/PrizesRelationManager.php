@@ -26,7 +26,7 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Columns\IconColumn;
+use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Arr;
@@ -36,6 +36,93 @@ use Illuminate\Support\HtmlString;
 class PrizesRelationManager extends RelationManager
 {
     protected static string $relationship = 'prizes';
+
+    protected static string $view = 'filament.resources.lottery-event-resource.relation-managers.prizes-relation-manager';
+
+    public function getStatusBarData(): array
+    {
+        $event = $this->getOwnerRecord();
+        $event->refresh();
+        $brandCode = $event->brand_code;
+
+        $isOnline = $this->frontendIsReady($brandCode);
+        $isDrawing = $isOnline && $this->frontendIsDrawing($brandCode);
+        $isSwitching = (bool) $event->is_prize_switching;
+
+        // connectionStatus
+        $connectionStatus = $isOnline ? 'online' : 'offline';
+
+        // processStatus (priority: switching > drawing > offline > standby)
+        if ($isSwitching) {
+            $processStatus = 'switching';
+        } elseif ($isDrawing) {
+            $processStatus = 'drawing';
+        } elseif (! $isOnline) {
+            $processStatus = 'offline';
+        } else {
+            $processStatus = 'standby';
+        }
+
+        // currentView & prizeSummary & progress
+        $currentPrize = $event->current_prize_id ? $event->currentPrize : null;
+
+        if ($currentPrize) {
+            $currentView = $currentPrize->name;
+            $drawn = $currentPrize->winners()->count();
+            $target = $currentPrize->winners_count;
+            $remaining = max(0, $target - $drawn);
+            $percentage = $target > 0 ? round(($drawn / $target) * 100) : 0;
+
+            $prizeSummary = [
+                'name' => $currentPrize->name,
+                'draw_mode' => $currentPrize->draw_mode === Prize::DRAW_MODE_ONE_BY_ONE ? '逐一抽出' : '一次全抽',
+                'animation_style' => match ($currentPrize->animation_style) {
+                    'lotto_air' => '樂透氣流機',
+                    'red_packet' => '紅包雨',
+                    'scratch_card' => '刮刮樂',
+                    'treasure_chest' => '寶箱開啟',
+                    'big_treasure_chest' => '大寶箱',
+                    default => $currentPrize->animation_style,
+                },
+                'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
+            ];
+
+            $progress = [
+                'drawn' => $drawn,
+                'target' => $target,
+                'remaining' => $remaining,
+                'percentage' => $percentage,
+            ];
+        } else {
+            $currentView = $isOnline ? '預覽畫面' : null;
+            $prizeSummary = null;
+            $progress = null;
+        }
+
+        // suggestion
+        if (! $isOnline) {
+            $suggestion = '請先開啟前台抽獎頁面';
+        } elseif ($isSwitching) {
+            $suggestion = '等待前台載入完成…';
+        } elseif ($isDrawing) {
+            $suggestion = '抽獎進行中，請等待完成';
+        } elseif ($currentPrize && $progress && $progress['remaining'] === 0) {
+            $suggestion = '此獎項已抽完，可切換下一個獎項';
+        } elseif ($currentPrize) {
+            $suggestion = '可至前台按下抽獎按鈕';
+        } else {
+            $suggestion = '請選擇一個獎項設為目前獎項';
+        }
+
+        return [
+            'connectionStatus' => $connectionStatus,
+            'processStatus' => $processStatus,
+            'currentView' => $currentView,
+            'prizeSummary' => $prizeSummary,
+            'progress' => $progress,
+            'suggestion' => $suggestion,
+        ];
+    }
 
     public function form(Form $form): Form
     {
@@ -99,7 +186,9 @@ class PrizesRelationManager extends RelationManager
                             ))
                             ->columnSpanFull(),
                         Toggle::make('allow_repeat_within_prize')
-                            ->label('同一獎項可重複中獎')
+                            ->label(new \Illuminate\Support\HtmlString(
+                                '同一獎項可重複中獎&nbsp;<span x-data x-tooltip.raw="開啟後，有資格中獎的人可在同一獎項中多次中獎" class="cursor-help inline-flex items-center align-middle text-gray-400 hover:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm.06 2.25a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H9z" clip-rule="evenodd" /></svg></span>'
+                            ))
                             ->default(false),
                         FileUpload::make('bg_image_path')
                             ->label('獎項背景圖')
@@ -280,7 +369,14 @@ class PrizesRelationManager extends RelationManager
                     ->sortable(),
                 TextColumn::make('name')
                     ->label('獎項名稱')
-                    ->searchable(),
+                    ->searchable()
+                    ->icon(fn (Prize $record): ?string =>
+                        (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
+                            ? 'heroicon-s-play' : null)
+                    ->iconPosition(IconPosition::After)
+                    ->color(fn (Prize $record): ?string =>
+                        (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
+                            ? 'success' : null),
                 TextColumn::make('drawn_count')
                     ->label('已抽 / 目標')
                     ->getStateUsing(fn (Prize $record) => $record->winners()->count().' / '.$record->winners_count)
@@ -301,10 +397,6 @@ class PrizesRelationManager extends RelationManager
                         'big_treasure_chest' => '大寶箱',
                         default => $state,
                     }),
-                IconColumn::make('is_current')
-                    ->label('目前')
-                    ->boolean()
-                    ->getStateUsing(fn (Prize $record): bool => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()),
             ])
             ->headerActions([
                 CreateAction::make()
@@ -562,18 +654,20 @@ class PrizesRelationManager extends RelationManager
                         if ((int) $event->current_prize_id === (int) $record->getKey()) {
                             LotteryBroadcaster::dispatchUpdate($event->refresh());
                         }
-                    }),
-                DeleteAction::make()
-                    ->before(function (Prize $record): void {
-                        $event = $this->getOwnerRecord();
+                    })
+                    ->extraModalFooterActions([
+                        DeleteAction::make()
+                            ->before(function (Prize $record): void {
+                                $event = $this->getOwnerRecord();
 
-                        if ((int) $event->current_prize_id !== (int) $record->getKey()) {
-                            return;
-                        }
+                                if ((int) $event->current_prize_id !== (int) $record->getKey()) {
+                                    return;
+                                }
 
-                        $event->update(['current_prize_id' => null]);
-                        LotteryBroadcaster::dispatchUpdate($event->refresh());
-                    }),
+                                $event->update(['current_prize_id' => null]);
+                                LotteryBroadcaster::dispatchUpdate($event->refresh());
+                            }),
+                    ]),
             ]);
     }
 
