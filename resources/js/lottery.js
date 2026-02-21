@@ -78,6 +78,21 @@ const initLottery = () => {
 
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+    const createDrawClock = (budgetMs) => {
+        const start = performance.now();
+        const budget = Math.max(3000, budgetMs);
+        return {
+            budgetMs: budget,
+            elapsedMs: () => performance.now() - start,
+            remainingMs: () => Math.max(0, budget - (performance.now() - start)),
+            waitUntilEnd: () => {
+                const rem = budget - (performance.now() - start);
+                return rem > 50 ? delay(rem) : Promise.resolve();
+            },
+            sliceMs: (fraction) => Math.max(50, (budget - (performance.now() - start)) * fraction),
+        };
+    };
+
     const clearCanvas = () => {
         if (!lottoCanvasEl) return;
         const ctx = lottoCanvasEl.getContext('2d');
@@ -2479,7 +2494,9 @@ const initLottery = () => {
                         phase = 'opening';
                         p.opening = true;
                         sfx.playPaperTear();
-                        animateTo(p, { openProgress: 1, scale: 3 }, 800, () => {
+                        const openDur = clamp(holdSeconds * 150, 300, 800);
+                        const revealHold = clamp(holdSeconds * 100, 200, 700);
+                        animateTo(p, { openProgress: 1, scale: 3 }, openDur, () => {
                             if (!running) return;
                             phase = 'reveal';
                             launchCoins();
@@ -2491,7 +2508,7 @@ const initLottery = () => {
                                     revealResolve();
                                     revealResolve = null;
                                 }
-                            }, 700);
+                            }, revealHold);
                         });
                     }
                 } else if (!p.selected) {
@@ -3725,9 +3742,10 @@ const initLottery = () => {
             // 更新每個寶箱
             for (const chest of chests) {
                 if (chest.phase === 'shaking') {
+                    const shakeDur = clamp(holdSeconds * 0.12, 0.3, 0.8);
                     chest.shakeTime += dt;
                     chest.shakeOffset = Math.sin(chest.shakeTime * 45) * 5;
-                    if (chest.shakeTime > 0.6) {
+                    if (chest.shakeTime > shakeDur) {
                         chest.phase = 'opening';
                         chest.shakeOffset = 0;
                     }
@@ -3737,8 +3755,9 @@ const initLottery = () => {
                         chest.openDelay -= dt;
                         continue;
                     }
-                    // 開啟蓋子
-                    chest.lidAngle = Math.max(-110, chest.lidAngle - 280 * dt);
+                    // 開啟蓋子 — 速度依 holdSeconds 動態計算
+                    const lidSpeed = 110 / clamp(holdSeconds * 0.15, 0.3, 0.6);
+                    chest.lidAngle = Math.max(-110, chest.lidAngle - lidSpeed * dt);
                     chest.glowIntensity = Math.min(1, chest.glowIntensity + dt * 3.5);
                     if (chest.lidAngle <= -100 && !chest.opened) {
                         chest.phase = 'open';
@@ -3750,13 +3769,14 @@ const initLottery = () => {
                         openedCount++;
 
                         // 單個寶箱開啟完成，resolve 該寶箱的 Promise
+                        const revealDelay = clamp(holdSeconds * 100, 200, 600);
                         if (chest.openResolve) {
                             setTimeout(() => {
                                 if (chest.openResolve) {
                                     chest.openResolve();
                                     chest.openResolve = null;
                                 }
-                            }, 600);
+                            }, revealDelay);
                         }
 
                         // 檢查是否全部開啟（相容舊的 startOpening + waitForAllOpened 流程）
@@ -3766,7 +3786,7 @@ const initLottery = () => {
                                     openResolve();
                                     openResolve = null;
                                 }
-                            }, 800);
+                            }, revealDelay + 200);
                         }
                     }
                 } else if (chest.phase === 'open') {
@@ -4062,7 +4082,7 @@ const initLottery = () => {
         let revealResolve = null;
         let spawnTimer = 0;
 
-        const HERO_HOLD_SECONDS = 3.5;
+
 
         let ctx = null;
         let canvasRect = { width: 0, height: 0 };
@@ -4172,10 +4192,11 @@ const initLottery = () => {
 
         const getTiming = () => {
             const total = Math.max(3, holdSeconds || 5);
-            const open = clamp(total * 0.32, 0.9, 1.8);
-            const fly = clamp(total * 0.2, 0.6, 1.0);
-            const fade = 0.6;
-            return { open, fly, fade };
+            const open = clamp(total * 0.25, 0.7, 1.5);
+            const fly = clamp(total * 0.15, 0.4, 0.8);
+            const heroHold = clamp(total * 0.4, 1.0, 3.5);
+            const fade = clamp(total * 0.08, 0.3, 0.6);
+            return { open, fly, heroHold, fade };
         };
 
         const spawnBurst = () => {
@@ -4361,7 +4382,7 @@ const initLottery = () => {
             } else if (heroToken.phase === 'hold') {
                 heroToken.opacity = 1;
                 heroToken.scale = 1 + Math.sin(heroToken.total * 2.2) * 0.02;
-                if (heroToken.t >= HERO_HOLD_SECONDS) {
+                if (heroToken.t >= timing.heroHold) {
                     heroToken.phase = 'fade';
                     heroToken.t = 0;
                 }
@@ -4903,8 +4924,6 @@ const initLottery = () => {
                         await lottoAir.waitForNextPick();
                         if (isRunStale()) return;
                         append(winner);
-                        await delay(220);
-                        if (isRunStale()) return;
                     }
                 }
             },
@@ -4922,6 +4941,7 @@ const initLottery = () => {
             revealWinners: async (winners, runtime = {}) => {
                 const append = runtime.appendWinner ?? appendWinner;
                 const isRunStale = runtime.isRunStale ?? (() => false);
+                const clock = runtime.clock;
                 if (isRunStale()) return;
 
                 if (state.currentPrize?.drawMode === 'one_by_one') {
@@ -4929,7 +4949,8 @@ const initLottery = () => {
                     await redPacketRain.waitForReveal();
                     if (isRunStale()) return;
                     append(winners[0]);
-                    await delay(1500);
+                    if (clock) await clock.waitUntilEnd();
+                    else await delay(1500);
                     if (isRunStale()) return;
                     redPacketRain.stop();
                 } else {
@@ -4940,14 +4961,21 @@ const initLottery = () => {
                         if (isRunStale()) return;
                         append(winner);
                         if (i < winners.length - 1) {
-                            await delay(800);
+                            const remaining = winners.length - 1 - i;
+                            const gap = clock ? Math.max(200, clock.remainingMs() * 0.4 / remaining) : 800;
+                            await delay(gap * 0.55);
                             if (isRunStale()) return;
                             redPacketRain.prepareNext();
-                            await delay(600);
+                            await delay(gap * 0.45);
                             if (isRunStale()) return;
                         }
                     }
-                    await delay(1500);
+                    if (clock) {
+                        const finalWait = Math.min(1500, clock.remainingMs());
+                        if (finalWait > 50) await delay(finalWait);
+                    } else {
+                        await delay(1500);
+                    }
                     if (isRunStale()) return;
                     redPacketRain.stop();
                 }
@@ -4973,6 +5001,7 @@ const initLottery = () => {
             revealWinners: async (winners, runtime = {}) => {
                 const append = runtime.appendWinner ?? appendWinner;
                 const isRunStale = runtime.isRunStale ?? (() => false);
+                const clock = runtime.clock;
                 if (isRunStale()) return;
 
                 if (state.currentPrize?.drawMode === 'one_by_one') {
@@ -4980,7 +5009,8 @@ const initLottery = () => {
                     await scratchCard.waitForReveal();
                     if (isRunStale()) return;
                     append(winners[0]);
-                    await delay(1200);
+                    if (clock) await clock.waitUntilEnd();
+                    else await delay(1200);
                     if (isRunStale()) return;
                     scratchCard.prepareNext();
                 } else {
@@ -4999,17 +5029,25 @@ const initLottery = () => {
                             if (isRunStale()) return;
                             append(batchWinners[cardIndex]);
                             if (i < batchCount - 1) {
-                                await delay(1500);
+                                const remainingTotal = (winners.length - processedCount - i - 1);
+                                const gap = clock ? Math.max(200, clock.remainingMs() * 0.3 / remainingTotal) : 1500;
+                                await delay(gap);
                                 if (isRunStale()) return;
                             }
                         }
                         processedCount += batchCount;
                         if (processedCount < winners.length) {
-                            await delay(1500);
+                            const batchGap = clock ? Math.max(200, clock.remainingMs() * 0.15) : 1500;
+                            await delay(batchGap);
                             if (isRunStale()) return;
                         }
                     }
-                    await delay(1500);
+                    if (clock) {
+                        const finalWait = Math.min(1500, clock.remainingMs());
+                        if (finalWait > 50) await delay(finalWait);
+                    } else {
+                        await delay(1500);
+                    }
                     if (isRunStale()) return;
                     scratchCard.prepareNext();
                 }
@@ -5035,6 +5073,7 @@ const initLottery = () => {
             revealWinners: async (winners, runtime = {}) => {
                 const append = runtime.appendWinner ?? appendWinner;
                 const isRunStale = runtime.isRunStale ?? (() => false);
+                const clock = runtime.clock;
                 if (isRunStale()) return;
 
                 if (state.currentPrize?.drawMode === 'one_by_one') {
@@ -5042,7 +5081,8 @@ const initLottery = () => {
                     await treasureChest.waitForReveal();
                     if (isRunStale()) return;
                     append(winners[0]);
-                    await delay(1500);
+                    if (clock) await clock.waitUntilEnd();
+                    else await delay(1500);
                     if (isRunStale()) return;
                     treasureChest.prepareNext();
                 } else {
@@ -5061,17 +5101,25 @@ const initLottery = () => {
                             if (isRunStale()) return;
                             append(batchWinners[chestIndex]);
                             if (i < batchCount - 1) {
-                                await delay(1000);
+                                const remainingInBatch = batchCount - 1 - i;
+                                const gap = clock ? Math.max(150, clock.remainingMs() * 0.3 / (remainingInBatch + (winners.length - processedCount - batchCount))) : 1000;
+                                await delay(gap);
                                 if (isRunStale()) return;
                             }
                         }
                         processedCount += batchCount;
                         if (processedCount < winners.length) {
-                            await delay(1500);
+                            const batchGap = clock ? Math.max(200, clock.remainingMs() * 0.15) : 1500;
+                            await delay(batchGap);
                             if (isRunStale()) return;
                         }
                     }
-                    await delay(1500);
+                    if (clock) {
+                        const finalWait = Math.min(1500, clock.remainingMs());
+                        if (finalWait > 50) await delay(finalWait);
+                    } else {
+                        await delay(1500);
+                    }
                     if (isRunStale()) return;
                     treasureChest.prepareNext();
                 }
@@ -5092,17 +5140,15 @@ const initLottery = () => {
             revealWinners: async (winners, runtime = {}) => {
                 const append = runtime.appendWinner ?? appendWinner;
                 const isRunStale = runtime.isRunStale ?? (() => false);
+                const clock = runtime.clock;
                 if (isRunStale()) return;
 
-                const settleDelay = 380;
-                const gapDelay = 480;
                 if (state.currentPrize?.drawMode === 'one_by_one') {
                     bigTreasureChest.setWinner(winners[0]?.employee_name ?? '???');
                     await bigTreasureChest.waitForReveal();
                     if (isRunStale()) return;
                     append(winners[0]);
-                    await delay(settleDelay);
-                    if (isRunStale()) return;
+                    if (clock) await clock.waitUntilEnd();
                     bigTreasureChest.prepareNext();
                 } else {
                     for (let i = 0; i < winners.length; i++) {
@@ -5112,15 +5158,15 @@ const initLottery = () => {
                         if (isRunStale()) return;
                         append(winner);
                         if (i < winners.length - 1) {
-                            await delay(gapDelay);
+                            const remaining = winners.length - 1 - i;
+                            const gap = clock ? Math.max(200, clock.remainingMs() * 0.3 / remaining) : 480;
+                            await delay(gap * 0.55);
                             if (isRunStale()) return;
                             bigTreasureChest.prepareNext();
-                            await delay(400);
+                            await delay(gap * 0.45);
                             if (isRunStale()) return;
                         }
                     }
-                    await delay(settleDelay);
-                    if (isRunStale()) return;
                     bigTreasureChest.prepareNext();
                 }
             },
@@ -5253,9 +5299,13 @@ const initLottery = () => {
                 return;
             }
 
+            const holdMs = (state.currentPrize?.lottoHoldSeconds ?? 5) * 1000;
+            const clock = createDrawClock(Math.max(3000, holdMs));
+
             await driver.revealWinners(winners, {
                 appendWinner: appendWinnerForRun,
                 isRunStale,
+                clock,
             });
         } catch {
             stopDrawingHeartbeat();

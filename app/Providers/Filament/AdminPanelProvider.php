@@ -28,7 +28,6 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->registrationUrl('/register-account')
             ->tenant(Organization::class, 'slug', ownershipRelationship: 'organization')
             ->tenantMenu(false)
             ->colors([
