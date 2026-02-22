@@ -55,6 +55,9 @@
             async startCamera() {
                 this.cameraError = null;
                 this.preview = null;
+                this.scanning = true;
+
+                await this.$nextTick();
 
                 if (!this.scanner) {
                     this.scanner = new Html5Qrcode('qr-reader');
@@ -67,7 +70,6 @@
                         (decodedText) => this.onScanSuccess(decodedText),
                         () => {}
                     );
-                    this.scanning = true;
                 } catch (err) {
                     console.error('[QR Scanner]', err);
                     this.cameraError = '無法開啟相機：' + (err?.message || err);
