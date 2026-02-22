@@ -6,7 +6,6 @@ use App\Filament\Resources\LotteryEventResource;
 use App\Jobs\SendPrizeNotifications;
 use App\Models\PrizeWinner;
 use Filament\Actions\Action;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
@@ -64,62 +63,6 @@ class ManageClaims extends Page implements HasTable
                         ->success()
                         ->title('通知已排程')
                         ->body("正在發送 {$count} 封通知信")
-                        ->send();
-                }),
-            Action::make('scan_qr')
-                ->label('掃描 QR Code 領獎')
-                ->icon('heroicon-o-qr-code')
-                ->color('success')
-                ->form([
-                    TextInput::make('claim_token')
-                        ->label('掃描或輸入領獎代碼')
-                        ->placeholder('掃描 QR Code 或輸入代碼')
-                        ->required()
-                        ->autofocus(),
-                ])
-                ->action(function (array $data): void {
-                    $token = trim($data['claim_token']);
-
-                    $winner = PrizeWinner::where('claim_token', $token)
-                        ->whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
-                        ->with(['employee', 'prize'])
-                        ->first();
-
-                    if (! $winner) {
-                        Notification::make()
-                            ->danger()
-                            ->title('找不到中獎者')
-                            ->body('無效的領獎代碼或不屬於此活動')
-                            ->send();
-
-                        return;
-                    }
-
-                    if ($winner->isClaimed()) {
-                        Notification::make()
-                            ->warning()
-                            ->title('已領獎')
-                            ->body(sprintf(
-                                '%s 已於 %s 領取「%s」',
-                                $winner->employee->name,
-                                $winner->claimed_at->format('Y/m/d H:i'),
-                                $winner->prize->name
-                            ))
-                            ->send();
-
-                        return;
-                    }
-
-                    $winner->update(['claimed_at' => now()]);
-
-                    Notification::make()
-                        ->success()
-                        ->title('領獎成功')
-                        ->body(sprintf(
-                            '%s 已完成領取「%s」',
-                            $winner->employee->name,
-                            $winner->prize->name
-                        ))
                         ->send();
                 }),
             Action::make('back')
@@ -243,6 +186,87 @@ class ManageClaims extends Page implements HasTable
                             ->send();
                     }),
             ]);
+    }
+
+    public function previewByToken(string $rawInput): array
+    {
+        $token = $this->extractClaimToken($rawInput);
+
+        if (! $token) {
+            return ['found' => false, 'error' => '無法辨識領獎碼，請確認格式'];
+        }
+
+        $winner = PrizeWinner::where('claim_token', $token)
+            ->whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
+            ->with(['employee', 'prize'])
+            ->first();
+
+        if (! $winner) {
+            return ['found' => false, 'error' => '找不到中獎記錄，代碼無效或不屬於此活動'];
+        }
+
+        return [
+            'found' => true,
+            'token' => $winner->claim_token,
+            'name' => $winner->employee->name,
+            'prize' => $winner->prize->name,
+            'sequence' => $winner->sequence,
+            'department' => $winner->employee->department ?? '',
+            'won_at' => $winner->won_at?->format('Y/m/d H:i'),
+            'claimed' => $winner->isClaimed(),
+            'claimed_at' => $winner->claimed_at?->format('Y/m/d H:i'),
+        ];
+    }
+
+    public function confirmClaim(string $token): void
+    {
+        $updated = PrizeWinner::where('claim_token', $token)
+            ->whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
+            ->whereNull('claimed_at')
+            ->update(['claimed_at' => now()]);
+
+        if ($updated) {
+            $winner = PrizeWinner::where('claim_token', $token)->with(['employee', 'prize'])->first();
+
+            Notification::make()
+                ->success()
+                ->title('領獎成功')
+                ->body(sprintf('%s 已完成領取「%s」', $winner->employee->name, $winner->prize->name))
+                ->send();
+        } else {
+            $winner = PrizeWinner::where('claim_token', $token)
+                ->whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
+                ->first();
+
+            if ($winner && $winner->isClaimed()) {
+                Notification::make()
+                    ->warning()
+                    ->title('已領獎')
+                    ->body('此獎項已經被領取過了')
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('領獎失敗')
+                    ->body('找不到中獎記錄或代碼無效')
+                    ->send();
+            }
+        }
+    }
+
+    private function extractClaimToken(string $input): ?string
+    {
+        $input = trim($input);
+
+        if (preg_match('/\/claim\/([A-Za-z0-9]{64})/', $input, $matches)) {
+            return $matches[1];
+        }
+
+        if (preg_match('/^[A-Za-z0-9]{64}$/', $input)) {
+            return $input;
+        }
+
+        return null;
     }
 
     public function getWinnersCount(): int
