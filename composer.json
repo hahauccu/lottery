@@ -7,6 +7,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "aws/aws-sdk-php": "^3.370",
+        "endroid/qr-code": "^5.0",
         "filament/filament": "^3.2",
         "laravel/framework": "^12.0",
         "laravel/reverb": "^1.7",

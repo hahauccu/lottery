@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -74,11 +78,15 @@ class PrizeWinner extends Model
 
     public function generateQrCodeBase64(): string
     {
-        $png = QrCode::format('png')
+        $result = Builder::create()
+            ->writer(new PngWriter)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->data($this->getClaimUrl())
             ->size(200)
-            ->margin(1)
-            ->generate($this->getClaimUrl());
+            ->margin(4)
+            ->build();
 
-        return 'data:image/png;base64,'.base64_encode($png);
+        return 'data:image/png;base64,'.base64_encode($result->getString());
     }
 }
