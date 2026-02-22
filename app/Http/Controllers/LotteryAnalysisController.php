@@ -38,7 +38,6 @@ class LotteryAnalysisController extends Controller
                 fputcsv($handle, [
                     '統計類別',
                     '模擬次數',
-                    '獎項ID',
                     '獎項名稱',
                     '抽獎模式',
                     '同一獎項可重複中獎',
@@ -59,7 +58,6 @@ class LotteryAnalysisController extends Controller
                     fputcsv($handle, [
                         'prize_summary',
                         $iterations,
-                        $row['id'] ?? '',
                         $row['name'] ?? '',
                         $row['draw_mode'] ?? '',
                         isset($row['allow_repeat_within_prize']) ? (int) $row['allow_repeat_within_prize'] : '',
@@ -81,7 +79,6 @@ class LotteryAnalysisController extends Controller
                     fputcsv($handle, [
                         'department_summary',
                         $iterations,
-                        '',
                         '',
                         '',
                         '',

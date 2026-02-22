@@ -131,5 +131,164 @@
                 </div>
             </div>
         </div>
+
+        @if (count($prizes) > 0 || count($departments) > 0)
+            <div class="grid gap-6 lg:grid-cols-2">
+                @if (count($prizes) > 0)
+                    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">獎項中獎率 (%)</div>
+                        <div class="mt-4">
+                            <canvas id="chartPrizeWinRate" height="260"></canvas>
+                        </div>
+                    </div>
+                    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">可抽人數 vs 中獎人數</div>
+                        <div class="mt-4">
+                            <canvas id="chartPrizeEligibleWinners" height="260"></canvas>
+                        </div>
+                    </div>
+                @endif
+                @if (count($departments) > 0)
+                    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">部門可抽占比 vs 中獎占比 (%)</div>
+                        <div class="mt-4">
+                            <canvas id="chartDeptShare" height="260"></canvas>
+                        </div>
+                    </div>
+                    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">部門占比差異 (%)</div>
+                        <div class="mt-4">
+                            <canvas id="chartDeptDelta" height="260"></canvas>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const prizes = @json($prizes);
+                    const departments = @json($departments);
+                    const isDark = document.documentElement.classList.contains('dark');
+                    const textColor = isDark ? '#d1d5db' : '#374151';
+                    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+
+                    const baseScales = {
+                        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                        y: { ticks: { color: textColor }, grid: { color: gridColor } },
+                    };
+
+                    if (prizes.length > 0) {
+                        const prizeNames = prizes.map(p => p.name ?? '');
+                        const winRates = prizes.map(p => +(((p.win_rate ?? 0) * 100).toFixed(2)));
+                        const eligibleAvgs = prizes.map(p => Math.round(p.eligible_avg ?? 0));
+                        const winnersCounts = prizes.map(p => p.winners_count ?? 0);
+
+                        new Chart(document.getElementById('chartPrizeWinRate'), {
+                            type: 'bar',
+                            data: {
+                                labels: prizeNames,
+                                datasets: [{
+                                    label: '中獎率 (%)',
+                                    data: winRates,
+                                    backgroundColor: 'rgba(99,102,241,0.7)',
+                                    borderRadius: 4,
+                                }],
+                            },
+                            options: {
+                                indexAxis: 'y',
+                                responsive: true,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { ...baseScales.x, title: { display: true, text: '%', color: textColor } },
+                                    y: { ...baseScales.y },
+                                },
+                            },
+                        });
+
+                        new Chart(document.getElementById('chartPrizeEligibleWinners'), {
+                            type: 'bar',
+                            data: {
+                                labels: prizeNames,
+                                datasets: [
+                                    {
+                                        label: '平均可抽人數',
+                                        data: eligibleAvgs,
+                                        backgroundColor: 'rgba(99,102,241,0.5)',
+                                        borderRadius: 4,
+                                    },
+                                    {
+                                        label: '中獎人數',
+                                        data: winnersCounts,
+                                        backgroundColor: 'rgba(234,88,12,0.7)',
+                                        borderRadius: 4,
+                                    },
+                                ],
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: { legend: { labels: { color: textColor } } },
+                                scales: baseScales,
+                            },
+                        });
+                    }
+
+                    if (departments.length > 0) {
+                        const deptNames = departments.map(d => d.department ?? '');
+                        const eligiblePcts = departments.map(d => +(((d.eligible_pct ?? 0) * 100).toFixed(2)));
+                        const winPcts = departments.map(d => +(((d.win_pct ?? 0) * 100).toFixed(2)));
+                        const deltaPcts = departments.map(d => +(((d.delta_pct ?? 0) * 100).toFixed(2)));
+
+                        new Chart(document.getElementById('chartDeptShare'), {
+                            type: 'bar',
+                            data: {
+                                labels: deptNames,
+                                datasets: [
+                                    {
+                                        label: '可抽占比 (%)',
+                                        data: eligiblePcts,
+                                        backgroundColor: 'rgba(99,102,241,0.5)',
+                                        borderRadius: 4,
+                                    },
+                                    {
+                                        label: '中獎占比 (%)',
+                                        data: winPcts,
+                                        backgroundColor: 'rgba(234,88,12,0.7)',
+                                        borderRadius: 4,
+                                    },
+                                ],
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: { legend: { labels: { color: textColor } } },
+                                scales: baseScales,
+                            },
+                        });
+
+                        new Chart(document.getElementById('chartDeptDelta'), {
+                            type: 'bar',
+                            data: {
+                                labels: deptNames,
+                                datasets: [{
+                                    label: '占比差異 (%)',
+                                    data: deltaPcts,
+                                    backgroundColor: deltaPcts.map(v => v >= 0 ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)'),
+                                    borderRadius: 4,
+                                }],
+                            },
+                            options: {
+                                indexAxis: 'y',
+                                responsive: true,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { ...baseScales.x, title: { display: true, text: '%', color: textColor } },
+                                    y: { ...baseScales.y },
+                                },
+                            },
+                        });
+                    }
+                });
+            </script>
+        @endif
     </div>
 </x-filament-panels::page>

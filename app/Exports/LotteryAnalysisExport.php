@@ -59,8 +59,6 @@ class LotteryAnalysisExport implements WithMultipleSheets
 
         $summaryRows = [[
             $eventName,
-            $brandCode,
-            $analysisId,
             $iterations,
             $generatedAt,
             count($prizes),
@@ -89,7 +87,6 @@ class LotteryAnalysisExport implements WithMultipleSheets
             $chartData['prize_relative_rates'][] = $this->normalizeNumber($relativeWinRate);
 
             $prizeRows[] = [
-                $prize['id'] ?? '',
                 $prize['name'] ?? '',
                 $this->formatDrawMode($prize['draw_mode'] ?? null),
                 $this->formatAllowRepeat($prize['allow_repeat_within_prize'] ?? null),
@@ -187,9 +184,7 @@ class LotteryAnalysisExport implements WithMultipleSheets
                 ],
                 $iterations,
                 $generatedAt,
-                $eventName,
-                $brandCode,
-                $analysisId
+                $eventName
             ));
         }
 
@@ -216,9 +211,7 @@ class LotteryAnalysisExport implements WithMultipleSheets
                 ],
                 $iterations,
                 $generatedAt,
-                $eventName,
-                $brandCode,
-                $analysisId
+                $eventName
             ));
         }
 
@@ -238,9 +231,7 @@ class LotteryAnalysisExport implements WithMultipleSheets
         array $metrics,
         int $iterations,
         string $generatedAt,
-        string $eventName,
-        string $brandCode,
-        string $analysisId
+        string $eventName
     ): array {
         $rows = [];
         foreach ($metrics as $metric) {
@@ -253,8 +244,6 @@ class LotteryAnalysisExport implements WithMultipleSheets
                 $iterations,
                 $generatedAt,
                 $eventName,
-                $brandCode,
-                $analysisId,
             ];
         }
 
@@ -317,8 +306,6 @@ final class LotteryAnalysisSummarySheet implements FromArray, ShouldAutoSize, Wi
     {
         return [
             '活動名稱',
-            'Brand Code',
-            '分析ID',
             '模擬次數',
             '生成時間',
             '獎項數',
@@ -352,7 +339,6 @@ final class LotteryAnalysisPrizesSheet implements FromArray, ShouldAutoSize, Wit
     public function headings(): array
     {
         return [
-            '獎項ID',
             '獎項名稱',
             '抽獎模式',
             '同一獎項可重複中獎',
@@ -507,7 +493,7 @@ final class LotteryAnalysisChartsSheet implements FromArray, WithCharts, WithTit
         $labels = [
             new DataSeriesValues(
                 DataSeriesValues::DATASERIES_TYPE_STRING,
-                $this->cellRef('獎項統計', 'I', 1),
+                $this->cellRef('獎項統計', 'H', 1),
                 null,
                 1
             ),
@@ -515,7 +501,7 @@ final class LotteryAnalysisChartsSheet implements FromArray, WithCharts, WithTit
         $categories = [
             new DataSeriesValues(
                 DataSeriesValues::DATASERIES_TYPE_STRING,
-                $this->rangeRef('獎項統計', 'B', 2, $endRow),
+                $this->rangeRef('獎項統計', 'A', 2, $endRow),
                 null,
                 $this->prizeCount,
                 $this->prizeNames
@@ -524,7 +510,7 @@ final class LotteryAnalysisChartsSheet implements FromArray, WithCharts, WithTit
         $values = [
             new DataSeriesValues(
                 DataSeriesValues::DATASERIES_TYPE_NUMBER,
-                $this->rangeRef('獎項統計', 'I', 2, $endRow),
+                $this->rangeRef('獎項統計', 'H', 2, $endRow),
                 null,
                 $this->prizeCount,
                 $this->prizeWinRates
@@ -557,7 +543,7 @@ final class LotteryAnalysisChartsSheet implements FromArray, WithCharts, WithTit
         $labels = [
             new DataSeriesValues(
                 DataSeriesValues::DATASERIES_TYPE_STRING,
-                $this->cellRef('獎項統計', 'J', 1),
+                $this->cellRef('獎項統計', 'I', 1),
                 null,
                 1
             ),
@@ -565,7 +551,7 @@ final class LotteryAnalysisChartsSheet implements FromArray, WithCharts, WithTit
         $categories = [
             new DataSeriesValues(
                 DataSeriesValues::DATASERIES_TYPE_STRING,
-                $this->rangeRef('獎項統計', 'B', 2, $endRow),
+                $this->rangeRef('獎項統計', 'A', 2, $endRow),
                 null,
                 $this->prizeCount,
                 $this->prizeNames
@@ -574,7 +560,7 @@ final class LotteryAnalysisChartsSheet implements FromArray, WithCharts, WithTit
         $values = [
             new DataSeriesValues(
                 DataSeriesValues::DATASERIES_TYPE_NUMBER,
-                $this->rangeRef('獎項統計', 'J', 2, $endRow),
+                $this->rangeRef('獎項統計', 'I', 2, $endRow),
                 null,
                 $this->prizeCount,
                 $this->prizeRelativeRates
@@ -751,8 +737,6 @@ final class LotteryAnalysisPivotSheet implements FromArray, ShouldAutoSize, With
             '模擬次數',
             '生成時間',
             '活動名稱',
-            'Brand Code',
-            '分析ID',
         ];
     }
 

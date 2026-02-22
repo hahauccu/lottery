@@ -11,6 +11,10 @@ Route::get('/', function () {
     return view('home');
 });
 
+Route::get('/testSound', function () {
+    return view('testSound');
+})->name('testSound');
+
 // Route::get('/home1', function () {
 //     return view('home1');
 // })->name('home1');

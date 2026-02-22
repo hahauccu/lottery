@@ -1316,6 +1316,32 @@ const initLottery = () => {
             return `${chars.slice(0, 4).join('')}…`;
         };
 
+        const createBall = (name, index, radius) => {
+            const angle = rand(0, TAU);
+            const spread = rand(0, Math.max(10, airState.drum.r - radius - 10));
+
+            return {
+                name,
+                label: shortLabel(name),
+                x: airState.drum.x + Math.cos(angle) * spread,
+                y: airState.drum.y + Math.sin(angle) * spread,
+                vx: rand(-80, 80),
+                vy: rand(-80, 80),
+                r: radius,
+                hue: (index * 19) % 360,
+                spin: rand(-8, 8),
+                jitter: rand(0.6, 1.4),
+                restitution: rand(0.82, 0.94),
+                friction: rand(0.965, 0.988),
+                mass: rand(0.85, 1.15),
+                grabbed: false,
+                out: false,
+                phase: rand(0, TAU),
+                onOut: null,
+                forceOutAt: 0,
+            };
+        };
+
         const addShake = (value) => {
             shake.power = Math.max(shake.power, value);
         };
@@ -1486,30 +1512,9 @@ const initLottery = () => {
             const baseR = Math.min(lottoCanvasEl.getBoundingClientRect().width, lottoCanvasEl.getBoundingClientRect().height);
             const radius = clamp(Math.floor(baseR * 0.018), 10, 16);
             for (let i = 0; i < count; i += 1) {
-                const angle = rand(0, TAU);
-                const spread = rand(0, airState.drum.r - radius - 10);
                 const name = names[i % names.length];
-            airState.balls.push({
-                name,
-                label: shortLabel(name),
-                x: airState.drum.x + Math.cos(angle) * spread,
-                y: airState.drum.y + Math.sin(angle) * spread,
-                vx: rand(-80, 80),
-                vy: rand(-80, 80),
-                r: radius,
-                hue: (i * 19) % 360,
-                spin: rand(-8, 8),
-                jitter: rand(0.6, 1.4),
-                restitution: rand(0.82, 0.94),
-                friction: rand(0.965, 0.988),
-                mass: rand(0.85, 1.15),
-                grabbed: false,
-                out: false,
-                phase: rand(0, TAU),
-                onOut: null,
-                forceOutAt: 0,
-            });
-        }
+                airState.balls.push(createBall(name, i, radius));
+            }
         };
 
         const confine = (ball) => {
@@ -1580,11 +1585,15 @@ const initLottery = () => {
         };
 
         const pickBall = (winnerName) => {
-            const candidates = airState.balls.filter((ball) => !ball.grabbed && !ball.out);
+            let candidates = airState.balls.filter((ball) => !ball.grabbed && !ball.out);
             if (!candidates.length) {
-                const waiter = airState.waiters.shift();
-                waiter?.();
-                return;
+                // one_by_one 重複抽獎或球池耗盡時，補一顆臨時球避免「沒有中獎動畫」
+                const emergencyName = winnerName || '???';
+                const emergencyRadius = clamp(Math.floor(airState.drum.r * 0.04), 10, 16);
+                const emergencyBall = createBall(emergencyName, airState.balls.length + 1, emergencyRadius);
+                airState.balls.push(emergencyBall);
+                candidates = [emergencyBall];
+                console.warn('[lottery] pickBall: no available balls, spawned emergency ball for animation');
             }
             let target = candidates.find((ball) => ball.name === winnerName);
             if (!target) {

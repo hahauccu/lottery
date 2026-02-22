@@ -107,7 +107,9 @@ class PrizeResource extends Resource
                             ->helperText('開啟後抽獎過程會播放音效')
                             ->default(true),
                         Toggle::make('allow_repeat_within_prize')
-                            ->label('同一獎項可重複中獎')
+                            ->label(new \Illuminate\Support\HtmlString(
+                                '同一獎項可重複中獎&nbsp;<span x-data x-tooltip.raw="開啟後，有資格中獎的人可在同一獎項中多次中獎" class="cursor-help inline-flex items-center align-middle text-gray-400 hover:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm.06 2.25a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H9z" clip-rule="evenodd" /></svg></span>'
+                            ))
                             ->default(false),
                         FileUpload::make('bg_image_path')
                             ->label('獎項背景圖')
@@ -275,8 +277,10 @@ class PrizeResource extends Resource
                     ->formatStateUsing(fn (string $state) => $state === Prize::DRAW_MODE_ONE_BY_ONE ? '逐一抽出' : '一次全抽'),
             ])
             ->actions([
-                \Filament\Tables\Actions\EditAction::make(),
-                \Filament\Tables\Actions\DeleteAction::make(),
+                \Filament\Tables\Actions\EditAction::make()
+                    ->extraModalFooterActions([
+                        \Filament\Tables\Actions\DeleteAction::make(),
+                    ]),
             ])
             ->bulkActions([
                 \Filament\Tables\Actions\BulkActionGroup::make([
