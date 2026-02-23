@@ -97,9 +97,10 @@ class PrizeResource extends Resource
                             ->live(),
                         TextInput::make('lotto_hold_seconds')
                             ->label('抽獎秒數')
-                            ->helperText('每次抽獎的動畫時間（秒），最低 3 秒')
+                            ->helperText('每次抽獎的動畫時間（秒），5–50 秒')
                             ->numeric()
-                            ->minValue(3)
+                            ->minValue(5)
+                            ->maxValue(50)
                             ->default(5)
                             ->suffix('秒'),
                         Toggle::make('sound_enabled')
