@@ -4924,11 +4924,14 @@ const initLottery = () => {
                 if (isRunStale()) return;
 
                 if (state.currentPrize?.drawMode === 'one_by_one') {
+                    // 先 startDraw() 讓 ensureReady() 完成可能的 reset()，
+                    // 再 setWinners() 設定 pending，避免 WebSocket 已更新
+                    // eligibleNames 導致計數不符觸發 reset 清空 pending。
+                    lottoAir.startDraw();
                     lottoAir.setWinners([winners[0]?.employee_name ?? randomLabel()], {
                         resetBalls: false,
                         resetPicked: false,
                     });
-                    lottoAir.startDraw();
                     await lottoAir.waitForNextPick();
                     if (isRunStale()) return;
                     append(winners[0]);
