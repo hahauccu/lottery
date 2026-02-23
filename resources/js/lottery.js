@@ -2051,6 +2051,9 @@ const initLottery = () => {
                 cancelAnimationFrame(airState.rafId);
                 airState.rafId = null;
             }
+            while (airState.waiters.length) {
+                airState.waiters.shift()?.();
+            }
         };
 
         const ensureCount = (count) => {
@@ -3278,7 +3281,8 @@ const initLottery = () => {
         };
 
         // 顯示卡片（在選擇動畫時就呼叫，不等抽獎）
-        const showCards = (count) => {
+        const showCards = (count, forceReset = false) => {
+            if (running && !forceReset) return;
             cleanup();
             if (!resizeCanvas()) return;
 
@@ -3938,7 +3942,8 @@ const initLottery = () => {
         };
 
         // 顯示寶箱
-        const showChests = (count) => {
+        const showChests = (count, forceReset = false) => {
+            if (running && !forceReset) return;
             cleanup();
             if (!resizeCanvas()) return;
 
@@ -4915,6 +4920,7 @@ const initLottery = () => {
             revealWinners: async (winners, runtime = {}) => {
                 const append = runtime.appendWinner ?? appendWinner;
                 const isRunStale = runtime.isRunStale ?? (() => false);
+                const clock = runtime.clock;
                 if (isRunStale()) return;
 
                 if (state.currentPrize?.drawMode === 'one_by_one') {
@@ -4926,6 +4932,7 @@ const initLottery = () => {
                     await lottoAir.waitForNextPick();
                     if (isRunStale()) return;
                     append(winners[0]);
+                    if (clock) await clock.waitUntilEnd();
                 } else {
                     lottoAir.setWinners(winners.map((winner) => winner.employee_name ?? randomLabel()));
                     lottoAir.startDraw();
@@ -4933,6 +4940,10 @@ const initLottery = () => {
                         await lottoAir.waitForNextPick();
                         if (isRunStale()) return;
                         append(winner);
+                    }
+                    if (clock) {
+                        const finalWait = Math.min(1500, clock.remainingMs());
+                        if (finalWait > 50) await delay(finalWait);
                     }
                 }
             },
@@ -4992,14 +5003,14 @@ const initLottery = () => {
             stop: () => redPacketRain.stop(),
         },
         scratch_card: {
-            prepareIdle: () => {
+            prepareIdle: ({ forceReset = false } = {}) => {
                 scratchCard.ensureReady();
                 if (!state.isDrawing) {
                     const cardCount = state.currentPrize?.drawMode === 'one_by_one'
                         ? Math.min(1, getIdleSlotCount(1))
                         : Math.min(getIdleSlotCount(9), 9);
                     if (cardCount > 0) {
-                        scratchCard.showCards(cardCount);
+                        scratchCard.showCards(cardCount, forceReset);
                     }
                 }
             },
@@ -5029,7 +5040,7 @@ const initLottery = () => {
                         const batchStart = processedCount;
                         const batchCount = Math.min(winners.length - processedCount, 9);
                         const batchWinners = winners.slice(batchStart, batchStart + batchCount);
-                        scratchCard.showCards(batchCount);
+                        scratchCard.showCards(batchCount, true);
                         scratchCard.setWinners(batchWinners.map((w) => w.employee_name ?? '???'));
                         const scratchOrder = shuffle(Array.from({ length: batchCount }, (_, i) => i));
                         for (let i = 0; i < batchCount; i++) {
@@ -5064,14 +5075,14 @@ const initLottery = () => {
             stop: () => scratchCard.stop(),
         },
         treasure_chest: {
-            prepareIdle: () => {
+            prepareIdle: ({ forceReset = false } = {}) => {
                 treasureChest.ensureReady();
                 if (!state.isDrawing) {
                     const chestCount = state.currentPrize?.drawMode === 'one_by_one'
                         ? Math.min(1, getIdleSlotCount(1))
                         : Math.min(getIdleSlotCount(9), 9);
                     if (chestCount > 0) {
-                        treasureChest.showChests(chestCount);
+                        treasureChest.showChests(chestCount, forceReset);
                     }
                 }
             },
@@ -5101,7 +5112,7 @@ const initLottery = () => {
                         const batchStart = processedCount;
                         const batchCount = Math.min(winners.length - processedCount, 9);
                         const batchWinners = winners.slice(batchStart, batchStart + batchCount);
-                        treasureChest.showChests(batchCount);
+                        treasureChest.showChests(batchCount, true);
                         treasureChest.setWinners(batchWinners.map((w) => w.employee_name ?? '???'));
                         const openOrder = shuffle(Array.from({ length: batchCount }, (_, i) => i));
                         for (let i = 0; i < batchCount; i++) {
@@ -5136,7 +5147,7 @@ const initLottery = () => {
             stop: () => treasureChest.stop(),
         },
         big_treasure_chest: {
-            prepareIdle: () => {
+            prepareIdle: ({ forceReset = false } = {}) => {
                 bigTreasureChest.ensureReady();
                 if (!state.isDrawing) {
                     bigTreasureChest.showChest();
