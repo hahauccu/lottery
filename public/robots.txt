@@ -1,2 +1,5 @@
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /claim/
+
+Sitemap: https://lottery.dindin168.com/sitemap.xml

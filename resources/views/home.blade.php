@@ -5,16 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {{-- SEO --}}
-    <title>尾牙抽獎｜線上抽獎系統｜即時切換、彈幕互動、QRCode 兌獎</title>
-    <meta name="description" content="專為企業活動打造的尾牙抽獎與線上抽獎系統。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，讓每場抽獎更公平、更熱鬧、更有效率。">
+    <title>尾牙抽獎｜抽獎系統推薦｜即時切換、彈幕互動、QRCode 領獎</title>
+    <meta name="description" content="專為企業活動打造的尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
     <link rel="canonical" href="{{ url('/') }}">
 
     {{-- OG --}}
     <meta property="og:type" content="website">
-    <meta property="og:title" content="尾牙抽獎｜線上抽獎系統｜即時切換、彈幕互動、QRCode 兌獎">
-    <meta property="og:description" content="專為企業活動打造的尾牙抽獎與線上抽獎系統。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，讓每場抽獎更公平、更熱鬧、更有效率。">
+    <meta property="og:title" content="尾牙抽獎｜抽獎系統推薦｜即時切換、彈幕互動、QRCode 領獎">
+    <meta property="og:description" content="專為企業活動打造的尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
     <meta property="og:url" content="{{ url('/') }}">
     <meta property="og:image" content="{{ url('/images/og-home.jpg') }}">
+
+    {{-- Organization JSON-LD --}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "抽獎系統",
+        "url": "{{ url('/') }}",
+        "logo": "{{ url('/images/og-home.jpg') }}"
+    }
+    </script>
+
+    {{-- WebSite JSON-LD --}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "抽獎系統",
+        "url": "{{ url('/') }}"
+    }
+    </script>
 
     {{-- FAQ JSON-LD --}}
     @verbatim
