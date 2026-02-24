@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -50,13 +51,12 @@ class RegisterAccountController extends Controller
             return $user;
         });
 
+        Password::sendResetLink(['email' => $user->email]);
+
         return redirect()
             ->route('register-account')
             ->with([
                 'registered_email' => $user->email,
-                'registered_password' => $password,
-                'registered_org' => $organizationName,
-                'login_url' => route('login'),
             ]);
     }
 

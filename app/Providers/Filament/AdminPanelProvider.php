@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->passwordReset()
             ->tenant(Organization::class, 'slug', ownershipRelationship: 'organization')
             ->tenantMenu(false)
             ->colors([
@@ -40,6 +41,16 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 'panels::head.end',
                 fn () => new HtmlString('<meta name="robots" content="noindex, nofollow">'),
+            )
+            ->renderHook(
+                'panels::auth.login.form.after',
+                fn () => new HtmlString('
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <a href="/register-account" style="font-size: 0.875rem; color: rgb(var(--primary-600)); text-decoration: underline;">
+                            還沒有帳號？立即註冊
+                        </a>
+                    </div>
+                '),
             )
             ->middleware([
                 EncryptCookies::class,

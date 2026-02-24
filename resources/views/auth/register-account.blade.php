@@ -2,16 +2,12 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    @if (session('registered_password'))
-        <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p class="font-semibold">帳號已建立，請立即保存以下資訊：</p>
-            <div class="mt-3 rounded-md bg-white p-3 text-gray-700">
-                <p>公司名稱：<strong>{{ session('registered_org') }}</strong></p>
-                <p>登入帳號：<strong>{{ session('registered_email') }}</strong></p>
-                <p>登入密碼：<strong>{{ session('registered_password') }}</strong></p>
-            </div>
-            <p class="mt-3">此密碼僅顯示一次，請登入後立即修改。</p>
-            <a class="mt-3 inline-flex items-center text-sm font-semibold text-amber-700 hover:text-amber-800" href="{{ session('login_url') }}">
+    @if (session('registered_email'))
+        <div class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+            <p class="font-semibold">帳號已建立！</p>
+            <p class="mt-2">我們已寄送密碼設定連結到 <strong>{{ session('registered_email') }}</strong>，請前往信箱收信並設定您的登入密碼。</p>
+            <p class="mt-2 text-green-700">若未收到信件，請檢查垃圾信匣。</p>
+            <a class="mt-3 inline-flex items-center text-sm font-semibold text-green-700 hover:text-green-800" href="{{ route('login') }}">
                 前往登入
             </a>
         </div>
