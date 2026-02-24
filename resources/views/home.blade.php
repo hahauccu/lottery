@@ -19,8 +19,8 @@
     {{-- Organization JSON-LD --}}
     <script type="application/ld+json">
     {
-        "@context": "https://schema.org",
-        "@type": "Organization",
+        "@@context": "https://schema.org",
+        "@@type": "Organization",
         "name": "抽獎系統",
         "url": "{{ url('/') }}",
         "logo": "{{ url('/images/og-home.jpg') }}"
@@ -30,8 +30,8 @@
     {{-- WebSite JSON-LD --}}
     <script type="application/ld+json">
     {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
+        "@@context": "https://schema.org",
+        "@@type": "WebSite",
         "name": "抽獎系統",
         "url": "{{ url('/') }}"
     }
