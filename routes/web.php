@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ClaimController;
+use App\Http\Controllers\DemoLotteryController;
 use App\Http\Controllers\LotteryAnalysisController;
 use App\Http\Controllers\LotteryFrontendController;
 use App\Http\Controllers\PaymentController;
@@ -21,6 +22,15 @@ Route::get('/testSound', function () {
 
 Route::get('/claim/{token}', [ClaimController::class, 'verify'])
     ->name('claim.verify');
+
+// Demo 抽獎（免登入）
+Route::get('/demo/lottery', [DemoLotteryController::class, 'show'])->name('demo.lottery.show');
+Route::post('/demo/lottery/draw', [DemoLotteryController::class, 'draw'])->name('demo.lottery.draw');
+Route::post('/demo/lottery/style', [DemoLotteryController::class, 'setStyle'])->name('demo.lottery.style');
+Route::post('/demo/lottery/reset', [DemoLotteryController::class, 'reset'])->name('demo.lottery.reset');
+Route::post('/demo/lottery/ready', [DemoLotteryController::class, 'ready'])->name('demo.lottery.ready');
+Route::post('/demo/lottery/drawing-state', [DemoLotteryController::class, 'drawingState'])->name('demo.lottery.drawing-state');
+Route::post('/demo/lottery/switch-ack', [DemoLotteryController::class, 'switchAck'])->name('demo.lottery.switch-ack');
 
 Route::get('/{brandCode}/lottery', [LotteryFrontendController::class, 'show'])
     ->name('lottery.show');

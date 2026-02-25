@@ -5578,6 +5578,9 @@ const initLottery = () => {
         }
     };
 
+    // 暴露給外部（demo 工具面板使用）
+    window.__lotteryApplyPayload = applyLotteryPayload;
+
     const pollPayload = async () => {
         // 抽獎期間仍輪詢，但只更新切換狀態（不覆蓋 winners）
         const skipWinnersUpdate = state.isDrawing;

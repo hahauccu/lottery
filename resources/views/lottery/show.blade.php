@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>{{ $currentPrize?->name ?? $event->name }} - 抽獎</title>
+    <title>{{ $title ?? ($currentPrize?->name ?? $event->name) }} - 抽獎</title>
     <script>
         window.LotteryConfig = {!! json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!};
     </script>
@@ -116,6 +116,9 @@
     </style>
 </head>
 <body class="h-[100svh] overflow-hidden bg-black text-white">
+    @if (!empty($isDemo))
+        @include('lottery.partials.demo-toolbar')
+    @endif
         <div
             id="lottery-root"
             class="lottery-bg relative min-h-[100svh] {{ $bgUrl ? 'has-image' : '' }}"
