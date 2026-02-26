@@ -105,7 +105,7 @@ const initLottery = () => {
 
     // 使用全域追蹤 ACK 狀態（避免多個閉包各自獨立追蹤）
     if (!window.__lotteryAckState) {
-        window.__lotteryAckState = { lastPrizeId: null, pending: false };
+        window.__lotteryAckState = { lastNonce: null, pending: false };
     }
     const ackState = window.__lotteryAckState;
 
@@ -2051,9 +2051,16 @@ const initLottery = () => {
                 cancelAnimationFrame(airState.rafId);
                 airState.rafId = null;
             }
-            while (airState.waiters.length) {
-                airState.waiters.shift()?.();
+            if (airState.finishPauseId) {
+                clearTimeout(airState.finishPauseId);
+                airState.finishPauseId = null;
             }
+            airState.waiters.length = 0;
+            airState.balls.length = 0;
+            airState.picked.length = 0;
+            airState.pending.length = 0;
+            particles.length = 0;
+            stopTrayCarousel();
         };
 
         const ensureCount = (count) => {
@@ -5553,13 +5560,13 @@ const initLottery = () => {
             switchingMask.hide();
         }
 
-        // 獎項切換中 → 回報前端已載入（全域防抖：同一獎項只發送一次，且等前一個完成）
-        const ackPrizeId = payload.current_prize?.id ?? 'preview';
+        // 獎項切換中 → 回報前端已載入（以 switch_nonce 去重，確保每次切換都正確 ACK）
+        const switchNonce = payload.event?.switch_nonce ?? null;
         if (payload.event?.is_prize_switching && config.switchAckUrl
-            && ackPrizeId !== ackState.lastPrizeId && !ackState.pending) {
-            ackState.lastPrizeId = ackPrizeId;
+            && switchNonce && switchNonce !== ackState.lastNonce && !ackState.pending) {
+            ackState.lastNonce = switchNonce;
             ackState.pending = true;
-            console.log('[lottery] sending switch-ack for prizeId:', ackPrizeId);
+            console.log('[lottery] sending switch-ack for nonce:', switchNonce);
             fetch(config.switchAckUrl, {
                 method: 'POST',
                 headers: {
@@ -5568,10 +5575,10 @@ const initLottery = () => {
                 },
                 body: JSON.stringify({ prize_id: payload.current_prize?.id ?? null }),
             }).then(res => {
-                console.log('[lottery] switch-ack sent, status:', res.status, 'prizeId:', ackPrizeId);
+                console.log('[lottery] switch-ack sent, status:', res.status, 'nonce:', switchNonce);
             }).catch(err => {
                 console.error('[lottery] switch-ack failed:', err);
-                ackState.lastPrizeId = null; // 失敗時重設，允許重試
+                ackState.lastNonce = null; // 失敗時重設，允許重試
             }).finally(() => {
                 ackState.pending = false;
             });

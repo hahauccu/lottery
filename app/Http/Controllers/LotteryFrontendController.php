@@ -112,6 +112,7 @@ class LotteryFrontendController extends Controller
                     'show_prizes_preview' => $event->show_prizes_preview,
                     'current_prize_id' => $event->current_prize_id,
                     'is_prize_switching' => $event->is_prize_switching,
+                    'switch_nonce' => $event->prize_switched_at?->toISOString(),
                 ],
                 'bg_url' => $bgUrl,
                 'all_prizes' => $allPrizes,
@@ -184,33 +185,42 @@ class LotteryFrontendController extends Controller
             return response()->json(['message' => 'no_prize_selected'], 422);
         }
 
-        if ($runId = $request->input('run_id')) {
-            Cache::put("lottery-drawing:{$brandCode}", $runId, now()->addSeconds(15));
+        $lock = Cache::lock("draw:{$event->id}", 10);
+        if (! $lock->get()) {
+            return response()->json(['message' => 'drawing_in_progress'], 423);
         }
 
-        $winners = app(LotteryDrawService::class)->drawCurrentPrize($event);
+        try {
+            if ($runId = $request->input('run_id')) {
+                Cache::put("lottery-drawing:{$brandCode}", $runId, now()->addSeconds(15));
+            }
 
-        if ($winners->isEmpty()) {
-            return response()->json(['message' => 'no_winners', 'winners' => []]);
+            $winners = app(LotteryDrawService::class)->drawCurrentPrize($event);
+
+            if ($winners->isEmpty()) {
+                return response()->json(['message' => 'no_winners', 'winners' => []]);
+            }
+
+            event(new PrizeWinnersUpdated($event->brand_code, $event->currentPrize, $winners));
+
+            // 清除 winners 頁面快取
+            Cache::forget("winners:{$brandCode}");
+
+            return response()->json([
+                'prize_id' => $event->currentPrize->id,
+                'prize_name' => $event->currentPrize->name,
+                'winners' => $winners->map(fn ($winner) => [
+                    'id' => $winner->id,
+                    'employee_name' => $winner->employee?->name,
+                    'employee_email' => $winner->employee?->email,
+                    'employee_phone' => $winner->employee?->phone,
+                    'sequence' => $winner->sequence,
+                    'won_at' => optional($winner->won_at)->toDateTimeString(),
+                ])->values()->all(),
+            ]);
+        } finally {
+            $lock->release();
         }
-
-        event(new PrizeWinnersUpdated($event->brand_code, $event->currentPrize, $winners));
-
-        // 清除 winners 頁面快取
-        Cache::forget("winners:{$brandCode}");
-
-        return response()->json([
-            'prize_id' => $event->currentPrize->id,
-            'prize_name' => $event->currentPrize->name,
-            'winners' => $winners->map(fn ($winner) => [
-                'id' => $winner->id,
-                'employee_name' => $winner->employee?->name,
-                'employee_email' => $winner->employee?->email,
-                'employee_phone' => $winner->employee?->phone,
-                'sequence' => $winner->sequence,
-                'won_at' => optional($winner->won_at)->toDateTimeString(),
-            ])->values()->all(),
-        ]);
     }
 
     public function ready(string $brandCode): JsonResponse

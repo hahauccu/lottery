@@ -340,9 +340,20 @@ class PrizesRelationManager extends RelationManager
     public function forceResetSwitching(): void
     {
         $event = $this->getOwnerRecord();
-        if ($event->is_prize_switching) {
-            $event->update(['is_prize_switching' => false]);
-            LotteryBroadcaster::dispatchUpdate($event->refresh());
+        $lock = Cache::lock("switch-ack:{$event->id}", 5);
+
+        if (! $lock->get()) {
+            return;
+        }
+
+        try {
+            $event->refresh();
+            if ($event->is_prize_switching) {
+                $event->update(['is_prize_switching' => false]);
+                LotteryBroadcaster::dispatchUpdate($event->refresh());
+            }
+        } finally {
+            $lock->release();
         }
     }
 
