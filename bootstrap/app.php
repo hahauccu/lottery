@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'payment/ecpay/notify',
             'payment/ecpay/result',
+            // Demo 抽獎頁（公開免登入，無真實敏感操作，session 無法持久化故豁免）
+            'demo/lottery/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
