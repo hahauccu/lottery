@@ -5690,7 +5690,6 @@ const initLottery = () => {
 
     const sendReadyPing = () => {
         if (!config.readyUrl) return;
-        if (document.visibilityState === 'hidden') return;
         fetch(config.readyUrl, {
             method: 'POST',
             headers: {

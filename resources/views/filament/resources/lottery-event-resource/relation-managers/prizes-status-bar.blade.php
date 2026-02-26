@@ -42,7 +42,14 @@
                     <span class="relative flex h-3.5 w-3.5">
                         <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-gray-400"></span>
                     </span>
-                    <span class="text-base font-medium text-gray-500 dark:text-gray-400">離線</span>
+                    <span class="text-base font-medium text-gray-500 dark:text-gray-400">
+                        離線
+                        @if (!empty($statusData['everConnected']) && $statusData['lastSeenSeconds'] !== null)
+                            <span class="text-xs font-normal text-gray-400 dark:text-gray-500 ml-1">（{{ $statusData['lastSeenSeconds'] }} 秒前在線）</span>
+                        @elseif (empty($statusData['everConnected']))
+                            <span class="text-xs font-normal text-gray-400 dark:text-gray-500 ml-1">（尚未開啟前台）</span>
+                        @endif
+                    </span>
                 @endif
             </span>
 

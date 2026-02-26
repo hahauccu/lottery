@@ -45,7 +45,9 @@ class PrizesRelationManager extends RelationManager
         $event->refresh();
         $brandCode = $event->brand_code;
 
-        $isOnline = $this->frontendIsReady($brandCode);
+        $readyCacheKey = "lottery-ready:{$brandCode}";
+        $lastSeen = Cache::get($readyCacheKey);
+        $isOnline = $lastSeen && (now()->timestamp - (int) $lastSeen) <= 30;
         $isDrawing = $isOnline && $this->frontendIsDrawing($brandCode);
         $isSwitching = (bool) $event->is_prize_switching;
 
@@ -121,6 +123,8 @@ class PrizesRelationManager extends RelationManager
             'prizeSummary' => $prizeSummary,
             'progress' => $progress,
             'suggestion' => $suggestion,
+            'everConnected' => $lastSeen !== null,
+            'lastSeenSeconds' => $lastSeen ? (now()->timestamp - (int) $lastSeen) : null,
         ];
     }
 
@@ -355,13 +359,13 @@ class PrizesRelationManager extends RelationManager
             return false;
         }
 
-        return (now()->timestamp - (int) $lastSeen) <= 12;
+        return (now()->timestamp - (int) $lastSeen) <= 30;
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->poll('10s')
+            ->poll('5s')
             ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->columns([

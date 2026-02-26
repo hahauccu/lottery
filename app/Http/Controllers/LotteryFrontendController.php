@@ -218,7 +218,7 @@ class LotteryFrontendController extends Controller
         LotteryEvent::where('brand_code', $brandCode)->firstOrFail();
 
         $cacheKey = "lottery-ready:{$brandCode}";
-        Cache::put($cacheKey, now()->timestamp, now()->addSeconds(20));
+        Cache::put($cacheKey, now()->timestamp, now()->addSeconds(45));
 
         return response()->json([
             'ok' => true,
