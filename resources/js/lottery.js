@@ -3285,6 +3285,11 @@ const initLottery = () => {
             if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
             particles.length = 0;
             sparkles.length = 0;
+            for (const card of cards) {
+                card.maskCanvas = null;
+                card.maskCtx = null;
+            }
+            cards.length = 0;
             if (revealResolve) { revealResolve(); revealResolve = null; }
         };
 
@@ -5289,6 +5294,8 @@ const initLottery = () => {
                 ballRumbleSound = sfx.playBallRumble();
             }
 
+            const drawAbort = new AbortController();
+            const drawTimeout = setTimeout(() => drawAbort.abort(), 15000);
             const response = await fetch(config.drawUrl, {
                 method: 'POST',
                 headers: {
@@ -5296,7 +5303,9 @@ const initLottery = () => {
                     'X-CSRF-TOKEN': config.csrfToken,
                 },
                 body: JSON.stringify({ run_id: backendRunId }),
+                signal: drawAbort.signal,
             });
+            clearTimeout(drawTimeout);
 
             if (isRunStale()) {
                 return;
@@ -5579,14 +5588,17 @@ const initLottery = () => {
     // 暴露給外部（demo 工具面板使用）
     window.__lotteryApplyPayload = applyLotteryPayload;
 
+    const pollUrl = (() => {
+        const u = new URL(window.location.href);
+        u.searchParams.set('payload', '1');
+        return u.toString();
+    })();
+
     const pollPayload = async () => {
         // 抽獎期間仍輪詢，但只更新切換狀態（不覆蓋 winners）
         const skipWinnersUpdate = state.isDrawing;
-        const url = new URL(window.location.href);
-        url.searchParams.set('payload', '1');
-
         try {
-            const response = await fetch(url.toString(), {
+            const response = await fetch(pollUrl, {
                 headers: { 'Accept': 'application/json' },
             });
             if (!response.ok) return;

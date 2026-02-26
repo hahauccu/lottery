@@ -44,6 +44,7 @@
         .lottery-winners-hidden {
             opacity: 0;
             visibility: hidden;
+            transition: opacity 300ms ease, visibility 300ms ease;
         }
 
         #switching-mask {
