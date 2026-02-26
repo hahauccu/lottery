@@ -5448,7 +5448,8 @@ const initLottery = () => {
             : null;
 
         const nextIsSwitching = payload.event?.is_prize_switching ?? false;
-        const prizeChanged = nextPrize?.id !== previousPrizeId;
+        const nextPrizeId = nextPrize?.id ?? null;
+        const prizeChanged = nextPrizeId !== previousPrizeId;
 
         if (prizeChanged) {
             clearResultModeTimer();
@@ -5463,7 +5464,8 @@ const initLottery = () => {
             }
         }
 
-        if (nextIsSwitching || prizeChanged) {
+        const switchingStarted = !state.isSwitching && nextIsSwitching;
+        if (switchingStarted) {
             switchingMask.show();
         }
 
@@ -5508,7 +5510,7 @@ const initLottery = () => {
             }
         }
 
-        if (!state.isDrawing && (prizeChanged || nextIsSwitching || state.showPrizesPreview)) {
+        if (!state.isDrawing && (prizeChanged || switchingStarted)) {
             stopAllAnimations();
             // clearCanvas 移除：render() 會立即呼叫 prepareIdle → reset 重繪，避免中間空白閃爍
         }
