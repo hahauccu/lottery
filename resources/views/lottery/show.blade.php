@@ -49,7 +49,7 @@
         #switching-mask {
             position: absolute;
             inset: 0;
-            z-index: 35;
+            z-index: 55;
             display: flex;
             align-items: center;
             justify-content: center;

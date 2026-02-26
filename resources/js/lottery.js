@@ -2019,12 +2019,13 @@ const initLottery = () => {
             // 1. forceReset（切換獎項時強制清除舊狀態）
             // 2. 沒有 canvas context
             // 3. 球還沒初始化
-            // 4. 球數不對且沒有已抽出的球（避免 one_by_one 模式重置收納盤）
+            // 4. 球數不對且沒有進行中的抽獎狀態（out 球或 picked 球）
             const hasOutBalls = airState.balls.some((b) => b.out);
+            const hasPicked = airState.picked.length > 0;
             const needsReset = forceReset
                 || !airState.ctx
                 || !airState.balls.length
-                || (airState.balls.length !== lottoAirConfig.count && !hasOutBalls);
+                || (airState.balls.length !== lottoAirConfig.count && !hasOutBalls && !hasPicked);
             if (needsReset) {
                 reset();
                 drawFrame();
@@ -5387,21 +5388,7 @@ const initLottery = () => {
         draw();
     };
 
-    const handleKeyup = (event) => {
-        if (!shouldTriggerDraw(event)) return;
-        if (state.isResultMode) return;
-
-        event.preventDefault();
-        const now = Date.now();
-        if (now - lastKeyDrawAt < 300) return;
-        lastKeyDrawAt = now;
-        draw();
-    };
-
     document.addEventListener('keydown', handleKeydown);
-    document.addEventListener('keyup', handleKeyup);
-    window.addEventListener('keydown', handleKeydown);
-    window.addEventListener('keyup', handleKeyup);
 
     drawButtonEl?.addEventListener('click', () => {
         if (!state.isResultMode) {
@@ -5488,12 +5475,16 @@ const initLottery = () => {
         state.currentPrize = nextPrize;
         const shouldSkipWinnersUpdate = skipWinnersUpdate && !prizeChanged;
         if (!shouldSkipWinnersUpdate) {
+            const prevWinnersLen = state.winners?.length ?? 0;
             state.winners = payload.winners ?? [];
+            // 只在獎項變更或中獎者數量變化時才重置分頁，避免輪詢導致跳頁
+            if (prizeChanged || state.winners.length !== prevWinnersLen) {
+                pageIndex = 0;
+            }
         }
         state.eligibleNames = prizeChanged
             ? (payload.eligible_names ?? []) // 獎項變更：使用新值或清空
             : (payload.eligible_names ?? state.eligibleNames ?? []); // 同獎項：保留舊值
-        pageIndex = 0;
 
         // 更新背景圖片
         const newBgUrl = payload.bg_url ?? payload.bgUrl ?? null;
@@ -5510,7 +5501,7 @@ const initLottery = () => {
 
         if (!state.isDrawing && (prizeChanged || nextIsSwitching || state.showPrizesPreview)) {
             stopAllAnimations();
-            clearCanvas();
+            // clearCanvas 移除：render() 會立即呼叫 prepareIdle → reset 重繪，避免中間空白閃爍
         }
 
         if (prizeChanged && state.isResultMode) {
@@ -5655,9 +5646,10 @@ const initLottery = () => {
                 // 非抽獎狀態：用 id 去重，附加新中獎者
                 const existingIds = new Set(state.winners.map((w) => w.id));
                 const newWinners = (payload.winners ?? []).filter((w) => !existingIds.has(w.id));
-                state.winners = [...state.winners, ...newWinners];
-
-                pageIndex = 0;
+                if (newWinners.length > 0) {
+                    state.winners = [...state.winners, ...newWinners];
+                    pageIndex = 0;
+                }
                 render();
 
                 // 若在 resultMode，立即更新
