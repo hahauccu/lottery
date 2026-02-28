@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\SignupTrialService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -35,7 +37,7 @@ class RegisterAccountController extends Controller
 
         $password = Str::password(16);
 
-        $user = DB::transaction(function () use ($email, $organizationName, $password) {
+        [$user, $organization] = DB::transaction(function () use ($email, $organizationName, $password) {
             $organization = Organization::create([
                 'name' => $organizationName,
             ]);
@@ -48,8 +50,14 @@ class RegisterAccountController extends Controller
 
             $organization->users()->attach($user->id);
 
-            return $user;
+            return [$user, $organization];
         });
+
+        try {
+            app(SignupTrialService::class)->grantIfEligible($organization, 'register-account');
+        } catch (\Throwable $e) {
+            Log::warning('試用派發失敗', ['org' => $organization->id, 'error' => $e->getMessage()]);
+        }
 
         Password::sendResetLink(['email' => $user->email]);
 

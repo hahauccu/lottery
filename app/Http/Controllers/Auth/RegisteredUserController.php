@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\SignupTrialService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -38,7 +40,7 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = DB::transaction(function () use ($request) {
+        [$user, $organization] = DB::transaction(function () use ($request) {
             $organization = Organization::create([
                 'name' => $request->organization_name,
             ]);
@@ -51,8 +53,14 @@ class RegisteredUserController extends Controller
 
             $organization->users()->attach($user->id);
 
-            return $user;
+            return [$user, $organization];
         });
+
+        try {
+            app(SignupTrialService::class)->grantIfEligible($organization, 'register');
+        } catch (\Throwable $e) {
+            Log::warning('試用派發失敗', ['org' => $organization->id, 'error' => $e->getMessage()]);
+        }
 
         event(new Registered($user));
 
