@@ -20,7 +20,7 @@
             <p class="testsound-subtitle">這頁會列出目前抽獎流程的原始音效（可直接播放），並加入建議新增的音效樣本。你可以先在這裡試聽，再決定要不要串回正式抽獎流程。</p>
             <div class="testsound-meta">
                 <span>原有音效：14 組</span>
-                <span>建議新增：7 組</span>
+                <span>建議新增：37 組</span>
                 <span>重點示範：寶箱噴金幣連續音</span>
             </div>
         </header>
@@ -92,7 +92,7 @@
                 <h2>建議新增音效（試聽樣本）</h2>
                 <p>這些是為了優化節奏與臨場感的提案，先做樣本讓你試聽。</p>
             </div>
-            <div id="testsound-suggested-grid" class="testsound-grid"></div>
+            <div id="testsound-suggested-grid"></div>
         </section>
     </main>
 </body>

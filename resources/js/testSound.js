@@ -224,6 +224,313 @@ const initTestSound = () => {
             linked: false,
             description: '從抽獎畫面切入結果展示時的空間感氛圍層。',
             scene: '建議加在 result mode 切換時',
+            category: '原始建議',
+        },
+        // ── A. 金幣 / 金屬類 ──
+        {
+            key: 'coin_cascade',
+            name: '金幣連鎖掉落',
+            player: 'coinCascade',
+            mode: 'once',
+            linked: false,
+            description: '多枚金幣依序落下，有節奏的叮叮聲。',
+            scene: '中獎後金幣噴發、寶箱開啟',
+            category: 'A. 金幣 / 金屬類',
+        },
+        {
+            key: 'coin_spin',
+            name: '金幣旋轉',
+            player: 'coinSpin',
+            mode: 'once',
+            linked: false,
+            description: '硬幣在桌上旋轉到停止的聲音。',
+            scene: '轉盤停止、結果揭曉前',
+            category: 'A. 金幣 / 金屬類',
+        },
+        {
+            key: 'coin_insert',
+            name: '投幣入口',
+            player: 'coinInsert',
+            mode: 'once',
+            linked: false,
+            description: '投幣機吃幣的金屬撞擊聲。',
+            scene: '抽獎啟動、投幣動畫',
+            category: 'A. 金幣 / 金屬類',
+        },
+        {
+            key: 'jackpot_coins',
+            name: '大獎噴幣',
+            player: 'jackpotCoins',
+            mode: 'once',
+            linked: false,
+            description: '吃角子老虎大獎噴出大量金幣。',
+            scene: '特大獎中獎、頭獎揭曉',
+            category: 'A. 金幣 / 金屬類',
+        },
+        {
+            key: 'metal_chime',
+            name: '金屬風鈴',
+            player: 'metalChime',
+            mode: 'once',
+            linked: false,
+            description: '清脆的金屬風鈴碰撞聲。',
+            scene: '過場提示、輕量慶祝',
+            category: 'A. 金幣 / 金屬類',
+        },
+        // ── B. 氣流 / 環境類 ──
+        {
+            key: 'air_burst',
+            name: '氣流爆發',
+            player: 'airBurst',
+            mode: 'once',
+            linked: false,
+            description: '類似開香檳的氣壓噴發。',
+            scene: '慶祝時刻、開獎瞬間',
+            category: 'B. 氣流 / 環境類',
+        },
+        {
+            key: 'wind_gust',
+            name: '風聲呼嘯',
+            player: 'windGust',
+            mode: 'once',
+            linked: false,
+            description: '一陣強風呼嘯而過。',
+            scene: '轉場過渡、快速切換',
+            category: 'B. 氣流 / 環境類',
+        },
+        {
+            key: 'air_suction',
+            name: '吸入氣流',
+            player: 'airSuction',
+            mode: 'once',
+            linked: false,
+            description: '類似吸塵器開啟的吸入感。',
+            scene: '抽取名單、匯聚特效',
+            category: 'B. 氣流 / 環境類',
+        },
+        {
+            key: 'bubble_pop',
+            name: '泡泡破裂',
+            player: 'bubblePop',
+            mode: 'once',
+            linked: false,
+            description: '氣泡浮起後破裂的聲音。',
+            scene: '彈窗出現、趣味提示',
+            category: 'B. 氣流 / 環境類',
+        },
+        {
+            key: 'steam_release',
+            name: '蒸氣釋放',
+            player: 'steamRelease',
+            mode: 'once',
+            linked: false,
+            description: '壓力閥釋放蒸氣的嘶嘶聲。',
+            scene: '壓力釋放、結果公布',
+            category: 'B. 氣流 / 環境類',
+        },
+        // ── C. 中獎 / 慶祝類 ──
+        {
+            key: 'fanfare_short',
+            name: '短號角',
+            player: 'fanfareShort',
+            mode: 'once',
+            linked: false,
+            description: '簡短的勝利號角（銅管感）。',
+            scene: '中獎揭曉、勝利宣告',
+            category: 'C. 中獎 / 慶祝類',
+        },
+        {
+            key: 'firework_pop',
+            name: '煙火爆開',
+            player: 'fireworkPop',
+            mode: 'once',
+            linked: false,
+            description: '單發煙火升空並爆開。',
+            scene: '中獎慶祝、煙火特效',
+            category: 'C. 中獎 / 慶祝類',
+        },
+        {
+            key: 'applause_burst',
+            name: '掌聲爆發',
+            player: 'applauseBurst',
+            mode: 'once',
+            linked: false,
+            description: '短暫的群眾歡呼掌聲。',
+            scene: '中獎揭曉、頒獎時刻',
+            category: 'C. 中獎 / 慶祝類',
+        },
+        {
+            key: 'confetti_shower',
+            name: '彩帶紛飛',
+            player: 'confettiShowerLoop',
+            mode: 'loop',
+            linked: false,
+            description: '持續的彩帶碎紙灑落聲。',
+            scene: '慶祝持續期間、結果展示',
+            category: 'C. 中獎 / 慶祝類',
+        },
+        {
+            key: 'celebration_bell',
+            name: '慶祝鐘聲',
+            player: 'celebrationBell',
+            mode: 'once',
+            linked: false,
+            description: '教堂大鐘的慶祝鐘響。',
+            scene: '盛大中獎、頭獎揭曉',
+            category: 'C. 中獎 / 慶祝類',
+        },
+        // ── D. 機械 / 科技類 ──
+        {
+            key: 'reel_spin',
+            name: '轉盤旋轉',
+            player: 'reelSpinLoop',
+            mode: 'loop',
+            linked: false,
+            description: '老虎機轉盤持續旋轉的聲音。',
+            scene: 'slot 模式旋轉中',
+            category: 'D. 機械 / 科技類',
+        },
+        {
+            key: 'lock_click',
+            name: '鎖定卡榫',
+            player: 'lockClick',
+            mode: 'once',
+            linked: false,
+            description: '機械零件卡入定位的咔噠聲。',
+            scene: '結果鎖定、轉盤停止',
+            category: 'D. 機械 / 科技類',
+        },
+        {
+            key: 'power_up',
+            name: '充能啟動',
+            player: 'powerUp',
+            mode: 'once',
+            linked: false,
+            description: '電子設備充能到滿的上升音。',
+            scene: '抽獎準備、能量蓄積',
+            category: 'D. 機械 / 科技類',
+        },
+        {
+            key: 'digital_beep',
+            name: '數位嗶聲',
+            player: 'digitalBeep',
+            mode: 'once',
+            linked: false,
+            description: '科技感的短促嗶嗶提示。',
+            scene: '系統提示、確認操作',
+            category: 'D. 機械 / 科技類',
+        },
+        {
+            key: 'servo_move',
+            name: '伺服馬達',
+            player: 'servoMove',
+            mode: 'once',
+            linked: false,
+            description: '機械臂轉動的馬達聲。',
+            scene: '機械動畫、轉盤啟動',
+            category: 'D. 機械 / 科技類',
+        },
+        // ── E. 魔法 / 特效類 ──
+        {
+            key: 'magic_sparkle',
+            name: '魔法閃光',
+            player: 'magicSparkle',
+            mode: 'once',
+            linked: false,
+            description: '魔法粒子飛散的閃爍聲。',
+            scene: '特效粒子、魔法主題',
+            category: 'E. 魔法 / 特效類',
+        },
+        {
+            key: 'portal_open',
+            name: '傳送門開啟',
+            player: 'portalOpen',
+            mode: 'once',
+            linked: false,
+            description: '時空裂縫打開的低頻共鳴。',
+            scene: '場景切換、神秘揭曉',
+            category: 'E. 魔法 / 特效類',
+        },
+        {
+            key: 'enchant_rise',
+            name: '附魔上升',
+            player: 'enchantRise',
+            mode: 'once',
+            linked: false,
+            description: '光柱從下方升起的魔幻音效。',
+            scene: '中獎光柱、升級特效',
+            category: 'E. 魔法 / 特效類',
+        },
+        {
+            key: 'crystal_ring',
+            name: '水晶共鳴',
+            player: 'crystalRing',
+            mode: 'once',
+            linked: false,
+            description: '水晶球碰撞產生的純淨共鳴。',
+            scene: '高貴獎項、水晶主題',
+            category: 'E. 魔法 / 特效類',
+        },
+        {
+            key: 'warp_flash',
+            name: '瞬移閃現',
+            player: 'warpFlash',
+            mode: 'once',
+            linked: false,
+            description: '瞬間傳送的壓縮/展開感。',
+            scene: '快速切換、瞬間揭曉',
+            category: 'E. 魔法 / 特效類',
+        },
+        // ── F. 節奏 / 提示類 ──
+        {
+            key: 'heartbeat',
+            name: '心跳聲',
+            player: 'heartbeatLoop',
+            mode: 'loop',
+            linked: false,
+            description: '緊張時刻的心跳節奏。',
+            scene: '揭曉前緊張感、倒數階段',
+            category: 'F. 節奏 / 提示類',
+        },
+        {
+            key: 'suspense_rise',
+            name: '懸念上升',
+            player: 'suspenseRise',
+            mode: 'once',
+            linked: false,
+            description: '持續升高的張力音，適合揭曉前。',
+            scene: '揭曉前蓄勢、懸念營造',
+            category: 'F. 節奏 / 提示類',
+        },
+        {
+            key: 'notification_ding',
+            name: '通知叮咚',
+            player: 'notificationDing',
+            mode: 'once',
+            linked: false,
+            description: '友善的雙音通知聲。',
+            scene: '系統通知、友善提醒',
+            category: 'F. 節奏 / 提示類',
+        },
+        {
+            key: 'timer_tick_fast',
+            name: '快速滴答',
+            player: 'timerTickFastLoop',
+            mode: 'loop',
+            linked: false,
+            description: '倒數計時的加速滴答聲。',
+            scene: '倒數計時、時間壓力',
+            category: 'F. 節奏 / 提示類',
+        },
+        {
+            key: 'grand_reveal',
+            name: '盛大揭曉',
+            player: 'grandReveal',
+            mode: 'once',
+            linked: false,
+            description: '結合銅管+亮光的隆重揭曉音效。',
+            scene: '頭獎揭曉、壓軸時刻',
+            category: 'F. 節奏 / 提示類',
         },
     ];
 
@@ -1034,6 +1341,898 @@ const initTestSound = () => {
         noise.stop(now + 0.96);
     };
 
+    // ── A. 金幣 / 金屬類 ──────────────────────────────────────
+
+    const coinCascade = async () => {
+        const setup = await createSfxOutput(0.14);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        for (let i = 0; i < 8; i++) {
+            const t = now + i * 0.09;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = i % 2 === 0 ? 'triangle' : 'sine';
+            const freq = 2000 + Math.random() * 1200 - i * 80;
+            osc.frequency.setValueAtTime(freq, t);
+            osc.frequency.exponentialRampToValueAtTime(freq * 0.7, t + 0.08);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.2 - i * 0.015, t + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(t);
+            osc.stop(t + 0.12);
+        }
+    };
+
+    const coinSpin = async () => {
+        const setup = await createSfxOutput(0.12);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const dur = 1.2;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(3200, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + dur);
+        const lfo = ctx.createOscillator();
+        const lfoG = ctx.createGain();
+        lfo.frequency.setValueAtTime(30, now);
+        lfo.frequency.exponentialRampToValueAtTime(4, now + dur);
+        lfoG.gain.setValueAtTime(0.15, now);
+        lfo.connect(lfoG);
+        lfoG.connect(g.gain);
+        g.gain.setValueAtTime(0.18, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        osc.connect(g);
+        g.connect(output);
+        osc.start(now);
+        osc.stop(now + dur + 0.05);
+        lfo.start(now);
+        lfo.stop(now + dur + 0.05);
+    };
+
+    const coinInsert = async () => {
+        const setup = await createSfxOutput(0.14);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const hit = ctx.createOscillator();
+        const hg = ctx.createGain();
+        hit.type = 'square';
+        hit.frequency.setValueAtTime(1800, now);
+        hit.frequency.exponentialRampToValueAtTime(400, now + 0.06);
+        hg.gain.setValueAtTime(0.3, now);
+        hg.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        hit.connect(hg);
+        hg.connect(output);
+        hit.start(now);
+        hit.stop(now + 0.1);
+        const ring = ctx.createOscillator();
+        const rg = ctx.createGain();
+        ring.type = 'sine';
+        ring.frequency.setValueAtTime(2400, now + 0.04);
+        ring.frequency.exponentialRampToValueAtTime(1800, now + 0.2);
+        rg.gain.setValueAtTime(0.0001, now + 0.04);
+        rg.gain.exponentialRampToValueAtTime(0.15, now + 0.06);
+        rg.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        ring.connect(rg);
+        rg.connect(output);
+        ring.start(now + 0.04);
+        ring.stop(now + 0.28);
+    };
+
+    const jackpotCoins = async () => {
+        const setup = await createSfxOutput(0.16);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const nf = ctx.createBiquadFilter();
+        nf.type = 'highpass';
+        nf.frequency.setValueAtTime(4000, now);
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(0.0001, now);
+        ng.gain.exponentialRampToValueAtTime(0.12, now + 0.1);
+        ng.gain.exponentialRampToValueAtTime(0.08, now + 1.0);
+        ng.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+        noise.connect(nf);
+        nf.connect(ng);
+        ng.connect(output);
+        noise.start(now);
+        noise.stop(now + 1.6);
+        for (let i = 0; i < 14; i++) {
+            const t = now + i * 0.1 + Math.random() * 0.05;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = Math.random() > 0.5 ? 'triangle' : 'sine';
+            const f = 1800 + Math.random() * 2200;
+            osc.frequency.setValueAtTime(f, t);
+            osc.frequency.exponentialRampToValueAtTime(f * 0.65, t + 0.1);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.18 + Math.random() * 0.06, t + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(t);
+            osc.stop(t + 0.15);
+        }
+    };
+
+    const metalChime = async () => {
+        const setup = await createSfxOutput(0.13);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const freqs = [1200, 1800, 2400, 3000, 3600];
+        freqs.forEach((f, i) => {
+            const t = now + i * 0.06;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, t);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.14, t + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(t);
+            osc.stop(t + 0.55);
+        });
+    };
+
+    // ── B. 氣流 / 環境類 ──────────────────────────────────────
+
+    const airBurst = async () => {
+        const setup = await createSfxOutput(0.16);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const f = ctx.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.setValueAtTime(800, now);
+        f.frequency.exponentialRampToValueAtTime(3000, now + 0.08);
+        f.frequency.exponentialRampToValueAtTime(600, now + 0.5);
+        f.Q.setValueAtTime(0.8, now);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.35, now + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        noise.connect(f);
+        f.connect(g);
+        g.connect(output);
+        noise.start(now);
+        noise.stop(now + 0.55);
+    };
+
+    const windGust = async () => {
+        const setup = await createSfxOutput(0.14);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const f = ctx.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.setValueAtTime(300, now);
+        f.frequency.exponentialRampToValueAtTime(1800, now + 0.4);
+        f.frequency.exponentialRampToValueAtTime(200, now + 1.0);
+        f.Q.setValueAtTime(1.5, now);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.25, now + 0.25);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+        noise.connect(f);
+        f.connect(g);
+        g.connect(output);
+        noise.start(now);
+        noise.stop(now + 1.1);
+    };
+
+    const airSuction = async () => {
+        const setup = await createSfxOutput(0.14);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const f = ctx.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.setValueAtTime(2000, now);
+        f.frequency.exponentialRampToValueAtTime(400, now + 0.5);
+        f.Q.setValueAtTime(2, now);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.28, now + 0.08);
+        g.gain.exponentialRampToValueAtTime(0.18, now + 0.35);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        noise.connect(f);
+        f.connect(g);
+        g.connect(output);
+        noise.start(now);
+        noise.stop(now + 0.6);
+    };
+
+    const bubblePop = async () => {
+        const setup = await createSfxOutput(0.12);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const rise = ctx.createOscillator();
+        const rg = ctx.createGain();
+        rise.type = 'sine';
+        rise.frequency.setValueAtTime(200, now);
+        rise.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+        rg.gain.setValueAtTime(0.0001, now);
+        rg.gain.exponentialRampToValueAtTime(0.12, now + 0.05);
+        rg.gain.exponentialRampToValueAtTime(0.08, now + 0.14);
+        rg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        rise.connect(rg);
+        rg.connect(output);
+        rise.start(now);
+        rise.stop(now + 0.18);
+        const pop = ctx.createOscillator();
+        const pg = ctx.createGain();
+        pop.type = 'sine';
+        pop.frequency.setValueAtTime(1200, now + 0.15);
+        pop.frequency.exponentialRampToValueAtTime(400, now + 0.22);
+        pg.gain.setValueAtTime(0.25, now + 0.15);
+        pg.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        pop.connect(pg);
+        pg.connect(output);
+        pop.start(now + 0.15);
+        pop.stop(now + 0.26);
+    };
+
+    const steamRelease = async () => {
+        const setup = await createSfxOutput(0.13);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const f = ctx.createBiquadFilter();
+        f.type = 'highpass';
+        f.frequency.setValueAtTime(3000, now);
+        f.frequency.exponentialRampToValueAtTime(5000, now + 0.1);
+        f.frequency.exponentialRampToValueAtTime(2000, now + 0.8);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.22, now + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.1, now + 0.4);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+        noise.connect(f);
+        f.connect(g);
+        g.connect(output);
+        noise.start(now);
+        noise.stop(now + 0.9);
+    };
+
+    // ── C. 中獎 / 慶祝類 ──────────────────────────────────────
+
+    const fanfareShort = async () => {
+        const setup = await createSfxOutput(0.18);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const notes = [
+            { f: 523.25, t: 0, d: 0.15 },
+            { f: 659.25, t: 0.12, d: 0.15 },
+            { f: 783.99, t: 0.24, d: 0.2 },
+            { f: 1046.5, t: 0.36, d: 0.35 },
+        ];
+        notes.forEach(({ f, t: offset, d }) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(f, now + offset);
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2000, now + offset);
+            g.gain.setValueAtTime(0.0001, now + offset);
+            g.gain.exponentialRampToValueAtTime(0.2, now + offset + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, now + offset + d);
+            osc.connect(filter);
+            filter.connect(g);
+            g.connect(output);
+            osc.start(now + offset);
+            osc.stop(now + offset + d + 0.02);
+        });
+    };
+
+    const fireworkPop = async () => {
+        const setup = await createSfxOutput(0.15);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const rise = ctx.createOscillator();
+        const rg = ctx.createGain();
+        rise.type = 'sine';
+        rise.frequency.setValueAtTime(300, now);
+        rise.frequency.exponentialRampToValueAtTime(1200, now + 0.35);
+        rg.gain.setValueAtTime(0.0001, now);
+        rg.gain.exponentialRampToValueAtTime(0.15, now + 0.1);
+        rg.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+        rise.connect(rg);
+        rg.connect(output);
+        rise.start(now);
+        rise.stop(now + 0.38);
+        const boom = ctx.createBufferSource();
+        boom.buffer = noiseBuffer;
+        const bf = ctx.createBiquadFilter();
+        bf.type = 'bandpass';
+        bf.frequency.setValueAtTime(1000, now + 0.35);
+        bf.Q.setValueAtTime(0.5, now + 0.35);
+        const bg = ctx.createGain();
+        bg.gain.setValueAtTime(0.0001, now + 0.35);
+        bg.gain.exponentialRampToValueAtTime(0.3, now + 0.37);
+        bg.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+        boom.connect(bf);
+        bf.connect(bg);
+        bg.connect(output);
+        boom.start(now + 0.35);
+        boom.stop(now + 0.95);
+    };
+
+    const applauseBurst = async () => {
+        const setup = await createSfxOutput(0.14);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const f = ctx.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.setValueAtTime(2000, now);
+        f.Q.setValueAtTime(0.3, now);
+        const lfo = ctx.createOscillator();
+        const lg = ctx.createGain();
+        lfo.frequency.setValueAtTime(12, now);
+        lg.gain.setValueAtTime(0.08, now);
+        lfo.connect(lg);
+        lg.connect(f.frequency);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.22, now + 0.1);
+        g.gain.exponentialRampToValueAtTime(0.18, now + 0.6);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+        noise.connect(f);
+        f.connect(g);
+        g.connect(output);
+        noise.start(now);
+        noise.stop(now + 1.3);
+        lfo.start(now);
+        lfo.stop(now + 1.3);
+    };
+
+    const confettiShowerLoop = async () => {
+        const setup = await createSfxOutput(0.1);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return { stop: () => {} };
+        const { ctx, output } = setup;
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        noise.loop = true;
+        const f = ctx.createBiquadFilter();
+        f.type = 'highpass';
+        f.frequency.setValueAtTime(6000, ctx.currentTime);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.1, ctx.currentTime);
+        noise.connect(f);
+        f.connect(g);
+        g.connect(output);
+        noise.start(ctx.currentTime);
+        let stopped = false;
+        let tid;
+        const sparkle = () => {
+            if (stopped) return;
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const sg = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(3000 + Math.random() * 3000, t);
+            sg.gain.setValueAtTime(0.0001, t);
+            sg.gain.exponentialRampToValueAtTime(0.06, t + 0.01);
+            sg.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+            osc.connect(sg);
+            sg.connect(output);
+            osc.start(t);
+            osc.stop(t + 0.08);
+            tid = window.setTimeout(sparkle, 60 + Math.random() * 80);
+        };
+        sparkle();
+        return {
+            stop: () => {
+                stopped = true;
+                window.clearTimeout(tid);
+                const t = ctx.currentTime;
+                output.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                window.setTimeout(() => { try { noise.stop(); } catch {} }, 340);
+            },
+        };
+    };
+
+    const celebrationBell = async () => {
+        const setup = await createSfxOutput(0.16);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const fundamentals = [523.25, 659.25];
+        fundamentals.forEach((base) => {
+            [1, 2, 3, 4.2].forEach((ratio, i) => {
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(base * ratio, now);
+                const vol = 0.15 / (i + 1);
+                g.gain.setValueAtTime(0.0001, now);
+                g.gain.exponentialRampToValueAtTime(vol, now + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.001, now + 1.2 - i * 0.15);
+                osc.connect(g);
+                g.connect(output);
+                osc.start(now);
+                osc.stop(now + 1.3);
+            });
+        });
+    };
+
+    // ── D. 機械 / 科技類 ──────────────────────────────────────
+
+    const reelSpinLoop = async () => {
+        const setup = await createSfxOutput(0.1);
+        if (!setup) return { stop: () => {} };
+        const { ctx, output } = setup;
+        let stopped = false;
+        let tid;
+        const tick = () => {
+            if (stopped) return;
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(800 + Math.random() * 200, t);
+            osc.frequency.exponentialRampToValueAtTime(400, t + 0.03);
+            g.gain.setValueAtTime(0.12, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(t);
+            osc.stop(t + 0.05);
+            tid = window.setTimeout(tick, 50 + Math.random() * 15);
+        };
+        tick();
+        return {
+            stop: () => {
+                stopped = true;
+                window.clearTimeout(tid);
+                const t = ctx.currentTime;
+                output.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+            },
+        };
+    };
+
+    const lockClick = async () => {
+        const setup = await createSfxOutput(0.14);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(2000, now);
+        osc.frequency.exponentialRampToValueAtTime(500, now + 0.025);
+        g.gain.setValueAtTime(0.3, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.connect(g);
+        g.connect(output);
+        osc.start(now);
+        osc.stop(now + 0.08);
+        const tail = ctx.createOscillator();
+        const tg = ctx.createGain();
+        tail.type = 'sine';
+        tail.frequency.setValueAtTime(1200, now + 0.03);
+        tg.gain.setValueAtTime(0.0001, now + 0.03);
+        tg.gain.exponentialRampToValueAtTime(0.08, now + 0.04);
+        tg.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        tail.connect(tg);
+        tg.connect(output);
+        tail.start(now + 0.03);
+        tail.stop(now + 0.18);
+    };
+
+    const powerUp = async () => {
+        const setup = await createSfxOutput(0.15);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(1600, now + 0.6);
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.setValueAtTime(600, now);
+        f.frequency.exponentialRampToValueAtTime(4000, now + 0.6);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.2, now + 0.15);
+        g.gain.exponentialRampToValueAtTime(0.22, now + 0.5);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+        osc.connect(f);
+        f.connect(g);
+        g.connect(output);
+        osc.start(now);
+        osc.stop(now + 0.8);
+    };
+
+    const digitalBeep = async () => {
+        const setup = await createSfxOutput(0.12);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        [0, 0.1].forEach((delay) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1200, now + delay);
+            g.gain.setValueAtTime(0.0001, now + delay);
+            g.gain.exponentialRampToValueAtTime(0.18, now + delay + 0.005);
+            g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.06);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(now + delay);
+            osc.stop(now + delay + 0.07);
+        });
+    };
+
+    const servoMove = async () => {
+        const setup = await createSfxOutput(0.12);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.linearRampToValueAtTime(180, now + 0.15);
+        osc.frequency.linearRampToValueAtTime(120, now + 0.3);
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.setValueAtTime(800, now);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.18, now + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.15, now + 0.25);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(f);
+        f.connect(g);
+        g.connect(output);
+        osc.start(now);
+        osc.stop(now + 0.38);
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const nf = ctx.createBiquadFilter();
+        nf.type = 'bandpass';
+        nf.frequency.setValueAtTime(2000, now);
+        nf.Q.setValueAtTime(1, now);
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(0.0001, now);
+        ng.gain.exponentialRampToValueAtTime(0.06, now + 0.03);
+        ng.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        noise.connect(nf);
+        nf.connect(ng);
+        ng.connect(output);
+        noise.start(now);
+        noise.stop(now + 0.38);
+    };
+
+    // ── E. 魔法 / 特效類 ──────────────────────────────────────
+
+    const magicSparkle = async () => {
+        const setup = await createSfxOutput(0.13);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        for (let i = 0; i < 6; i++) {
+            const t = now + i * 0.07 + Math.random() * 0.03;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine';
+            const f = 2000 + Math.random() * 4000;
+            osc.frequency.setValueAtTime(f, t);
+            osc.frequency.exponentialRampToValueAtTime(f * 1.5, t + 0.08);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(t);
+            osc.stop(t + 0.14);
+        }
+    };
+
+    const portalOpen = async () => {
+        const setup = await createSfxOutput(0.16);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const sub = ctx.createOscillator();
+        const sg = ctx.createGain();
+        sub.type = 'sine';
+        sub.frequency.setValueAtTime(40, now);
+        sub.frequency.exponentialRampToValueAtTime(80, now + 0.8);
+        sg.gain.setValueAtTime(0.0001, now);
+        sg.gain.exponentialRampToValueAtTime(0.25, now + 0.3);
+        sg.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+        sub.connect(sg);
+        sg.connect(output);
+        sub.start(now);
+        sub.stop(now + 1.1);
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const nf = ctx.createBiquadFilter();
+        nf.type = 'bandpass';
+        nf.frequency.setValueAtTime(200, now);
+        nf.frequency.exponentialRampToValueAtTime(800, now + 0.6);
+        nf.Q.setValueAtTime(3, now);
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(0.0001, now);
+        ng.gain.exponentialRampToValueAtTime(0.12, now + 0.2);
+        ng.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+        noise.connect(nf);
+        nf.connect(ng);
+        ng.connect(output);
+        noise.start(now);
+        noise.stop(now + 1.1);
+    };
+
+    const enchantRise = async () => {
+        const setup = await createSfxOutput(0.15);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(2400, now + 0.7);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.2, now + 0.2);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+        osc.connect(g);
+        g.connect(output);
+        osc.start(now);
+        osc.stop(now + 0.9);
+        const shimmer = ctx.createOscillator();
+        const shg = ctx.createGain();
+        shimmer.type = 'triangle';
+        shimmer.frequency.setValueAtTime(600, now);
+        shimmer.frequency.exponentialRampToValueAtTime(4800, now + 0.7);
+        shg.gain.setValueAtTime(0.0001, now + 0.1);
+        shg.gain.exponentialRampToValueAtTime(0.1, now + 0.3);
+        shg.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+        shimmer.connect(shg);
+        shg.connect(output);
+        shimmer.start(now);
+        shimmer.stop(now + 0.9);
+    };
+
+    const crystalRing = async () => {
+        const setup = await createSfxOutput(0.14);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const harmonics = [880, 1320, 1760, 2640, 3520];
+        harmonics.forEach((f, i) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now);
+            const vol = 0.16 / (i + 1);
+            g.gain.setValueAtTime(0.0001, now);
+            g.gain.exponentialRampToValueAtTime(vol, now + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 1.5 - i * 0.2);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(now);
+            osc.stop(now + 1.6);
+        });
+    };
+
+    const warpFlash = async () => {
+        const setup = await createSfxOutput(0.15);
+        const noiseBuffer = await getNoiseBuffer();
+        if (!setup || !noiseBuffer) return;
+        const { ctx, now, output } = setup;
+        const sweep = ctx.createOscillator();
+        const sg = ctx.createGain();
+        sweep.type = 'sawtooth';
+        sweep.frequency.setValueAtTime(100, now);
+        sweep.frequency.exponentialRampToValueAtTime(3000, now + 0.12);
+        sweep.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+        const sf = ctx.createBiquadFilter();
+        sf.type = 'lowpass';
+        sf.frequency.setValueAtTime(1000, now);
+        sf.frequency.exponentialRampToValueAtTime(6000, now + 0.12);
+        sf.frequency.exponentialRampToValueAtTime(500, now + 0.25);
+        sg.gain.setValueAtTime(0.0001, now);
+        sg.gain.exponentialRampToValueAtTime(0.22, now + 0.05);
+        sg.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        sweep.connect(sf);
+        sf.connect(sg);
+        sg.connect(output);
+        sweep.start(now);
+        sweep.stop(now + 0.3);
+        const pop = ctx.createBufferSource();
+        pop.buffer = noiseBuffer;
+        const pf = ctx.createBiquadFilter();
+        pf.type = 'highpass';
+        pf.frequency.setValueAtTime(4000, now + 0.1);
+        const pg = ctx.createGain();
+        pg.gain.setValueAtTime(0.0001, now + 0.1);
+        pg.gain.exponentialRampToValueAtTime(0.18, now + 0.12);
+        pg.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        pop.connect(pf);
+        pf.connect(pg);
+        pg.connect(output);
+        pop.start(now + 0.1);
+        pop.stop(now + 0.35);
+    };
+
+    // ── F. 節奏 / 提示類 ──────────────────────────────────────
+
+    const heartbeatLoop = async () => {
+        const setup = await createSfxOutput(0.12);
+        if (!setup) return { stop: () => {} };
+        const { ctx, output } = setup;
+        let stopped = false;
+        let tid;
+        const beat = () => {
+            if (stopped) return;
+            const t = ctx.currentTime;
+            [0, 0.12].forEach((delay) => {
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(60, t + delay);
+                osc.frequency.exponentialRampToValueAtTime(40, t + delay + 0.1);
+                g.gain.setValueAtTime(0.0001, t + delay);
+                g.gain.exponentialRampToValueAtTime(delay === 0 ? 0.25 : 0.18, t + delay + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.15);
+                osc.connect(g);
+                g.connect(output);
+                osc.start(t + delay);
+                osc.stop(t + delay + 0.18);
+            });
+            tid = window.setTimeout(beat, 800);
+        };
+        beat();
+        return {
+            stop: () => {
+                stopped = true;
+                window.clearTimeout(tid);
+                const t = ctx.currentTime;
+                output.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+            },
+        };
+    };
+
+    const suspenseRise = async () => {
+        const setup = await createSfxOutput(0.14);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 1.5);
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.setValueAtTime(400, now);
+        f.frequency.exponentialRampToValueAtTime(3000, now + 1.5);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.18, now + 0.5);
+        g.gain.exponentialRampToValueAtTime(0.22, now + 1.3);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+        osc.connect(f);
+        f.connect(g);
+        g.connect(output);
+        osc.start(now);
+        osc.stop(now + 1.65);
+    };
+
+    const notificationDing = async () => {
+        const setup = await createSfxOutput(0.12);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        [{ f: 880, t: 0 }, { f: 1318.5, t: 0.12 }].forEach(({ f, t: delay }) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now + delay);
+            g.gain.setValueAtTime(0.0001, now + delay);
+            g.gain.exponentialRampToValueAtTime(0.2, now + delay + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.3);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(now + delay);
+            osc.stop(now + delay + 0.35);
+        });
+    };
+
+    const timerTickFastLoop = async () => {
+        const setup = await createSfxOutput(0.1);
+        if (!setup) return { stop: () => {} };
+        const { ctx, output } = setup;
+        let stopped = false;
+        let tid;
+        let interval = 200;
+        const tick = () => {
+            if (stopped) return;
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1000, t);
+            g.gain.setValueAtTime(0.18, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+            osc.connect(g);
+            g.connect(output);
+            osc.start(t);
+            osc.stop(t + 0.05);
+            if (interval > 80) interval -= 3;
+            tid = window.setTimeout(tick, interval);
+        };
+        tick();
+        return {
+            stop: () => {
+                stopped = true;
+                window.clearTimeout(tid);
+                interval = 200;
+                const t = ctx.currentTime;
+                output.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            },
+        };
+    };
+
+    const grandReveal = async () => {
+        const setup = await createSfxOutput(0.2);
+        if (!setup) return;
+        const { ctx, now, output } = setup;
+        const brass = [
+            { f: 261.63, t: 0 },
+            { f: 329.63, t: 0 },
+            { f: 392, t: 0.08 },
+            { f: 523.25, t: 0.16 },
+            { f: 659.25, t: 0.24 },
+            { f: 783.99, t: 0.32 },
+            { f: 1046.5, t: 0.4 },
+        ];
+        brass.forEach(({ f, t: offset }) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(f, now + offset);
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1500, now + offset);
+            filter.frequency.exponentialRampToValueAtTime(3000, now + offset + 0.2);
+            g.gain.setValueAtTime(0.0001, now + offset);
+            g.gain.exponentialRampToValueAtTime(0.16, now + offset + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.5);
+            osc.connect(filter);
+            filter.connect(g);
+            g.connect(output);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.55);
+        });
+        for (let i = 0; i < 5; i++) {
+            const t = now + 0.3 + i * 0.05;
+            const sparkle = ctx.createOscillator();
+            const sg = ctx.createGain();
+            sparkle.type = 'sine';
+            sparkle.frequency.setValueAtTime(3000 + Math.random() * 3000, t);
+            sg.gain.setValueAtTime(0.0001, t);
+            sg.gain.exponentialRampToValueAtTime(0.08, t + 0.01);
+            sg.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            sparkle.connect(sg);
+            sg.connect(output);
+            sparkle.start(t);
+            sparkle.stop(t + 0.12);
+        }
+    };
+
     const soundPlayers = {
         playChestOpen,
         playBallPick,
@@ -1056,6 +2255,42 @@ const initTestSound = () => {
         batchRevealStinger,
         noEligibleWarning,
         resultEnterSwell,
+        // A. 金幣 / 金屬類
+        coinCascade,
+        coinSpin,
+        coinInsert,
+        jackpotCoins,
+        metalChime,
+        // B. 氣流 / 環境類
+        airBurst,
+        windGust,
+        airSuction,
+        bubblePop,
+        steamRelease,
+        // C. 中獎 / 慶祝類
+        fanfareShort,
+        fireworkPop,
+        applauseBurst,
+        confettiShowerLoop,
+        celebrationBell,
+        // D. 機械 / 科技類
+        reelSpinLoop,
+        lockClick,
+        powerUp,
+        digitalBeep,
+        servoMove,
+        // E. 魔法 / 特效類
+        magicSparkle,
+        portalOpen,
+        enchantRise,
+        crystalRing,
+        warpFlash,
+        // F. 節奏 / 提示類
+        heartbeatLoop,
+        suspenseRise,
+        notificationDing,
+        timerTickFastLoop,
+        grandReveal,
     };
 
     const playOneShot = async (item) => {
@@ -1181,8 +2416,25 @@ const initTestSound = () => {
             originalGridEl.appendChild(createCard(item));
         });
 
+        const groups = new Map();
         suggestedSounds.forEach((item) => {
-            suggestedGridEl.appendChild(createCard(item));
+            const cat = item.category || '其他';
+            if (!groups.has(cat)) groups.set(cat, []);
+            groups.get(cat).push(item);
+        });
+
+        groups.forEach((items, category) => {
+            const heading = document.createElement('h3');
+            heading.className = 'testsound-category-title';
+            heading.textContent = category;
+            suggestedGridEl.appendChild(heading);
+
+            const grid = document.createElement('div');
+            grid.className = 'testsound-grid';
+            items.forEach((item) => {
+                grid.appendChild(createCard(item));
+            });
+            suggestedGridEl.appendChild(grid);
         });
     };
 
