@@ -17,7 +17,7 @@ return [
     'form' => [
 
         'email' => [
-            'label' => 'E-Mail 位址',
+            'label' => '電子信箱',
         ],
 
         'actions' => [

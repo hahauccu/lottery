@@ -179,7 +179,7 @@ const initLottery = () => {
 
         if (state.winners.length === 0) {
             winnerListEl.innerHTML = `
-                <li class="rounded-2xl border border-white/10 bg-black/20 px-4 py-6 text-sm text-slate-200/50">尚未抽出中獎者</li>
+                <li class="rounded-2xl border border-white/10 bg-black/20 px-4 py-6 text-sm text-slate-200/50">請按 Enter 開始抽獎</li>
             `;
             if (drawProgressEl) {
                 drawProgressEl.textContent = '';
@@ -302,7 +302,7 @@ const initLottery = () => {
             clearCanvas();
             switchingMask.hide(0);
             stageEl?.classList.add('hidden');
-            resultModeEl.classList.remove('hidden');
+            resultModeEl.classList.add('is-active');
             state.isResultMode = true;
             renderPage(true);
         };
@@ -311,7 +311,7 @@ const initLottery = () => {
             clearResultModeTimer();
             stopTimer();
             if (!resultModeEl) return;
-            resultModeEl.classList.add('hidden');
+            resultModeEl.classList.remove('is-active');
             stageEl?.classList.remove('hidden');
             state.isResultMode = false;
         };
@@ -379,8 +379,8 @@ const initLottery = () => {
             clearCanvas();
             switchingMask.hide(0);
             stageEl?.classList.add('hidden');
-            resultModeEl?.classList.add('hidden');
-            prizesPreviewModeEl.classList.remove('hidden');
+            resultModeEl?.classList.remove('is-active');
+            prizesPreviewModeEl.classList.add('is-active');
             state.isPrizesPreviewMode = true;
             state.isResultMode = false;
             renderPage(true);
@@ -388,7 +388,7 @@ const initLottery = () => {
 
         const hide = () => {
             if (!prizesPreviewModeEl) return;
-            prizesPreviewModeEl.classList.add('hidden');
+            prizesPreviewModeEl.classList.remove('is-active');
             stageEl?.classList.remove('hidden');
             state.isPrizesPreviewMode = false;
             stopTimer();

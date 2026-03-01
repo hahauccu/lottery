@@ -111,9 +111,9 @@ class PrizesRelationManager extends RelationManager
         } elseif ($currentPrize && $progress && $progress['remaining'] === 0) {
             $suggestion = '此獎項已抽完，可切換下一個獎項';
         } elseif ($currentPrize) {
-            $suggestion = '可至前台按下抽獎按鈕';
+            $suggestion = '前台已就緒，可執行下一步';
         } else {
-            $suggestion = '請選擇一個獎項設為目前獎項';
+            $suggestion = '請選擇一個獎項進行切換';
         }
 
         return [
@@ -416,6 +416,7 @@ class PrizesRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
+                    ->label('新增抽獎項目')
                     ->mutateFormDataUsing(function (array $data): array {
                         $data['lottery_event_id'] = $this->getOwnerRecord()->getKey();
                         $data['sort_order'] = $this->nextSortOrder();
@@ -429,7 +430,8 @@ class PrizesRelationManager extends RelationManager
                         return $record;
                     }),
                 \Filament\Tables\Actions\Action::make('switch_to_preview')
-                    ->label('切換至預覽畫面')
+                    ->label('切換到預覽輪播')
+                    ->tooltip('需前台在線才可切換')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
                     ->action(function ($livewire): void {
@@ -514,7 +516,8 @@ class PrizesRelationManager extends RelationManager
             ])
             ->actions([
                 \Filament\Tables\Actions\Action::make('set_current')
-                    ->label('設為目前獎項')
+                    ->label('切換本輪抽獎')
+                    ->tooltip('需前台在線且未在抽獎中')
                     ->requiresConfirmation()
                     ->action(function (Prize $record, $livewire): void {
                         $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'big_treasure_chest'];

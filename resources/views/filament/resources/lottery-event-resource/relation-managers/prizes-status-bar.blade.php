@@ -7,9 +7,9 @@
     $suggestion = $statusData['suggestion'];
 
     $procLabel = match ($proc) {
-        'switching' => '切換中',
+        'switching' => '獎項切換中',
         'drawing'   => '抽獎中',
-        'offline'   => '前台離線',
+        'offline'   => '前台未連線',
         'standby'   => '待命',
     };
     $procColor = match ($proc) {
@@ -88,7 +88,10 @@
                 </span>
                 <span class="text-gray-300 dark:text-gray-600">|</span>
             @endif
-            <span class="text-gray-500 dark:text-gray-400 italic text-sm">{{ $suggestion }}</span>
+            <span class="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400 italic text-sm">
+                <x-heroicon-o-light-bulb class="w-4 h-4 text-amber-400" />
+                {{ $suggestion }}
+            </span>
         </div>
 
         {{-- Progress bar --}}

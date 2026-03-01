@@ -162,14 +162,14 @@
                             </span>
                         </li>
                     @empty
-                        <li class="rounded-2xl border border-white/10 bg-black/20 px-4 py-6 text-sm text-slate-200/50">尚未抽出中獎者</li>
+                        <li class="rounded-2xl border border-white/10 bg-black/20 px-4 py-6 text-sm text-slate-200/50">請按 Enter 開始抽獎</li>
                     @endforelse
                 </ul>
             </div>
         </div>
 
         <!-- 獎項預覽模式 -->
-        <div id="prizes-preview-mode" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center">
+        <div id="prizes-preview-mode" class="fixed inset-0 z-40 flex flex-col items-center justify-center">
             <div class="absolute inset-0 bg-black/10"></div>
             <div class="relative z-10 w-full max-w-5xl px-6">
                 <h2 class="text-center text-4xl font-bold text-white mb-2">今日獎項</h2>
@@ -188,7 +188,7 @@
         </div>
 
         <!-- 結果展示模式 -->
-        <div id="result-mode" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-center">
+        <div id="result-mode" class="fixed inset-0 z-40 flex flex-col items-center justify-center">
             <div class="absolute inset-0 bg-black/10"></div>
             <div class="relative z-10 w-full flex flex-col items-center justify-center px-6">
                 <!-- 獎項標題 -->
@@ -212,6 +212,18 @@
     <div id="danmaku-container" class="hidden fixed inset-0 pointer-events-none z-50 overflow-hidden"></div>
 
     <style>
+    #prizes-preview-mode,
+    #result-mode {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 400ms ease, visibility 400ms ease;
+    }
+    #prizes-preview-mode.is-active,
+    #result-mode.is-active {
+        opacity: 1;
+        visibility: visible;
+    }
+
     .danmaku-item {
         position: absolute;
         white-space: nowrap;

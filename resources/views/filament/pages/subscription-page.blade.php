@@ -8,7 +8,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <div class="text-sm text-gray-500 dark:text-gray-400">員工數</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">目前員工數</div>
                     <div class="text-2xl font-semibold">{{ number_format($employeeCount) }} 人</div>
                 </div>
 
@@ -46,7 +46,7 @@
                 <div class="mt-4 p-4 rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800">
                     <div class="flex items-center gap-2 text-warning-600 dark:text-warning-400">
                         <x-heroicon-o-exclamation-triangle class="w-5 h-5" />
-                        <span class="font-medium">目前為測試模式</span>
+                        <span class="font-medium">測試模式啟用中</span>
                     </div>
                     <p class="mt-1 text-sm text-warning-600 dark:text-warning-400">
                         前台抽獎頁面將顯示「抽獎測試中」浮水印。請購買適合的方案以解除限制。
