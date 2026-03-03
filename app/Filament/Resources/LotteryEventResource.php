@@ -7,6 +7,7 @@ use App\Filament\Resources\LotteryEventResource\RelationManagers\PrizesRelationM
 use App\Models\LotteryEvent;
 use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
@@ -47,6 +48,10 @@ class LotteryEventResource extends Resource
                             ->helperText('建立後自動產生，可用於前台 URL')
                             ->disabled()
                             ->dehydrated(),
+                        DateTimePicker::make('draw_starts_at')
+                            ->label('抽獎開始時間')
+                            ->required()
+                            ->timezone('Asia/Taipei'),
                         Toggle::make('is_lottery_open')
                             ->label('開放抽獎')
                             ->default(false),
@@ -85,6 +90,11 @@ class LotteryEventResource extends Resource
                     ->copyable()
                     ->copyMessage('已複製')
                     ->toggleable(),
+                TextColumn::make('draw_starts_at')
+                    ->label('抽獎開始時間')
+                    ->dateTime('Y-m-d H:i')
+                    ->timezone('Asia/Taipei')
+                    ->sortable(),
                 ToggleColumn::make('is_lottery_open')
                     ->label('開放抽獎')
                     ->afterStateUpdated(function (LotteryEvent $record): void {

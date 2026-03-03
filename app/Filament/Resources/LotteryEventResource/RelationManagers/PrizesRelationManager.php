@@ -14,7 +14,6 @@ use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Livewire as LivewireComponent;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -23,15 +22,14 @@ use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
-use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\HtmlString;
 
 class PrizesRelationManager extends RelationManager
 {
@@ -182,14 +180,6 @@ class PrizesRelationManager extends RelationManager
                             ->maxValue(50)
                             ->default(5)
                             ->suffix('秒'),
-                        Placeholder::make('animation_demo')
-                            ->label('動畫預覽')
-                            ->content(fn (Get $get) => new HtmlString(
-                                view('filament.lottery.animation-demo', [
-                                    'style' => $get('animation_style') ?? 'slot',
-                                ])->render()
-                            ))
-                            ->columnSpanFull(),
                         Toggle::make('allow_repeat_within_prize')
                             ->label(new \Illuminate\Support\HtmlString(
                                 '同一獎項可重複中獎&nbsp;<span x-data x-tooltip.raw="開啟後，有資格中獎的人可在同一獎項中多次中獎" class="cursor-help inline-flex items-center align-middle text-gray-400 hover:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm.06 2.25a.75.75 0 000 1.5h.01a.75.75 0 000-1.5H9z" clip-rule="evenodd" /></svg></span>'
@@ -222,6 +212,10 @@ class PrizesRelationManager extends RelationManager
                             })
                             ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'])
                             ->maxSize(10240),
+                        Toggle::make('sound_enabled')
+                            ->label('開啟音效')
+                            ->helperText('開啟後抽獎過程會播放音效')
+                            ->default(true),
                     ])
                     ->columns(2),
                 Section::make('抽獎範圍')
@@ -386,20 +380,16 @@ class PrizesRelationManager extends RelationManager
                 TextColumn::make('name')
                     ->label('獎項名稱')
                     ->searchable()
-                    ->icon(fn (Prize $record): ?string =>
-                        (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
+                    ->icon(fn (Prize $record): ?string => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
                             ? 'heroicon-s-play' : null)
                     ->iconPosition(IconPosition::After)
-                    ->color(fn (Prize $record): ?string =>
-                        (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
+                    ->color(fn (Prize $record): ?string => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
                             ? 'success' : null),
                 TextColumn::make('drawn_count')
                     ->label('已抽 / 目標')
                     ->getStateUsing(fn (Prize $record) => $record->winners()->count().' / '.$record->winners_count)
                     ->badge()
                     ->color(fn (Prize $record) => $record->winners()->count() >= $record->winners_count ? 'success' : 'gray'),
-                TextColumn::make('winners_count')
-                    ->label('中獎人數'),
                 TextColumn::make('draw_mode')
                     ->label('抽獎模式')
                     ->formatStateUsing(fn (string $state) => $state === Prize::DRAW_MODE_ONE_BY_ONE ? '逐一抽出' : '一次全抽'),
@@ -625,39 +615,9 @@ class PrizesRelationManager extends RelationManager
                         ");
                     })
                     ->disabled(fn () => $this->getOwnerRecord()->is_prize_switching),
-                \Filament\Tables\Actions\Action::make('send_notifications')
-                    ->label('發送中獎通知')
-                    ->icon('heroicon-o-envelope')
-                    ->color('info')
-                    ->requiresConfirmation()
-                    ->modalHeading('發送中獎通知')
-                    ->modalDescription(fn (Prize $record) => sprintf(
-                        '將發送通知給 %d 位尚未收到通知的中獎者。確定要發送嗎？',
-                        $record->winners()->whereNull('notified_at')->count()
-                    ))
-                    ->visible(fn (Prize $record) => $record->winners()->count() > 0)
-                    ->action(function (Prize $record): void {
-                        $unnotifiedCount = $record->winners()->whereNull('notified_at')->count();
-
-                        if ($unnotifiedCount === 0) {
-                            Notification::make()
-                                ->warning()
-                                ->title('無需發送')
-                                ->body('所有中獎者已收到通知')
-                                ->send();
-
-                            return;
-                        }
-
-                        SendPrizeNotifications::dispatch($record->id);
-
-                        Notification::make()
-                            ->success()
-                            ->title('通知已排程')
-                            ->body("正在發送 {$unnotifiedCount} 封通知信")
-                            ->send();
-                    }),
                 EditAction::make()
+                    ->label('編輯抽獎項目')
+                    ->modalHeading('編輯抽獎項目')
                     ->mutateRecordDataUsing(function (array $data, Prize $record): array {
                         return array_merge($data, $this->ruleStateFromRecord($record));
                     })
@@ -675,6 +635,38 @@ class PrizesRelationManager extends RelationManager
                         }
                     })
                     ->extraModalFooterActions([
+                        \Filament\Tables\Actions\Action::make('send_prize_notifications')
+                            ->label('發送本項未通知')
+                            ->icon('heroicon-o-envelope')
+                            ->color('info')
+                            ->requiresConfirmation()
+                            ->modalHeading('發送中獎通知')
+                            ->modalDescription(fn (Prize $record) => sprintf(
+                                '將發送通知給 %d 位尚未收到通知的中獎者。確定要發送嗎？',
+                                $record->winners()->whereNull('notified_at')->count()
+                            ))
+                            ->visible(fn (Prize $record) => $record->winners()->whereNull('notified_at')->count() > 0)
+                            ->action(function (Prize $record): void {
+                                $unnotifiedCount = $record->winners()->whereNull('notified_at')->count();
+
+                                if ($unnotifiedCount === 0) {
+                                    Notification::make()
+                                        ->warning()
+                                        ->title('無需發送')
+                                        ->body('所有中獎者已收到通知')
+                                        ->send();
+
+                                    return;
+                                }
+
+                                SendPrizeNotifications::dispatch($record->id);
+
+                                Notification::make()
+                                    ->success()
+                                    ->title('通知已排程')
+                                    ->body("正在發送 {$unnotifiedCount} 封通知信")
+                                    ->send();
+                            }),
                         DeleteAction::make()
                             ->before(function (Prize $record): void {
                                 $event = $this->getOwnerRecord();
