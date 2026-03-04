@@ -484,6 +484,7 @@ const initLottery = () => {
     let lottoTimerLabel = '';
 
     const startDrawAudio = () => {
+        if (!(state.currentPrize?.soundEnabled ?? true)) return;
         const url = state.currentPrize?.musicUrl;
         if (!url) return;
 
@@ -5480,6 +5481,11 @@ const initLottery = () => {
 
         if (nextPrize) {
             nextPrize.musicUrl = payload.current_prize?.music_url ?? nextPrize.musicUrl;
+        }
+
+        // 音效關閉時，立即停止 BGM
+        if (nextPrize && !(nextPrize.soundEnabled ?? true)) {
+            stopDrawAudio();
         }
 
         // 獎項變更時強制清空 eligibleNames，避免使用舊獎項的資格名單

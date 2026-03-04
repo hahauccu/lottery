@@ -27,6 +27,10 @@ class PrizeResource extends Resource
 {
     protected static ?string $model = Prize::class;
 
+    protected static ?string $modelLabel = '抽獎項目';
+
+    protected static ?string $pluralModelLabel = '抽獎項目';
+
     protected static bool $isScopedToTenant = false;
 
     protected static bool $shouldRegisterNavigation = false;
@@ -104,7 +108,7 @@ class PrizeResource extends Resource
                             ->default(5)
                             ->suffix('秒'),
                         Toggle::make('sound_enabled')
-                            ->label('播放音效')
+                            ->label('開啟音效')
                             ->helperText('開啟後抽獎過程會播放音效')
                             ->default(true),
                         Toggle::make('allow_repeat_within_prize')

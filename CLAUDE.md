@@ -5,6 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Language
 
 請使用繁體中文回覆。
+這是一個laravel 專案
+如果在接收到一個任務但是不知道在哪的話 可以先看看route 再在用你原本的找法
 
 ## Project Overview
 
