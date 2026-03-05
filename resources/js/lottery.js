@@ -4904,16 +4904,16 @@ const initLottery = () => {
     const marbleRace = (() => {
         // ─── 賽道參數 ───
         const TRACK = {
-            pegRadius: 8,
+            pegRadius: 10,
             pegRows: 10,
-            pegCols: 8,
-            rowSpacing: 70,
-            gateY: 70,
-            marbleRadius: 9,
+            pegCols: 7,
+            rowSpacing: 85,
+            gateY: 80,
+            marbleRadius: 16,
             gravity: 620,
             restitution: 0.55,
             friction: 0.992,
-            finishPadding: 70,
+            finishPadding: 80,
             stuckThreshold: 15,
             stuckTime: 1.5,
             raceTimeout: 55,
@@ -5061,21 +5061,21 @@ const initLottery = () => {
 
         // ─── 彈珠名稱池 ───
         const buildNamePool = () => {
-            const base = (state.eligibleNames?.length ? state.eligibleNames : [])
-                .concat(state.winners.map((w) => w.employee_name).filter(Boolean))
-                .filter(Boolean);
-            const unique = Array.from(new Set(base));
-            if (unique.length === 0) {
+            const eligible = state.eligibleNames?.length ? [...state.eligibleNames] : [];
+            const won = state.winners.map((w) => w.employee_name).filter(Boolean);
+            const base = eligible.concat(won).filter(Boolean);
+            // 不去重 — 可重複中獎時同一人可能出現多顆彈珠
+            if (base.length === 0) {
                 return Array.from({ length: 10 }, (_, i) => `Ball ${i + 1}`);
             }
-            return shuffle(unique);
+            return shuffle(base);
         };
 
         const shortLabel = (name) => {
             if (!name) return '??';
             const chars = Array.from(name);
-            if (chars.length <= 4) return name;
-            return `${chars.slice(0, 4).join('')}…`;
+            if (chars.length <= 3) return name;
+            return `${chars.slice(0, 3).join('')}…`;
         };
 
         // ─── 建立彈珠 ───
@@ -5389,12 +5389,13 @@ const initLottery = () => {
                 ctx.beginPath(); ctx.arc(m.x - r * 0.28, sy - r * 0.32, r * 0.35, 0, TAU); ctx.fill();
                 ctx.globalAlpha = 1;
 
-                // 名稱
-                ctx.fillStyle = 'rgba(255,255,255,0.88)';
-                ctx.font = '600 9px Inter,ui-sans-serif,system-ui,sans-serif';
+                // 名稱 — 放在球中間
+                ctx.fillStyle = m.finished ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.95)';
+                const fontSize = Math.max(7, Math.min(11, r * 0.7));
+                ctx.font = `700 ${fontSize}px Inter,ui-sans-serif,system-ui,sans-serif`;
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom';
-                ctx.fillText(m.label, m.x, sy - r - 3);
+                ctx.textBaseline = 'middle';
+                ctx.fillText(m.label, m.x, sy + 1);
 
                 // 名次徽章
                 if (m.finished && m.rank <= 3) {
@@ -5455,7 +5456,9 @@ const initLottery = () => {
                 // 彈珠在閘門前晃動
                 updatePhysics(dt);
                 if (mrState.countdownTimer >= 3.2) {
-                    // 開閘！
+                    // 開閘！根據 holdSeconds 調整比賽時長
+                    const raceTime = Math.max(10, (mrState.holdSeconds || 5) * 6);
+                    TRACK.raceTimeout = raceTime;
                     mrState.gateOpen = true;
                     mrState.phase = 'racing';
                     mrState.raceTimer = 0;
@@ -5957,6 +5960,9 @@ const initLottery = () => {
                     await marbleRace.waitForNextPick();
                     if (isRunStale()) return;
                     append(winners[0]);
+                    // 結束後多等 5 秒讓使用者欣賞
+                    await delay(5000);
+                    if (isRunStale()) return;
                     if (clock) await clock.waitUntilEnd();
                 } else {
                     marbleRace.setWinners(winners.map((w) => w.employee_name ?? randomLabel()));
@@ -5966,6 +5972,9 @@ const initLottery = () => {
                         if (isRunStale()) return;
                         append(winner);
                     }
+                    // 結束後多等 5 秒讓使用者欣賞
+                    await delay(5000);
+                    if (isRunStale()) return;
                     if (clock) {
                         const finalWait = Math.min(1500, clock.remainingMs());
                         if (finalWait > 50) await delay(finalWait);
