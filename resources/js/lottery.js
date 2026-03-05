@@ -4951,6 +4951,7 @@ const initLottery = () => {
             last: 0,
             holdSeconds: 5,
             pending: [],
+            winnerQueue: [],
             waiters: [],
             W: 0,
             H: 0,
@@ -5204,6 +5205,14 @@ const initLottery = () => {
                 if (m.y > mrState.finishY && !m.finished) {
                     m.finished = true;
                     m.rank = mrState.rankings.length + 1;
+
+                    // 從 winnerQueue 取出真正的得獎者名字
+                    if (mrState.winnerQueue.length > 0) {
+                        const realName = mrState.winnerQueue.shift();
+                        m.name = realName;
+                        m.label = shortLabel(realName);
+                    }
+
                     mrState.rankings.push(m);
 
                     if (m.rank === 1) {
@@ -5227,6 +5236,12 @@ const initLottery = () => {
                 if (mrState.raceTimer > TRACK.raceTimeout && !m.finished) {
                     m.finished = true;
                     m.rank = mrState.rankings.length + 1;
+                    // 從 winnerQueue 取出真正的得獎者名字
+                    if (mrState.winnerQueue.length > 0) {
+                        const realName = mrState.winnerQueue.shift();
+                        m.name = realName;
+                        m.label = shortLabel(realName);
+                    }
                     mrState.rankings.push(m);
                     spawnParticles(m.x, m.y, 6, 60, 0, 360);
                     if (mrState.waiters.length > 0) {
@@ -5491,6 +5506,7 @@ const initLottery = () => {
             mrState.marbles = [];
             mrState.rankings = [];
             mrState.pending = [];
+            mrState.winnerQueue = [];
             mrState.waiters.forEach((r) => r()); // resolve all pending
             mrState.waiters = [];
             mrState.phase = 'idle';
@@ -5528,7 +5544,9 @@ const initLottery = () => {
         const startDraw = () => {
             // 開始倒數
             if (mrState.phase === 'racing' || mrState.phase === 'countdown') return;
+            const savedQueue = [...mrState.winnerQueue]; // 保留 queue
             reset();
+            mrState.winnerQueue = savedQueue; // reset 後恢復
             if (!mrState.running) {
                 mrState.running = true;
                 mrState.last = performance.now();
@@ -5549,18 +5567,8 @@ const initLottery = () => {
             clearCanvas();
         };
 
-        const setWinners = (names, opts = {}) => {
-            mrState.pending = [...names];
-            if (!opts.resetMarbles) {
-                // 將 pending 名稱對應到彈珠上
-                const available = mrState.marbles.filter((m) => !m.finished);
-                names.forEach((name, i) => {
-                    if (i < available.length) {
-                        available[i].name = name;
-                        available[i].label = shortLabel(name);
-                    }
-                });
-            }
+        const setWinnerQueue = (names) => {
+            mrState.winnerQueue = [...names];
         };
 
         const waitForNextPick = () => {
@@ -5615,7 +5623,7 @@ const initLottery = () => {
 
         return {
             ensureReady, start, startDraw, stop,
-            setWinners, waitForNextPick, ensureCount,
+            setWinnerQueue, waitForNextPick, ensureCount,
             setHoldSeconds, resize,
         };
     })();
@@ -5954,10 +5962,8 @@ const initLottery = () => {
                 if (isRunStale()) return;
 
                 if (state.currentPrize?.drawMode === 'one_by_one') {
+                    marbleRace.setWinnerQueue([winners[0]?.employee_name ?? randomLabel()]);
                     marbleRace.startDraw();
-                    marbleRace.setWinners([winners[0]?.employee_name ?? randomLabel()], {
-                        resetMarbles: false,
-                    });
                     await marbleRace.waitForNextPick();
                     if (isRunStale()) return;
                     append(winners[0]);
@@ -5966,7 +5972,7 @@ const initLottery = () => {
                     if (isRunStale()) return;
                     if (clock) await clock.waitUntilEnd();
                 } else {
-                    marbleRace.setWinners(winners.map((w) => w.employee_name ?? randomLabel()));
+                    marbleRace.setWinnerQueue(winners.map((w) => w.employee_name ?? randomLabel()));
                     marbleRace.startDraw();
                     for (const winner of winners) {
                         await marbleRace.waitForNextPick();
