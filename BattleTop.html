@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🌀 戰鬥陀螺 — BattleTop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0d1117;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Noto Sans TC', Inter, system-ui, sans-serif;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        #btnStart {
+            background: #6366f1;
+            color: #fff;
+        }
+
+        #btnReset {
+            background: #374151;
+            color: #fff;
+        }
+
+        #btnAdd {
+            background: #10b981;
+            color: #fff;
+        }
+
+        button:hover {
+            filter: brightness(1.15);
+            transform: scale(1.04);
+        }
+
+        #info {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 0.04em;
+        }
+
+        #surviving {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="info">🌀 戰鬥陀螺 — BattleTop Prototype</div>
+    <div id="surviving" id="surviving"></div>
+    <div id="ui">
+        <button id="btnReset">🔄 重置</button>
+        <button id="btnAdd">➕ 加人</button>
+        <button id="btnStart">🌀 開始戰鬥</button>
+    </div>
+
+    <script>
+        // ─── 常數 ───
+        const TAU = Math.PI * 2;
+        const rand = (a, b) => a + Math.random() * (b - a);
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
+
+        const TOP_COLORS = [
+            '#f43f5e', '#f97316', '#eab308', '#22c55e',
+            '#06b6d4', '#6366f1', '#a855f7', '#ec4899',
+            '#10b981', '#3b82f6', '#f59e0b', '#dc2626',
+        ];
+
+        const SAMPLE_NAMES = [
+            '王小明', '李美玲', '陳志偉', '張雅惠', '林俊傑', '黃淑芬', '吳建宏', '劉怡君',
+            '蔡明哲', '鄭雅婷', '許育誠', '何佳穎', '施宗翰', '曾信昌', '杜玉梅', '盧冠廷',
+            '葉書豪', '廖思璇', '謝家銘', '邱惠雯', '洪子傑', '游靜宜', '潘政宏', '簡珮琳',
+        ];
+
+        // ─── 設定 ───
+        const BT = {
+            friction: 0.22,   // 每秒角速度衰減率
+            minOmega: 4,      // 低於此倒下
+            entrySpeed: 240,    // 入場速度
+            elasticity: 0.72,   // 碰撞彈性
+            omegaTransfer: 0.12,   // 碰撞轉移角速度比例
+            winnerCount: 3,      // 本場中獎人數
+        };
+
+        // ─── 狀態 ───
+        const state = {
+            phase: 'idle',  // idle | countdown | entry | battle | reveal | finished
+            tops: [],
+            dying: [],      // 正在播放消滅動畫的陀螺
+            particles: [],
+            countdownTimer: 0,
+            entryTimer: 0,
+            battleTimer: 0,
+            revealTimer: 0,
+            arenaR: 0,
+            cx: 0,
+            cy: 0,
+        };
+
+        // ─── Canvas ───
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let W, H, dpr;
+
+        function resizeCanvas() {
+            dpr = Math.max(1, Math.min(2, devicePixelRatio || 1));
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = Math.floor(W * dpr);
+            canvas.height = Math.floor(H * dpr);
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            state.cx = W / 2;
+            state.cy = H / 2;
+            state.arenaR = Math.min(W, H) * 0.42;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // ─── 陀螺建立 ───
+        function calcTopRadius(n) {
+            return clamp(320 / Math.sqrt(n), 18, 45);
+        }
+
+        function shortLabel(name) {
+            return name.length > 4 ? name.slice(0, 4) : name;
+        }
+
+        let namePool = [...SAMPLE_NAMES];
+        function createTop(name) {
+            const angle = rand(0, TAU);
+            const spawnR = state.arenaR + 60;
+            const aimAngle = angle + Math.PI + rand(-0.35, 0.35);
+            return {
+                name,
+                label: shortLabel(name),
+                color: TOP_COLORS[Math.floor(Math.random() * TOP_COLORS.length)],
+                x: state.cx + Math.cos(angle) * spawnR,
+                y: state.cy + Math.sin(angle) * spawnR,
+                vx: Math.cos(aimAngle) * BT.entrySpeed,
+                vy: Math.sin(aimAngle) * BT.entrySpeed,
+                r: 28,           // 先設定預設，後面動態更新
+                omega: rand(18, 30),
+                angle: 0,
+                mass: 1,
+                alive: true,
+                winner: false,
+                alpha: 1,
+                wobble: 0,       // 搖晃幅度
+                entryDelay: rand(0, 0.6),
+                entered: false,
+                dyingTimer: 0,
+                dyingDuration: 0.6,
+            };
+        }
+
+        function buildTops(n) {
+            state.tops = [];
+            state.dying = [];
+            const r = calcTopRadius(n);
+            const shuffled = [...SAMPLE_NAMES].sort(() => Math.random() - 0.5).slice(0, n);
+            shuffled.forEach(name => {
+                const t = createTop(name);
+                t.r = r;
+                t.mass = r * r / (28 * 28); // 相對質量
+                // 先在場外待命位置（隨機分布在圓周外）
+                const a = rand(0, TAU);
+                t.x = state.cx + Math.cos(a) * (state.arenaR + 70);
+                t.y = state.cy + Math.sin(a) * (state.arenaR + 70);
+                t.entered = false;
+                state.tops.push(t);
+            });
+        }
+
+        // ─── 粒子 ───
+        function spawnParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                const a = rand(0, TAU);
+                const spd = rand(60, 220);
+                state.particles.push({
+                    x, y,
+                    vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+                    r: rand(2, 5),
+                    life: 1,
+                    color,
+                });
+            }
+        }
+
+        function updateParticles(dt) {
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const p = state.particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vx *= (1 - 3 * dt);
+                p.vy *= (1 - 3 * dt);
+                p.life -= dt * 1.8;
+                if (p.life <= 0) state.particles.splice(i, 1);
+            }
+        }
+
+        // ─── 物理 ───
+        function updatePhysics(dt) {
+            const { tops, cx, cy, arenaR } = state;
+
+            // 更新陀螺
+            tops.forEach(t => {
+                if (!t.alive || !t.entered) return;
+
+                t.x += t.vx * dt;
+                t.y += t.vy * dt;
+                t.angle += t.omega * dt;
+
+                // 摩擦力
+                t.omega *= (1 - BT.friction * dt);
+                t.vx *= (1 - 0.08 * dt);
+                t.vy *= (1 - 0.08 * dt);
+
+                // 搖晃程度
+                const omegaRatio = clamp(t.omega / 20, 0, 1);
+                t.wobble = lerp(0.4, 0, omegaRatio);
+
+                // 角速度太低 → 倒下
+                if (t.omega < BT.minOmega && state.phase === 'battle') {
+                    defeat(t, 'spin_out');
+                    return;
+                }
+
+                // 出界淘汰
+                const dx = t.x - cx;
+                const dy = t.y - cy;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist + t.r > arenaR && state.phase === 'battle') {
+                    defeat(t, 'out_of_bounds');
+                }
+            });
+
+            // 陀螺間碰撞
+            for (let i = 0; i < tops.length; i++) {
+                for (let j = i + 1; j < tops.length; j++) {
+                    const a = tops[i], b = tops[j];
+                    if (!a.alive || !b.alive || !a.entered || !b.entered) continue;
+
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+                    const distSq = dx * dx + dy * dy;
+                    const minDist = a.r + b.r;
+
+                    if (distSq < minDist * minDist && distSq > 0) {
+                        const dist = Math.sqrt(distSq);
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        // 分離重疊
+                        const overlap = minDist - dist;
+                        const totalMass = a.mass + b.mass;
+                        a.x -= nx * overlap * (b.mass / totalMass);
+                        a.y -= ny * overlap * (b.mass / totalMass);
+                        b.x += nx * overlap * (a.mass / totalMass);
+                        b.y += ny * overlap * (a.mass / totalMass);
+
+                        // 速度碰撞
+                        const dvx = b.vx - a.vx;
+                        const dvy = b.vy - a.vy;
+                        const dot = dvx * nx + dvy * ny;
+                        if (dot < 0) {
+                            const j2 = (-(1 + BT.elasticity) * dot) / totalMass;
+                            a.vx -= j2 * b.mass * nx;
+                            a.vy -= j2 * b.mass * ny;
+                            b.vx += j2 * a.mass * nx;
+                            b.vy += j2 * a.mass * ny;
+                        }
+
+                        // 角速度轉移（強者吸收弱者）
+                        const omegaDiff = a.omega - b.omega;
+                        a.omega -= omegaDiff * BT.omegaTransfer;
+                        b.omega += omegaDiff * BT.omegaTransfer;
+                        a.omega = Math.max(0, a.omega);
+                        b.omega = Math.max(0, b.omega);
+
+                        // 碰撞粒子特效
+                        const ix = (a.x + b.x) / 2;
+                        const iy = (a.y + b.y) / 2;
+                        spawnParticles(ix, iy, 8, '#fff');
+                    }
+                }
+            }
+
+            // 更新消滅中的陀螺
+            for (let i = state.dying.length - 1; i >= 0; i--) {
+                const t = state.dying[i];
+                t.dyingTimer += dt;
+                t.alpha = clamp(1 - t.dyingTimer / t.dyingDuration, 0, 1);
+                t.r *= (1 + dt * 0.5); // 膨脹
+                if (t.dyingTimer >= t.dyingDuration) {
+                    state.dying.splice(i, 1);
+                }
+            }
+
+            updateParticles(dt);
+        }
+
+        function defeat(top, reason) {
+            top.alive = false;
+            // 特效粒子
+            spawnParticles(top.x, top.y, 20, top.color);
+            // 加入消滅動畫佇列
+            state.dying.push({ ...top, dyingTimer: 0, dyingDuration: 0.5 });
+
+            // 如果是出界，給一個初速飛出去
+            if (reason === 'out_of_bounds') {
+                const dx = top.x - state.cx;
+                const dy = top.y - state.cy;
+                const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                top.vx = (dx / d) * 200;
+                top.vy = (dy / d) * 200;
+            }
+        }
+
+        function getAliveTops() {
+            return state.tops.filter(t => t.alive && t.entered);
+        }
+
+        // ─── 主迴圈 ───
+        let last = performance.now();
+        let rafId;
+
+        function loop(now) {
+            const dt = Math.min((now - last) / 1000, 0.05);
+            last = now;
+
+            update(dt);
+            draw();
+
+            rafId = requestAnimationFrame(loop);
+        }
+
+        function update(dt) {
+            const { phase } = state;
+
+            if (phase === 'countdown') {
+                state.countdownTimer += dt;
+                // 讓陀螺在場外原地旋轉
+                state.tops.forEach(t => { t.angle += t.omega * dt; });
+                if (state.countdownTimer >= 3.5) startEntry();
+            }
+            else if (phase === 'entry') {
+                state.entryTimer += dt;
+                // 逐一入場（帶延遲）
+                state.tops.forEach((t, i) => {
+                    if (!t.entered && state.entryTimer > t.entryDelay) {
+                        t.entered = true;
+                    }
+                });
+                updatePhysics(dt);
+                // 全部進場後進入戰鬥
+                if (state.tops.every(t => t.entered)) state.phase = 'battle';
+            }
+            else if (phase === 'battle') {
+                state.battleTimer += dt;
+                updatePhysics(dt);
+
+                const alive = getAliveTops();
+                if (alive.length <= BT.winnerCount) {
+                    // 戰鬥結束
+                    startReveal(alive);
+                }
+            }
+            else if (phase === 'reveal') {
+                state.revealTimer += dt;
+                updatePhysics(dt);
+                // 倖存者閃爍
+                if (state.revealTimer >= 2.5) state.phase = 'finished';
+            }
+            else if (phase === 'idle') {
+                // 場中展示陀螺旋轉
+                state.tops.forEach(t => { t.angle += 8 * dt; });
+            }
+            else if (phase === 'finished') {
+                // 持續旋轉展示
+                state.tops.filter(t => t.winner).forEach(t => {
+                    t.angle += 6 * dt;
+                });
+            }
+        }
+
+        function startEntry() {
+            state.phase = 'entry';
+            state.entryTimer = 0;
+            // 設定每顆陀螺的入場方向
+            state.tops.forEach(t => {
+                const angle = rand(0, TAU);
+                const spawnR = state.arenaR + 60;
+                t.x = state.cx + Math.cos(angle) * spawnR;
+                t.y = state.cy + Math.sin(angle) * spawnR;
+                const aimAngle = angle + Math.PI + rand(-0.3, 0.3);
+                t.vx = Math.cos(aimAngle) * BT.entrySpeed;
+                t.vy = Math.sin(aimAngle) * BT.entrySpeed;
+                t.omega = rand(20, 35);
+            });
+        }
+
+        function startReveal(winners) {
+            state.phase = 'reveal';
+            state.revealTimer = 0;
+            winners.forEach(t => {
+                t.winner = true;
+                t.vx = 0;
+                t.vy = 0;
+                spawnParticles(t.x, t.y, 40, '#fbbf24');
+            });
+            // 讓倖存者慢慢飄向場中心
+            const cx = state.cx, cy = state.cy;
+            const count = winners.length;
+            winners.forEach((t, i) => {
+                const targetAngle = (TAU / count) * i;
+                const targetR = count === 1 ? 0 : state.arenaR * 0.35;
+                t.vx = (cx + Math.cos(targetAngle) * targetR - t.x) * 1.2;
+                t.vy = (cy + Math.sin(targetAngle) * targetR - t.y) * 1.2;
+            });
+        }
+
+        // ─── 繪製 ───
+        function drawArena() {
+            const { cx, cy, arenaR } = state;
+
+            // 外環陰影
+            const grad = ctx.createRadialGradient(cx, cy, arenaR * 0.7, cx, cy, arenaR * 1.3);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.8)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            // 競技場地板
+            const floorGrad = ctx.createRadialGradient(cx, cy - 40, 0, cx, cy, arenaR);
+            floorGrad.addColorStop(0, '#1e2533');
+            floorGrad.addColorStop(1, '#11161f');
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR, 0, TAU);
+            ctx.fillStyle = floorGrad;
+            ctx.fill();
+
+            // 六角格紋路（裝飾）
+            ctx.save();
+            ctx.clip();
+            ctx.globalAlpha = 0.04;
+            ctx.strokeStyle = '#6366f1';
+            ctx.lineWidth = 0.8;
+            const step = 36;
+            for (let yy = cy - arenaR; yy < cy + arenaR; yy += step * 0.866) {
+                for (let xx = cx - arenaR; xx < cx + arenaR; xx += step * 1.5) {
+                    drawHex(xx, yy, step / 2);
+                    drawHex(xx + step * 0.75, yy + step * 0.433, step / 2);
+                }
+            }
+            ctx.restore();
+
+            // 競技場邊框
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR, 0, TAU);
+            ctx.strokeStyle = 'rgba(99,102,241,0.5)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 內側發光圈
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR - 8, 0, TAU);
+            ctx.strokeStyle = 'rgba(99,102,241,0.15)';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+        }
+
+        function drawHex(cx, cy, r) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const a = (Math.PI / 3) * i;
+                i === 0 ? ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r)
+                    : ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function drawTop(t, alpha = 1) {
+            const { x, y, r, color, angle, omega, winner, wobble } = t;
+
+            // 搖晃效果：omega 低時 x 軸壓縮
+            const scaleX = lerp(0.7, 1, 1 - wobble);
+            const scaleY = 1;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(x, y);
+
+            // 搖晃旋轉
+            if (wobble > 0.05) {
+                ctx.rotate(Math.sin(angle * 3) * wobble * 0.3);
+            }
+
+            ctx.scale(scaleX, scaleY);
+
+            // 倖存者光環
+            if (winner) {
+                const glowR = r + 10 + Math.sin(Date.now() * 0.008) * 5;
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 30;
+                ctx.beginPath();
+                ctx.arc(0, 0, glowR, 0, TAU);
+                ctx.strokeStyle = `rgba(251,191,36,${0.4 + Math.sin(Date.now() * 0.01) * 0.2})`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // 外旋轉圓環（依 omega 速度旋轉）
+            const ringAngle = angle * (omega / 20);
+            ctx.save();
+            ctx.rotate(ringAngle);
+            for (let i = 0; i < 8; i++) {
+                const a = (TAU / 8) * i;
+                const segStart = a;
+                const segEnd = a + (TAU / 8) * 0.7;
+                ctx.beginPath();
+                ctx.arc(0, 0, r, segStart, segEnd);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = alpha * (0.6 + (i % 2) * 0.3);
+                ctx.stroke();
+            }
+            ctx.restore();
+            ctx.globalAlpha = alpha;
+
+            // 中間主體
+            const bodyGrad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, 0, 0, 0, r * 0.85);
+            bodyGrad.addColorStop(0, lightenColor(color, 40));
+            bodyGrad.addColorStop(1, darkenColor(color, 30));
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.82, 0, TAU);
+            ctx.fillStyle = bodyGrad;
+            ctx.fill();
+
+            // 內部旋轉花紋
+            ctx.save();
+            ctx.rotate(angle);
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i < 4; i++) {
+                const a = (TAU / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(a) * r * 0.75, Math.sin(a) * r * 0.75);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // 高光
+            const hlGrad = ctx.createRadialGradient(-r * 0.25, -r * 0.3, 0, -r * 0.1, -r * 0.15, r * 0.5);
+            hlGrad.addColorStop(0, 'rgba(255,255,255,0.35)');
+            hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.82, 0, TAU);
+            ctx.fillStyle = hlGrad;
+            ctx.fill();
+
+            // 中心黑點 + 名字
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.32, 0, TAU);
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fill();
+
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const fontSize = Math.max(7, Math.min(12, r * 0.38));
+            ctx.font = `700 ${fontSize}px Inter,system-ui,sans-serif`;
+            ctx.fillText(t.label, 0, 0);
+
+            ctx.restore();
+        }
+
+        function drawCountdown() {
+            if (state.phase !== 'countdown') return;
+            const t = state.countdownTimer;
+            const step = Math.floor(t);
+            let text = '', color = '#fff';
+
+            if (step === 0) { text = '3'; color = '#ef4444'; }
+            else if (step === 1) { text = '2'; color = '#f97316'; }
+            else if (step === 2) { text = '1'; color = '#22c55e'; }
+            else if (step === 3) { text = 'GO!'; color = '#6366f1'; }
+
+            if (!text) return;
+            const frac = t - step;
+            const scl = frac < 0.3 ? lerp(2.2, 0.9, frac / 0.3)
+                : frac < 0.7 ? lerp(0.9, 1.05, (frac - 0.3) / 0.4)
+                    : lerp(1.05, 1, (frac - 0.7) / 0.3);
+            const alpha = frac < 0.2 ? frac / 0.2 : frac > 0.75 ? 1 - (frac - 0.75) / 0.25 : 1;
+
+            ctx.save();
+            ctx.globalAlpha = clamp(alpha, 0, 1);
+            ctx.translate(state.cx, state.cy);
+            ctx.scale(scl, scl);
+            ctx.font = '900 100px Inter,system-ui,sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 40;
+            ctx.fillText(text, 0, 0);
+            ctx.restore();
+        }
+
+        function drawParticles() {
+            state.particles.forEach(p => {
+                ctx.globalAlpha = clamp(p.life, 0, 1);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, TAU);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawSurvivingCount() {
+            if (state.phase !== 'battle') return;
+            const n = getAliveTops().length;
+            document.getElementById('surviving').textContent = `💫 剩餘 ${n} 顆`;
+        }
+
+        function drawWinnerBanner() {
+            if (state.phase !== 'reveal' && state.phase !== 'finished') return;
+            const winners = state.tops.filter(t => t.winner);
+            if (!winners.length) return;
+
+            const pulse = 0.85 + Math.sin(Date.now() * 0.006) * 0.12;
+            ctx.save();
+            ctx.globalAlpha = pulse;
+            ctx.font = '900 28px Inter,system-ui,sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fbbf24';
+            ctx.shadowColor = '#fbbf24';
+            ctx.shadowBlur = 20;
+            ctx.fillText(`🏆 得獎者：${winners.map(t => t.name).join('、')}`, state.cx, state.cy + state.arenaR + 36);
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+
+            // 背景
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, W, H);
+
+            drawArena();
+
+            // 消滅中的陀螺
+            state.dying.forEach(t => drawTop(t, t.alpha * 0.6));
+
+            // 正常陀螺
+            state.tops.forEach(t => {
+                if (t.alive || t.entered) drawTop(t, t.alive ? 1 : 0);
+            });
+
+            drawParticles();
+            drawCountdown();
+            drawWinnerBanner();
+            drawSurvivingCount();
+        }
+
+        // ─── 色彩工具 ───
+        function parseColor(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return { r, g, b };
+        }
+        function lightenColor(hex, amt) {
+            const { r, g, b } = parseColor(hex);
+            return `rgb(${clamp(r + amt, 0, 255)},${clamp(g + amt, 0, 255)},${clamp(b + amt, 0, 255)})`;
+        }
+        function darkenColor(hex, amt) {
+            return lightenColor(hex, -amt);
+        }
+
+        // ─── UI ───
+        let topCount = 12;
+
+        function buildIdleTops() {
+            const n = 3;
+            state.tops = [];
+            for (let i = 0; i < n; i++) {
+                const a = (TAU / n) * i;
+                const t = createTop(SAMPLE_NAMES[i]);
+                t.r = 36;
+                t.x = state.cx + Math.cos(a) * 80;
+                t.y = state.cy + Math.sin(a) * 80;
+                t.vx = 0; t.vy = 0; t.omega = 20;
+                t.entered = true; t.alive = true;
+                state.tops.push(t);
+            }
+        }
+
+        function resetGame() {
+            state.phase = 'idle';
+            state.countdownTimer = 0;
+            state.entryTimer = 0;
+            state.battleTimer = 0;
+            state.revealTimer = 0;
+            state.particles = [];
+            state.dying = [];
+            document.getElementById('surviving').textContent = '';
+            buildIdleTops();
+        }
+
+        document.getElementById('btnStart').addEventListener('click', () => {
+            if (state.phase !== 'idle') { resetGame(); return; }
+            buildTops(topCount);
+            state.phase = 'countdown';
+            state.countdownTimer = 0;
+        });
+
+        document.getElementById('btnReset').addEventListener('click', resetGame);
+
+        document.getElementById('btnAdd').addEventListener('click', () => {
+            topCount = Math.min(topCount + 4, 28);
+            console.log('陀螺數量：', topCount);
+        });
+
+        // ─── 啟動 ───
+        resetGame();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>
