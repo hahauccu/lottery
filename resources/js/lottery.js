@@ -4952,6 +4952,7 @@ const initLottery = () => {
             holdSeconds: 5,
             pending: [],
             winnerQueue: [],
+            totalWinners: 0,
             waiters: [],
             W: 0,
             H: 0,
@@ -5422,20 +5423,41 @@ const initLottery = () => {
                 }
             });
 
-            // ─── 即時排名面板（右側，前 10 名）───
+            // ─── 即時排名面板（右側，動態支援多人）───
             if (mrState.phase === 'countdown' || mrState.phase === 'racing' || mrState.phase === 'finished') {
-                // 建立即時排名：已衝線的優先（按 rank），未衝線的按 Y 座標降序
                 const finished = mrState.rankings.slice();
                 const racing = mrState.marbles
                     .filter((m) => !m.finished)
                     .sort((a, b) => b.y - a.y);
                 const liveRank = [...finished, ...racing];
-                const maxShow = Math.min(10, liveRank.length);
+                const winCount = mrState.totalWinners || 1;
 
-                const rowH = 40;
-                const panelW = 260;
-                const headerH = 48;
-                const pad = 16;
+                // 決定要顯示幾筆：至少顯示「所有中獎者 + 1 個落榜者」，且最少顯示 10 筆，最多不超過總參與人數
+                let maxShow = Math.max(10, winCount + 1);
+                maxShow = Math.min(maxShow, liveRank.length);
+                if (maxShow === 0) maxShow = 1;
+
+                // 根據畫面高度動態縮放
+                const maxAvailableHeight = H - 32; // 上下 padding 16
+                let headerH = 48;
+                let pad = 16;
+                let rowH = 40;
+                let panelW = 260;
+                let scale = 1.0;
+
+                // 如果裝不下，就要縮小 rowH
+                if (headerH + maxShow * rowH + pad > maxAvailableHeight) {
+                    rowH = (maxAvailableHeight - headerH - pad) / maxShow;
+                    // 如果 rowH 太小，整體 UI 也等比縮小
+                    if (rowH < 30) {
+                        scale = Math.max(0.5, rowH / 30);
+                        rowH = 30 * scale;
+                        panelW = 260 * scale;
+                        headerH = 48 * Math.min(1, scale * 1.2);
+                        pad = 16 * scale;
+                    }
+                }
+
                 const panelH = headerH + maxShow * rowH + pad;
                 const px = W - panelW - Math.max(20, W * 0.05);
                 const py = 16;
@@ -5445,7 +5467,7 @@ const initLottery = () => {
                 ctx.globalAlpha = 0.78;
                 ctx.fillStyle = '#0d1117';
                 ctx.beginPath();
-                ctx.roundRect(px, py, panelW, panelH, 12);
+                ctx.roundRect(px, py, panelW, panelH, 12 * scale);
                 ctx.fill();
                 ctx.globalAlpha = 0.15;
                 ctx.strokeStyle = '#fff';
@@ -5455,7 +5477,7 @@ const initLottery = () => {
 
                 // 標題
                 ctx.fillStyle = 'rgba(255,255,255,0.75)';
-                ctx.font = '700 18px Inter,ui-sans-serif,system-ui,sans-serif';
+                ctx.font = `700 ${18 * Math.min(1, scale * 1.1)}px Inter,ui-sans-serif,system-ui,sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('🏆 即時排名', px + panelW / 2, py + headerH / 2);
@@ -5464,20 +5486,26 @@ const initLottery = () => {
                 ctx.strokeStyle = 'rgba(255,255,255,0.12)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(px + 10, py + headerH);
-                ctx.lineTo(px + panelW - 10, py + headerH);
+                ctx.moveTo(px + 10 * scale, py + headerH);
+                ctx.lineTo(px + panelW - 10 * scale, py + headerH);
                 ctx.stroke();
 
                 const medals = ['🥇', '🥈', '🥉'];
+
                 for (let i = 0; i < maxShow; i++) {
                     const m = liveRank[i];
                     if (!m) break;
                     const ry = py + headerH + i * rowH + rowH / 2;
+                    const isWinningSpot = i < winCount;
 
-                    // 前三名高亮背景
-                    if (i < 3) {
+                    // 高亮背景：前三名維持金銀銅，其他中獎名額給綠色微光
+                    if (isWinningSpot) {
                         ctx.globalAlpha = m.finished ? 0.15 : 0.08;
-                        ctx.fillStyle = i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : '#cd7f32';
+                        if (i === 0) ctx.fillStyle = '#fbbf24';
+                        else if (i === 1) ctx.fillStyle = '#94a3b8';
+                        else if (i === 2) ctx.fillStyle = '#cd7f32';
+                        else ctx.fillStyle = '#10b981'; // 綠色表示中獎區間
+
                         const rr = 6;
                         ctx.beginPath();
                         ctx.roundRect(px + 6, ry - rowH / 2 + 3, panelW - 12, rowH - 6, rr);
@@ -5489,41 +5517,68 @@ const initLottery = () => {
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'middle';
                     if (i < 3 && m.finished) {
-                        ctx.font = '20px serif';
-                        ctx.fillText(medals[i], px + 12, ry);
+                        ctx.font = `${20 * scale}px serif`;
+                        ctx.fillText(medals[i], px + 12 * scale, ry);
                     } else {
-                        ctx.font = '700 16px Inter,ui-sans-serif,system-ui,sans-serif';
+                        ctx.font = `700 ${16 * scale}px Inter,ui-sans-serif,system-ui,sans-serif`;
                         ctx.fillStyle = i < 3 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)';
-                        ctx.fillText(`${i + 1}`, px + 14, ry);
+                        ctx.fillText(`${i + 1}`, px + 14 * scale, ry);
                     }
 
                     // 色球標記
                     ctx.beginPath();
-                    ctx.arc(px + 44, ry, 7, 0, TAU);
+                    ctx.arc(px + 44 * scale, ry, 7 * scale, 0, TAU);
                     ctx.fillStyle = m.color;
                     ctx.fill();
                     // 高光
                     ctx.globalAlpha = 0.3;
                     ctx.fillStyle = '#fff';
                     ctx.beginPath();
-                    ctx.arc(px + 42, ry - 2, 2.5, 0, TAU);
+                    ctx.arc(px + 42 * scale, ry - 2 * scale, 2.5 * scale, 0, TAU);
                     ctx.fill();
                     ctx.globalAlpha = 1;
 
                     // 名稱
-                    ctx.font = '600 15px Inter,ui-sans-serif,system-ui,sans-serif';
+                    ctx.font = `600 ${15 * scale}px Inter,ui-sans-serif,system-ui,sans-serif`;
                     ctx.fillStyle = m.finished
                         ? (i < 3 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)')
                         : 'rgba(255,255,255,0.55)';
-                    ctx.fillText(m.label, px + 60, ry);
+                    ctx.fillText(m.label, px + 60 * scale, ry);
 
                     // 狀態標記
                     if (m.finished) {
-                        ctx.font = '500 11px Inter,ui-sans-serif,system-ui,sans-serif';
-                        ctx.fillStyle = 'rgba(52,211,153,0.7)';
+                        ctx.font = `500 ${11 * scale}px Inter,ui-sans-serif,system-ui,sans-serif`;
+                        ctx.fillStyle = isWinningSpot ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.4)';
                         ctx.textAlign = 'right';
-                        ctx.fillText('✓ 完成', px + panelW - 14, ry);
+                        ctx.fillText(isWinningSpot ? '✓ 中獎' : '完成', px + panelW - 14 * scale, ry);
                         ctx.textAlign = 'left';
+                    }
+
+                    // 畫在最後一個中獎者下方的錄取線
+                    if (i === winCount - 1 && i < maxShow - 1) {
+                        const lineY = ry + rowH / 2;
+                        ctx.save();
+                        ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)'; // 紅色虛線
+                        ctx.lineWidth = Math.max(0.5, 1 * scale);
+                        ctx.setLineDash([4 * scale, 4 * scale]);
+                        ctx.beginPath();
+                        ctx.moveTo(px + 10 * scale, lineY);
+                        ctx.lineTo(px + panelW - 10 * scale, lineY);
+                        ctx.stroke();
+                        ctx.restore();
+
+                        // 膠囊標籤
+                        ctx.save();
+                        ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+                        ctx.beginPath();
+                        ctx.roundRect(px + panelW / 2 - 25 * scale, lineY - 8 * scale, 50 * scale, 16 * scale, 8 * scale);
+                        ctx.fill();
+                        ctx.fillStyle = '#fff';
+                        ctx.font = `700 ${9 * scale}px Inter,ui-sans-serif,system-ui,sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('中獎線', px + panelW / 2, lineY);
+                        ctx.restore();
                     }
                 }
             }
@@ -5613,6 +5668,7 @@ const initLottery = () => {
             mrState.rankings = [];
             mrState.pending = [];
             mrState.winnerQueue = [];
+            mrState.totalWinners = 0;
             mrState.waiters.forEach((r) => r()); // resolve all pending
             mrState.waiters = [];
             mrState.phase = 'idle';
@@ -5651,8 +5707,10 @@ const initLottery = () => {
             // 開始倒數
             if (mrState.phase === 'racing' || mrState.phase === 'countdown') return;
             const savedQueue = [...mrState.winnerQueue]; // 保留 queue
+            const savedTotal = mrState.totalWinners;
             reset();
             mrState.winnerQueue = savedQueue; // reset 後恢復
+            mrState.totalWinners = savedTotal;
             if (!mrState.running) {
                 mrState.running = true;
                 mrState.last = performance.now();
@@ -5675,6 +5733,7 @@ const initLottery = () => {
 
         const setWinnerQueue = (names) => {
             mrState.winnerQueue = [...names];
+            mrState.totalWinners = names.length;
         };
 
         const waitForNextPick = () => {
