@@ -82,7 +82,7 @@ class PrizesRelationManager extends RelationManager
                     'scratch_card' => '刮刮樂',
                     'treasure_chest' => '寶箱開啟',
                     'big_treasure_chest' => '大寶箱',
-                    'marble_race' => '彈珠賽跑',
+                    'marble_race' => '圓球賽跑',
                     default => $currentPrize->animation_style,
                 },
                 'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
@@ -169,7 +169,7 @@ class PrizesRelationManager extends RelationManager
                                 'scratch_card' => '刮刮樂',
                                 'treasure_chest' => '寶箱開啟',
                                 'big_treasure_chest' => '大寶箱',
-                                'marble_race' => '彈珠賽跑',
+                                'marble_race' => '圓球賽跑',
                             ])
                             ->required()
                             ->default('lotto_air')
@@ -403,7 +403,7 @@ class PrizesRelationManager extends RelationManager
                         'scratch_card' => '刮刮樂',
                         'treasure_chest' => '寶箱開啟',
                         'big_treasure_chest' => '大寶箱',
-                        'marble_race' => '彈珠賽跑',
+                        'marble_race' => '圓球賽跑',
                         default => $state,
                     }),
             ])

@@ -61,7 +61,7 @@
                 { key: 'scratch_card', label: '刮刮樂' },
                 { key: 'treasure_chest', label: '寶箱' },
                 { key: 'big_treasure_chest', label: '大寶箱' },
-                { key: 'marble_race', label: '彈珠賽跑' },
+                { key: 'marble_race', label: '圓球賽跑' },
             ],
 
             async switchStyle(style) {
