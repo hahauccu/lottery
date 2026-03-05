@@ -5422,6 +5422,83 @@ const initLottery = () => {
                 }
             });
 
+            // ─── 排名面板（右側，前 10 名）───
+            if (mrState.rankings.length > 0 && (mrState.phase === 'racing' || mrState.phase === 'finished')) {
+                const maxShow = Math.min(10, mrState.rankings.length);
+                const pad = 12;
+                const rowH = 24;
+                const panelW = 140;
+                const headerH = 30;
+                const panelH = headerH + maxShow * rowH + pad;
+                const px = W - panelW - 12;
+                const py = 12;
+
+                // 面板背景
+                ctx.save();
+                ctx.globalAlpha = 0.75;
+                ctx.fillStyle = '#0d1117';
+                ctx.beginPath();
+                ctx.roundRect(px, py, panelW, panelH, 10);
+                ctx.fill();
+                ctx.globalAlpha = 0.15;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+
+                // 標題
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = '700 11px Inter,ui-sans-serif,system-ui,sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🏆 排名', px + panelW / 2, py + headerH / 2);
+
+                // 分隔線
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.beginPath();
+                ctx.moveTo(px + 8, py + headerH);
+                ctx.lineTo(px + panelW - 8, py + headerH);
+                ctx.stroke();
+
+                // 排名列表
+                const medals = ['🥇', '🥈', '🥉'];
+                for (let i = 0; i < maxShow; i++) {
+                    const m = mrState.rankings[i];
+                    const ry = py + headerH + i * rowH + rowH / 2;
+
+                    // 前三名高亮背景
+                    if (i < 3) {
+                        ctx.globalAlpha = 0.08;
+                        ctx.fillStyle = i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : '#cd7f32';
+                        ctx.fillRect(px + 4, ry - rowH / 2 + 2, panelW - 8, rowH - 4);
+                        ctx.globalAlpha = 1;
+                    }
+
+                    // 名次
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    if (i < 3) {
+                        ctx.font = '12px serif';
+                        ctx.fillText(medals[i], px + 8, ry);
+                    } else {
+                        ctx.font = '600 10px Inter,ui-sans-serif,system-ui,sans-serif';
+                        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                        ctx.fillText(`${i + 1}`, px + 10, ry);
+                    }
+
+                    // 名稱
+                    ctx.font = '600 10px Inter,ui-sans-serif,system-ui,sans-serif';
+                    ctx.fillStyle = i < 3 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)';
+                    ctx.fillText(m.label, px + 30, ry);
+
+                    // 色球標記
+                    ctx.beginPath();
+                    ctx.arc(px + panelW - 14, ry, 4, 0, TAU);
+                    ctx.fillStyle = m.color;
+                    ctx.fill();
+                }
+            }
+
             // 粒子
             drawParticles();
 
