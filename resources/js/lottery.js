@@ -5422,23 +5422,30 @@ const initLottery = () => {
                 }
             });
 
-            // ─── 排名面板（右側，前 10 名）───
-            if (mrState.rankings.length > 0 && (mrState.phase === 'racing' || mrState.phase === 'finished')) {
-                const maxShow = Math.min(10, mrState.rankings.length);
-                const pad = 12;
-                const rowH = 24;
-                const panelW = 140;
-                const headerH = 30;
+            // ─── 即時排名面板（右側，前 10 名）───
+            if (mrState.phase === 'countdown' || mrState.phase === 'racing' || mrState.phase === 'finished') {
+                // 建立即時排名：已衝線的優先（按 rank），未衝線的按 Y 座標降序
+                const finished = mrState.rankings.slice();
+                const racing = mrState.marbles
+                    .filter((m) => !m.finished)
+                    .sort((a, b) => b.y - a.y);
+                const liveRank = [...finished, ...racing];
+                const maxShow = Math.min(10, liveRank.length);
+
+                const rowH = 40;
+                const panelW = 260;
+                const headerH = 48;
+                const pad = 16;
                 const panelH = headerH + maxShow * rowH + pad;
-                const px = W - panelW - 12;
-                const py = 12;
+                const px = W - panelW - Math.max(20, W * 0.05);
+                const py = 16;
 
                 // 面板背景
                 ctx.save();
-                ctx.globalAlpha = 0.75;
+                ctx.globalAlpha = 0.78;
                 ctx.fillStyle = '#0d1117';
                 ctx.beginPath();
-                ctx.roundRect(px, py, panelW, panelH, 10);
+                ctx.roundRect(px, py, panelW, panelH, 12);
                 ctx.fill();
                 ctx.globalAlpha = 0.15;
                 ctx.strokeStyle = '#fff';
@@ -5447,55 +5454,77 @@ const initLottery = () => {
                 ctx.restore();
 
                 // 標題
-                ctx.fillStyle = 'rgba(255,255,255,0.7)';
-                ctx.font = '700 11px Inter,ui-sans-serif,system-ui,sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.75)';
+                ctx.font = '700 18px Inter,ui-sans-serif,system-ui,sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('🏆 排名', px + panelW / 2, py + headerH / 2);
+                ctx.fillText('🏆 即時排名', px + panelW / 2, py + headerH / 2);
 
                 // 分隔線
-                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(px + 8, py + headerH);
-                ctx.lineTo(px + panelW - 8, py + headerH);
+                ctx.moveTo(px + 10, py + headerH);
+                ctx.lineTo(px + panelW - 10, py + headerH);
                 ctx.stroke();
 
-                // 排名列表
                 const medals = ['🥇', '🥈', '🥉'];
                 for (let i = 0; i < maxShow; i++) {
-                    const m = mrState.rankings[i];
+                    const m = liveRank[i];
+                    if (!m) break;
                     const ry = py + headerH + i * rowH + rowH / 2;
 
                     // 前三名高亮背景
                     if (i < 3) {
-                        ctx.globalAlpha = 0.08;
+                        ctx.globalAlpha = m.finished ? 0.15 : 0.08;
                         ctx.fillStyle = i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : '#cd7f32';
-                        ctx.fillRect(px + 4, ry - rowH / 2 + 2, panelW - 8, rowH - 4);
+                        const rr = 6;
+                        ctx.beginPath();
+                        ctx.roundRect(px + 6, ry - rowH / 2 + 3, panelW - 12, rowH - 6, rr);
+                        ctx.fill();
                         ctx.globalAlpha = 1;
                     }
 
                     // 名次
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'middle';
-                    if (i < 3) {
-                        ctx.font = '12px serif';
-                        ctx.fillText(medals[i], px + 8, ry);
+                    if (i < 3 && m.finished) {
+                        ctx.font = '20px serif';
+                        ctx.fillText(medals[i], px + 12, ry);
                     } else {
-                        ctx.font = '600 10px Inter,ui-sans-serif,system-ui,sans-serif';
-                        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                        ctx.fillText(`${i + 1}`, px + 10, ry);
+                        ctx.font = '700 16px Inter,ui-sans-serif,system-ui,sans-serif';
+                        ctx.fillStyle = i < 3 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)';
+                        ctx.fillText(`${i + 1}`, px + 14, ry);
                     }
-
-                    // 名稱
-                    ctx.font = '600 10px Inter,ui-sans-serif,system-ui,sans-serif';
-                    ctx.fillStyle = i < 3 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)';
-                    ctx.fillText(m.label, px + 30, ry);
 
                     // 色球標記
                     ctx.beginPath();
-                    ctx.arc(px + panelW - 14, ry, 4, 0, TAU);
+                    ctx.arc(px + 44, ry, 7, 0, TAU);
                     ctx.fillStyle = m.color;
                     ctx.fill();
+                    // 高光
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(px + 42, ry - 2, 2.5, 0, TAU);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+
+                    // 名稱
+                    ctx.font = '600 15px Inter,ui-sans-serif,system-ui,sans-serif';
+                    ctx.fillStyle = m.finished
+                        ? (i < 3 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)')
+                        : 'rgba(255,255,255,0.55)';
+                    ctx.fillText(m.label, px + 60, ry);
+
+                    // 狀態標記
+                    if (m.finished) {
+                        ctx.font = '500 11px Inter,ui-sans-serif,system-ui,sans-serif';
+                        ctx.fillStyle = 'rgba(52,211,153,0.7)';
+                        ctx.textAlign = 'right';
+                        ctx.fillText('✓ 完成', px + panelW - 14, ry);
+                        ctx.textAlign = 'left';
+                    }
                 }
             }
 
