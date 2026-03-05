@@ -120,19 +120,21 @@
 
         // ─── 設定 ───
         const BT = {
-            friction: 0.22,   // 每秒角速度衰減率
-            minOmega: 4,      // 低於此倒下
-            entrySpeed: 240,    // 入場速度
-            elasticity: 0.72,   // 碰撞彈性
-            omegaTransfer: 0.12,   // 碰撞轉移角速度比例
+            friction: 0.08,   // 每秒角速度衰減率（降低才夠久）
+            minOmega: 1.5,    // 低於此才算倒下
+            entrySpeed: 300,    // 入場速度
+            elasticity: 0.75,   // 碰撞彈性
+            walElasticity: 0.65,   // 牆壁反彈彈性
+            omegaTransfer: 0.15,   // 碰撞轉移角速度比例
             winnerCount: 3,      // 本場中獎人數
+            graceTime: 4.0,    // 入場後多少秒才能被淘汰
         };
 
         // ─── 狀態 ───
         const state = {
             phase: 'idle',  // idle | countdown | entry | battle | reveal | finished
             tops: [],
-            dying: [],      // 正在播放消滅動畫的陀螺
+            dying: [],
             particles: [],
             countdownTimer: 0,
             entryTimer: 0,
@@ -174,31 +176,25 @@
             return name.length > 4 ? name.slice(0, 4) : name;
         }
 
-        let namePool = [...SAMPLE_NAMES];
-        function createTop(name) {
-            const angle = rand(0, TAU);
-            const spawnR = state.arenaR + 60;
-            const aimAngle = angle + Math.PI + rand(-0.35, 0.35);
+        function createTop(name, r) {
             return {
                 name,
                 label: shortLabel(name),
                 color: TOP_COLORS[Math.floor(Math.random() * TOP_COLORS.length)],
-                x: state.cx + Math.cos(angle) * spawnR,
-                y: state.cy + Math.sin(angle) * spawnR,
-                vx: Math.cos(aimAngle) * BT.entrySpeed,
-                vy: Math.sin(aimAngle) * BT.entrySpeed,
-                r: 28,           // 先設定預設，後面動態更新
-                omega: rand(18, 30),
-                angle: 0,
+                x: state.cx, y: state.cy,
+                vx: 0, vy: 0,
+                r: r || 28,
+                omega: rand(22, 34),
+                angle: rand(0, TAU),
                 mass: 1,
                 alive: true,
                 winner: false,
                 alpha: 1,
-                wobble: 0,       // 搖晃幅度
-                entryDelay: rand(0, 0.6),
+                wobble: 0,
+                entryDelay: 0,
                 entered: false,
                 dyingTimer: 0,
-                dyingDuration: 0.6,
+                dyingDuration: 0.5,
             };
         }
 
@@ -207,14 +203,15 @@
             state.dying = [];
             const r = calcTopRadius(n);
             const shuffled = [...SAMPLE_NAMES].sort(() => Math.random() - 0.5).slice(0, n);
-            shuffled.forEach(name => {
-                const t = createTop(name);
-                t.r = r;
-                t.mass = r * r / (28 * 28); // 相對質量
-                // 先在場外待命位置（隨機分布在圓周外）
-                const a = rand(0, TAU);
-                t.x = state.cx + Math.cos(a) * (state.arenaR + 70);
-                t.y = state.cy + Math.sin(a) * (state.arenaR + 70);
+            shuffled.forEach((name, i) => {
+                const t = createTop(name, r);
+                t.mass = r * r / (28 * 28);
+                // 分散在場外圓周等待
+                const a = (TAU / n) * i + rand(-0.1, 0.1);
+                const spawnR = state.arenaR + r + 20;
+                t.x = state.cx + Math.cos(a) * spawnR;
+                t.y = state.cy + Math.sin(a) * spawnR;
+                t.entryDelay = rand(0, 0.8);
                 t.entered = false;
                 state.tops.push(t);
             });
@@ -229,8 +226,7 @@
                     x, y,
                     vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
                     r: rand(2, 5),
-                    life: 1,
-                    color,
+                    life: 1, color,
                 });
             }
         }
@@ -250,8 +246,8 @@
         // ─── 物理 ───
         function updatePhysics(dt) {
             const { tops, cx, cy, arenaR } = state;
+            const inGrace = state.battleTimer < BT.graceTime;
 
-            // 更新陀螺
             tops.forEach(t => {
                 if (!t.alive || !t.entered) return;
 
@@ -261,25 +257,44 @@
 
                 // 摩擦力
                 t.omega *= (1 - BT.friction * dt);
-                t.vx *= (1 - 0.08 * dt);
-                t.vy *= (1 - 0.08 * dt);
+                t.vx *= (1 - 0.05 * dt);
+                t.vy *= (1 - 0.05 * dt);
 
                 // 搖晃程度
-                const omegaRatio = clamp(t.omega / 20, 0, 1);
+                const omegaRatio = clamp(t.omega / 18, 0, 1);
                 t.wobble = lerp(0.4, 0, omegaRatio);
 
-                // 角速度太低 → 倒下
-                if (t.omega < BT.minOmega && state.phase === 'battle') {
+                // 角速度太低 → 倒下（保護期內不觸發）
+                if (!inGrace && t.omega < BT.minOmega && state.phase === 'battle') {
                     defeat(t, 'spin_out');
                     return;
                 }
 
-                // 出界淘汰
+                // 圓形邊界
                 const dx = t.x - cx;
                 const dy = t.y - cy;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist + t.r > arenaR && state.phase === 'battle') {
-                    defeat(t, 'out_of_bounds');
+                const boundary = arenaR - t.r;
+
+                if (dist > boundary) {
+                    // 正規化法向量（指向圓心）
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    // 推回邊界內
+                    t.x = cx + nx * boundary;
+                    t.y = cy + ny * boundary;
+                    // 反彈速度
+                    const dot = t.vx * nx + t.vy * ny;
+                    t.vx -= (1 + BT.walElasticity) * dot * nx;
+                    t.vy -= (1 + BT.walElasticity) * dot * ny;
+                    // 碰到邊界損失一點角速度
+                    t.omega *= 0.92;
+                    spawnParticles(t.x + nx * (-t.r), t.y + ny * (-t.r), 4, t.color);
+
+                    // 保護期結束後，被彈飛出去才淘汰
+                    if (!inGrace && state.phase === 'battle') {
+                        // 若速度被彈向外超標則視為飛出（速度太快撞牆也不管）
+                    }
                 }
             });
 
@@ -294,55 +309,51 @@
                     const distSq = dx * dx + dy * dy;
                     const minDist = a.r + b.r;
 
-                    if (distSq < minDist * minDist && distSq > 0) {
+                    if (distSq < minDist * minDist && distSq > 0.001) {
                         const dist = Math.sqrt(distSq);
                         const nx = dx / dist;
                         const ny = dy / dist;
 
                         // 分離重疊
-                        const overlap = minDist - dist;
+                        const overlap = (minDist - dist) / 2;
                         const totalMass = a.mass + b.mass;
-                        a.x -= nx * overlap * (b.mass / totalMass);
-                        a.y -= ny * overlap * (b.mass / totalMass);
-                        b.x += nx * overlap * (a.mass / totalMass);
-                        b.y += ny * overlap * (a.mass / totalMass);
+                        a.x -= nx * overlap * (b.mass / totalMass) * 2;
+                        a.y -= ny * overlap * (b.mass / totalMass) * 2;
+                        b.x += nx * overlap * (a.mass / totalMass) * 2;
+                        b.y += ny * overlap * (a.mass / totalMass) * 2;
 
-                        // 速度碰撞
+                        // 速度分量交換
                         const dvx = b.vx - a.vx;
                         const dvy = b.vy - a.vy;
                         const dot = dvx * nx + dvy * ny;
                         if (dot < 0) {
-                            const j2 = (-(1 + BT.elasticity) * dot) / totalMass;
-                            a.vx -= j2 * b.mass * nx;
-                            a.vy -= j2 * b.mass * ny;
-                            b.vx += j2 * a.mass * nx;
-                            b.vy += j2 * a.mass * ny;
+                            const impulse = (-(1 + BT.elasticity) * dot) / totalMass;
+                            a.vx -= impulse * b.mass * nx;
+                            a.vy -= impulse * b.mass * ny;
+                            b.vx += impulse * a.mass * nx;
+                            b.vy += impulse * a.mass * ny;
                         }
 
-                        // 角速度轉移（強者吸收弱者）
+                        // 角速度轉移（強者吸收弱者的角速度）
                         const omegaDiff = a.omega - b.omega;
                         a.omega -= omegaDiff * BT.omegaTransfer;
                         b.omega += omegaDiff * BT.omegaTransfer;
                         a.omega = Math.max(0, a.omega);
                         b.omega = Math.max(0, b.omega);
 
-                        // 碰撞粒子特效
-                        const ix = (a.x + b.x) / 2;
-                        const iy = (a.y + b.y) / 2;
-                        spawnParticles(ix, iy, 8, '#fff');
+                        // 碰撞火花
+                        spawnParticles((a.x + b.x) / 2, (a.y + b.y) / 2, 6, '#ffe066');
                     }
                 }
             }
 
-            // 更新消滅中的陀螺
+            // dying 更新
             for (let i = state.dying.length - 1; i >= 0; i--) {
                 const t = state.dying[i];
                 t.dyingTimer += dt;
                 t.alpha = clamp(1 - t.dyingTimer / t.dyingDuration, 0, 1);
-                t.r *= (1 + dt * 0.5); // 膨脹
-                if (t.dyingTimer >= t.dyingDuration) {
-                    state.dying.splice(i, 1);
-                }
+                t.r *= (1 + dt * 1.5);
+                if (t.dyingTimer >= t.dyingDuration) state.dying.splice(i, 1);
             }
 
             updateParticles(dt);
@@ -350,19 +361,8 @@
 
         function defeat(top, reason) {
             top.alive = false;
-            // 特效粒子
-            spawnParticles(top.x, top.y, 20, top.color);
-            // 加入消滅動畫佇列
+            spawnParticles(top.x, top.y, 25, top.color);
             state.dying.push({ ...top, dyingTimer: 0, dyingDuration: 0.5 });
-
-            // 如果是出界，給一個初速飛出去
-            if (reason === 'out_of_bounds') {
-                const dx = top.x - state.cx;
-                const dy = top.y - state.cy;
-                const d = Math.sqrt(dx * dx + dy * dy) || 1;
-                top.vx = (dx / d) * 200;
-                top.vy = (dy / d) * 200;
-            }
         }
 
         function getAliveTops() {
@@ -371,16 +371,13 @@
 
         // ─── 主迴圈 ───
         let last = performance.now();
-        let rafId;
 
         function loop(now) {
             const dt = Math.min((now - last) / 1000, 0.05);
             last = now;
-
             update(dt);
             draw();
-
-            rafId = requestAnimationFrame(loop);
+            requestAnimationFrame(loop);
         }
 
         function update(dt) {
@@ -388,83 +385,87 @@
 
             if (phase === 'countdown') {
                 state.countdownTimer += dt;
-                // 讓陀螺在場外原地旋轉
                 state.tops.forEach(t => { t.angle += t.omega * dt; });
                 if (state.countdownTimer >= 3.5) startEntry();
             }
             else if (phase === 'entry') {
                 state.entryTimer += dt;
-                // 逐一入場（帶延遲）
-                state.tops.forEach((t, i) => {
+                state.tops.forEach(t => {
                     if (!t.entered && state.entryTimer > t.entryDelay) {
                         t.entered = true;
                     }
                 });
                 updatePhysics(dt);
-                // 全部進場後進入戰鬥
-                if (state.tops.every(t => t.entered)) state.phase = 'battle';
+                if (state.tops.every(t => t.entered) && state.entryTimer > 1.2) {
+                    state.phase = 'battle';
+                    state.battleTimer = 0;
+                }
             }
             else if (phase === 'battle') {
                 state.battleTimer += dt;
                 updatePhysics(dt);
-
                 const alive = getAliveTops();
-                if (alive.length <= BT.winnerCount) {
-                    // 戰鬥結束
+                // 只有超過保護期才判斷勝負
+                if (state.battleTimer > BT.graceTime && alive.length <= BT.winnerCount) {
                     startReveal(alive);
                 }
             }
             else if (phase === 'reveal') {
                 state.revealTimer += dt;
-                updatePhysics(dt);
-                // 倖存者閃爍
-                if (state.revealTimer >= 2.5) state.phase = 'finished';
+                state.tops.filter(t => t.winner).forEach(t => {
+                    t.angle += 8 * dt;
+                    t.vx *= 0.88;
+                    t.vy *= 0.88;
+                });
+                updateParticles(dt);
+                for (let i = state.dying.length - 1; i >= 0; i--) {
+                    const d = state.dying[i];
+                    d.dyingTimer += dt;
+                    d.alpha = clamp(1 - d.dyingTimer / d.dyingDuration, 0, 1);
+                    if (d.dyingTimer >= d.dyingDuration) state.dying.splice(i, 1);
+                }
+                if (state.revealTimer >= 3.5) state.phase = 'finished';
             }
             else if (phase === 'idle') {
-                // 場中展示陀螺旋轉
-                state.tops.forEach(t => { t.angle += 8 * dt; });
+                state.tops.forEach(t => { t.angle += 10 * dt; });
             }
             else if (phase === 'finished') {
-                // 持續旋轉展示
-                state.tops.filter(t => t.winner).forEach(t => {
-                    t.angle += 6 * dt;
-                });
+                state.tops.filter(t => t.winner).forEach(t => { t.angle += 6 * dt; });
             }
         }
 
         function startEntry() {
             state.phase = 'entry';
             state.entryTimer = 0;
-            // 設定每顆陀螺的入場方向
-            state.tops.forEach(t => {
-                const angle = rand(0, TAU);
-                const spawnR = state.arenaR + 60;
-                t.x = state.cx + Math.cos(angle) * spawnR;
-                t.y = state.cy + Math.sin(angle) * spawnR;
-                const aimAngle = angle + Math.PI + rand(-0.3, 0.3);
+            const n = state.tops.length;
+            state.tops.forEach((t, i) => {
+                // 從圓周外均勻射入
+                const a = (TAU / n) * i + rand(-0.2, 0.2);
+                const spawnR = state.arenaR + t.r + 10;
+                t.x = state.cx + Math.cos(a) * spawnR;
+                t.y = state.cy + Math.sin(a) * spawnR;
+                // 瞄準中心附近（加隨機偏移，避免全部撞到一個點）
+                const aimAngle = a + Math.PI + rand(-0.5, 0.5);
                 t.vx = Math.cos(aimAngle) * BT.entrySpeed;
                 t.vy = Math.sin(aimAngle) * BT.entrySpeed;
-                t.omega = rand(20, 35);
+                // 給足夠的初始角速度
+                t.omega = rand(22, 40);
+                t.alive = true;
+                t.winner = false;
             });
         }
 
         function startReveal(winners) {
             state.phase = 'reveal';
             state.revealTimer = 0;
-            winners.forEach(t => {
-                t.winner = true;
-                t.vx = 0;
-                t.vy = 0;
-                spawnParticles(t.x, t.y, 40, '#fbbf24');
-            });
-            // 讓倖存者慢慢飄向場中心
-            const cx = state.cx, cy = state.cy;
-            const count = winners.length;
             winners.forEach((t, i) => {
-                const targetAngle = (TAU / count) * i;
-                const targetR = count === 1 ? 0 : state.arenaR * 0.35;
-                t.vx = (cx + Math.cos(targetAngle) * targetR - t.x) * 1.2;
-                t.vy = (cy + Math.sin(targetAngle) * targetR - t.y) * 1.2;
+                t.winner = true;
+                spawnParticles(t.x, t.y, 50, '#fbbf24');
+                // 飄向場中心的等距位置
+                const targetAngle = (TAU / winners.length) * i;
+                const targetR = winners.length === 1 ? 0 : state.arenaR * 0.3;
+                t.vx = (state.cx + Math.cos(targetAngle) * targetR - t.x) * 0.8;
+                t.vy = (state.cy + Math.sin(targetAngle) * targetR - t.y) * 0.8;
             });
         }
 
