@@ -5456,9 +5456,10 @@ const initLottery = () => {
                 // 彈珠在閘門前晃動
                 updatePhysics(dt);
                 if (mrState.countdownTimer >= 3.2) {
-                    // 開閘！根據 holdSeconds 調整比賽時長
-                    const raceTime = Math.max(10, (mrState.holdSeconds || 5) * 6);
-                    TRACK.raceTimeout = raceTime;
+                    // 開閘！holdSeconds 控制比賽節奏：秒數越大重力越小，比賽越慢
+                    const hs = Math.max(5, mrState.holdSeconds || 15);
+                    TRACK.gravity = clamp(9300 / hs, 150, 1800);
+                    TRACK.raceTimeout = hs * 2; // 安全超時：設定秒數的兩倍
                     mrState.gateOpen = true;
                     mrState.phase = 'racing';
                     mrState.raceTimer = 0;
