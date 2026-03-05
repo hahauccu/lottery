@@ -112,7 +112,7 @@ const initLottery = () => {
     const escapeHtml = (str) => {
         if (!str) return '';
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     };
 
     const modeLabel = (mode) => (mode === 'one_by_one' ? '逐一抽出' : '一次全抽');
@@ -500,7 +500,7 @@ const initLottery = () => {
         }
 
         drawAudio.currentTime = 0;
-        drawAudio.play().catch(() => {});
+        drawAudio.play().catch(() => { });
     };
 
     const stopDrawAudio = () => {
@@ -513,7 +513,7 @@ const initLottery = () => {
     const sfx = (() => {
         // 音效設定由後台獎項設定控制，讀取 state.currentPrize?.soundEnabled
         const AudioContextRef = window.AudioContext || window.webkitAudioContext;
-        const noop = () => {};
+        const noop = () => { };
         const noopLooped = () => ({ stop: noop });
 
         // 檢查音效是否啟用（讀取獎項設定）
@@ -547,7 +547,7 @@ const initLottery = () => {
                 context = new AudioContextRef();
             }
             if (context.state === 'suspended') {
-                context.resume().catch(() => {});
+                context.resume().catch(() => { });
             }
             return context;
         };
@@ -697,10 +697,10 @@ const initLottery = () => {
 
         // 刮卡沙沙聲（持續播放，返回控制物件）
         const playScratch = () => {
-            if (!isEnabled()) return { stop: () => {} };
+            if (!isEnabled()) return { stop: () => { } };
             console.log('[sfx] playScratch: start');
             const ctx = getContext();
-            if (!ctx) return { stop: () => {} };
+            if (!ctx) return { stop: () => { } };
 
             const now = ctx.currentTime;
             const master = ctx.createGain();
@@ -957,10 +957,10 @@ const initLottery = () => {
 
         // 樂透球滾動聲（持續播放）
         const playBallRumble = () => {
-            if (!isEnabled()) return { stop: () => {} };
+            if (!isEnabled()) return { stop: () => { } };
             console.log('[sfx] playBallRumble: start');
             const ctx = getContext();
-            if (!ctx) return { stop: () => {} };
+            if (!ctx) return { stop: () => { } };
 
             const now = ctx.currentTime;
             const master = ctx.createGain();
@@ -1112,10 +1112,10 @@ const initLottery = () => {
 
         // 鼓聲滾動（持續播放，用於緊張氛圍）
         const playDrumRoll = () => {
-            if (!isEnabled()) return { stop: () => {} };
+            if (!isEnabled()) return { stop: () => { } };
             console.log('[sfx] playDrumRoll: start');
             const ctx = getContext();
-            if (!ctx) return { stop: () => {} };
+            if (!ctx) return { stop: () => { } };
 
             const now = ctx.currentTime;
             const master = ctx.createGain();
@@ -1198,11 +1198,13 @@ const initLottery = () => {
     const isScratchCardStyle = (style) => style === 'scratch_card';
     const isTreasureChestStyle = (style) => style === 'treasure_chest';
     const isBigTreasureChestStyle = (style) => style === 'big_treasure_chest';
+    const isMarbleRaceStyle = (style) => style === 'marble_race';
     const isCanvasStyle = (style) => isLottoAirStyle(style)
         || isRedPacketStyle(style)
         || isScratchCardStyle(style)
         || isTreasureChestStyle(style)
-        || isBigTreasureChestStyle(style);
+        || isBigTreasureChestStyle(style)
+        || isMarbleRaceStyle(style);
     const isLottoStyle = (style) => isLottoAirStyle(style);
     const mapRange = (value, min, max) => min + (max - min) * ((value - 1) / 9);
     const TAU = Math.PI * 2;
@@ -4894,12 +4896,733 @@ const initLottery = () => {
         };
     })();
 
+    /* ============================================================
+       MarbleRace — 彈珠賽跑抽獎動畫模組
+       改造自 MarbleRace.html，適配 lottery.js Driver 介面
+       類型：連續型（類似 lottoAir），使用 waitForNextPick()
+       ============================================================ */
+    const marbleRace = (() => {
+        // ─── 賽道參數 ───
+        const TRACK = {
+            pegRadius: 8,
+            pegRows: 10,
+            pegCols: 8,
+            rowSpacing: 70,
+            gateY: 70,
+            marbleRadius: 9,
+            gravity: 620,
+            restitution: 0.55,
+            friction: 0.992,
+            finishPadding: 70,
+            stuckThreshold: 15,
+            stuckTime: 1.5,
+            raceTimeout: 55,
+        };
+
+        const MARBLE_COLORS = [
+            '#FF4757', '#FF6B81', '#FFA502', '#FFDD59',
+            '#2ED573', '#7BED9F', '#1E90FF', '#70A1FF',
+            '#A855F7', '#D946EF', '#FF6348', '#ECCC68',
+            '#2BCBBA', '#4BCFFA', '#FC427B', '#FD7272',
+            '#3742fa', '#ff6b6b', '#feca57', '#54a0ff',
+        ];
+
+        // ─── 內部狀態 ───
+        const mrState = {
+            running: false,
+            phase: 'idle', // idle | countdown | racing | finished
+            marbles: [],
+            pegs: [],
+            finishY: 0,
+            trackTop: 0,
+            trackBottom: 0,
+            trackLeft: 0,
+            trackRight: 0,
+            gateOpen: false,
+            rankings: [],
+            cameraY: 0,
+            targetCameraY: 0,
+            countdownValue: 3,
+            countdownTimer: 0,
+            raceTimer: 0,
+            ctx: null,
+            dpr: 1,
+            rafId: null,
+            last: 0,
+            holdSeconds: 5,
+            pending: [],
+            waiters: [],
+            W: 0,
+            H: 0,
+        };
+
+        const mrParticles = [];
+
+        // ─── 粒子系統 ───
+        const spawnParticles = (x, y, count = 20, power = 200, hueA = 0, hueB = 360) => {
+            for (let i = 0; i < count; i++) {
+                const a = rand(0, TAU);
+                const sp = power * rand(0.3, 1);
+                mrParticles.push({
+                    x, y,
+                    vx: Math.cos(a) * sp,
+                    vy: Math.sin(a) * sp,
+                    life: rand(0.4, 0.9),
+                    t: 0,
+                    r: rand(1.5, 4),
+                    hue: rand(hueA, hueB),
+                    drag: rand(0.93, 0.98),
+                });
+            }
+        };
+
+        const updateParticles = (dt) => {
+            for (let i = mrParticles.length - 1; i >= 0; i--) {
+                const p = mrParticles[i];
+                p.t += dt;
+                if (p.t >= p.life) { mrParticles.splice(i, 1); continue; }
+                p.vy += 400 * dt;
+                p.vx *= Math.pow(p.drag, dt * 60);
+                p.vy *= Math.pow(p.drag, dt * 60);
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+            }
+        };
+
+        const drawParticles = () => {
+            const { ctx } = mrState;
+            if (!ctx || !mrParticles.length) return;
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            mrParticles.forEach((p) => {
+                const k = 1 - p.t / p.life;
+                ctx.globalAlpha = clamp(k, 0, 1) * 0.85;
+                ctx.fillStyle = `hsl(${p.hue} 90% 65%)`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y - mrState.cameraY, p.r * lerp(0.8, 2, k), 0, TAU);
+                ctx.fill();
+            });
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        };
+
+        // ─── Canvas ───
+        const resizeCanvas = () => {
+            if (!lottoCanvasEl) return false;
+            const wrapperRect = lottoWrapEl?.getBoundingClientRect();
+            const rect = wrapperRect && wrapperRect.width && wrapperRect.height
+                ? wrapperRect
+                : lottoCanvasEl.getBoundingClientRect();
+            if (!rect.width || !rect.height) return false;
+
+            mrState.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+            lottoCanvasEl.width = Math.floor(rect.width * mrState.dpr);
+            lottoCanvasEl.height = Math.floor(rect.height * mrState.dpr);
+            mrState.ctx = lottoCanvasEl.getContext('2d');
+            if (mrState.ctx) {
+                mrState.ctx.setTransform(mrState.dpr, 0, 0, mrState.dpr, 0, 0);
+            }
+            mrState.W = rect.width;
+            mrState.H = rect.height;
+            return true;
+        };
+
+        // ─── 賽道生成 ───
+        const generateTrack = () => {
+            const { W, H } = mrState;
+            const trackW = Math.min(420, W * 0.75);
+            const cx = W * 0.5;
+            mrState.trackLeft = cx - trackW / 2;
+            mrState.trackRight = cx + trackW / 2;
+            mrState.trackTop = TRACK.gateY;
+
+            mrState.pegs = [];
+            const startY = TRACK.gateY + 100;
+            for (let row = 0; row < TRACK.pegRows; row++) {
+                const y = startY + row * TRACK.rowSpacing;
+                const isOdd = row % 2 === 1;
+                const cols = isOdd ? TRACK.pegCols - 1 : TRACK.pegCols;
+                const offset = isOdd ? (trackW / TRACK.pegCols) / 2 : 0;
+                const spacing = trackW / TRACK.pegCols;
+                for (let col = 0; col < cols; col++) {
+                    const px = mrState.trackLeft + spacing / 2 + col * spacing + offset;
+                    const jx = rand(-3, 3);
+                    const jy = rand(-3, 3);
+                    mrState.pegs.push({
+                        x: px + jx, y: y + jy,
+                        r: TRACK.pegRadius,
+                        isSpecial: Math.random() < 0.12,
+                    });
+                }
+            }
+            mrState.finishY = startY + TRACK.pegRows * TRACK.rowSpacing + TRACK.finishPadding;
+            mrState.trackBottom = mrState.finishY + 100;
+        };
+
+        // ─── 彈珠名稱池 ───
+        const buildNamePool = () => {
+            const base = (state.eligibleNames?.length ? state.eligibleNames : [])
+                .concat(state.winners.map((w) => w.employee_name).filter(Boolean))
+                .filter(Boolean);
+            const unique = Array.from(new Set(base));
+            if (unique.length === 0) {
+                return Array.from({ length: 10 }, (_, i) => `Ball ${i + 1}`);
+            }
+            return shuffle(unique);
+        };
+
+        const shortLabel = (name) => {
+            if (!name) return '??';
+            const chars = Array.from(name);
+            if (chars.length <= 4) return name;
+            return `${chars.slice(0, 4).join('')}…`;
+        };
+
+        // ─── 建立彈珠 ───
+        const createMarbles = () => {
+            mrState.marbles = [];
+            mrState.rankings = [];
+            const names = buildNamePool();
+            const n = names.length;
+            const trackW = mrState.trackRight - mrState.trackLeft;
+            const cols = Math.min(n, 6);
+            const spacingX = Math.min(28, (trackW - 30) / cols);
+            const spacingY = 22;
+            const cx = (mrState.trackLeft + mrState.trackRight) / 2;
+
+            for (let i = 0; i < n; i++) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = cx - ((cols - 1) * spacingX) / 2 + col * spacingX + rand(-2, 2);
+                const y = TRACK.gateY + 10 + row * spacingY + rand(-2, 2);
+                mrState.marbles.push({
+                    name: names[i],
+                    label: shortLabel(names[i]),
+                    color: MARBLE_COLORS[i % MARBLE_COLORS.length],
+                    x, y,
+                    vx: rand(-15, 15),
+                    vy: rand(-5, 5),
+                    r: TRACK.marbleRadius,
+                    restitution: rand(0.45, 0.65),
+                    mass: rand(0.9, 1.1),
+                    finished: false,
+                    rank: 0,
+                    stuckTimer: 0,
+                });
+            }
+        };
+
+        // ─── 物理引擎 ───
+        const updatePhysics = (dt) => {
+            const g = TRACK.gravity;
+            for (const m of mrState.marbles) {
+                if (m.finished) {
+                    // 已衝線：緩慢停下
+                    m.vy += g * 0.3 * dt;
+                    m.x += m.vx * dt; m.y += m.vy * dt;
+                    m.vx *= 0.96; m.vy *= 0.96;
+                    if (m.y > mrState.trackBottom - m.r) {
+                        m.y = mrState.trackBottom - m.r;
+                        m.vy *= -0.2;
+                        if (Math.abs(m.vy) < 5) m.vy = 0;
+                    }
+                    continue;
+                }
+
+                if (!mrState.gateOpen) {
+                    // 閘門未開：輕微重力 + 閘門限制
+                    m.vy += g * 0.3 * dt;
+                    m.x += m.vx * dt; m.y += m.vy * dt;
+                    m.vx *= Math.pow(TRACK.friction, dt * 60);
+                    m.vy *= Math.pow(TRACK.friction, dt * 60);
+                    if (m.y + m.r > TRACK.gateY + 70) {
+                        m.y = TRACK.gateY + 70 - m.r;
+                        m.vy *= -TRACK.restitution;
+                    }
+                    if (m.y - m.r < TRACK.gateY - 10) {
+                        m.y = TRACK.gateY - 10 + m.r;
+                        m.vy *= -0.3;
+                    }
+                    if (m.x - m.r < mrState.trackLeft) { m.x = mrState.trackLeft + m.r; m.vx *= -TRACK.restitution; }
+                    if (m.x + m.r > mrState.trackRight) { m.x = mrState.trackRight - m.r; m.vx *= -TRACK.restitution; }
+                    continue;
+                }
+
+                // 比賽中：完整重力
+                m.vy += g * dt;
+
+                // 防卡住機制
+                const speed = Math.hypot(m.vx, m.vy);
+                if (speed < TRACK.stuckThreshold) {
+                    m.stuckTimer += dt;
+                    if (m.stuckTimer > TRACK.stuckTime) {
+                        m.vx += rand(-180, 180);
+                        m.vy += rand(80, 200);
+                        m.stuckTimer = 0;
+                        spawnParticles(m.x, m.y, 6, 60, 180, 220);
+                    }
+                } else {
+                    m.stuckTimer = Math.max(0, m.stuckTimer - dt * 2);
+                }
+
+                if (Math.random() < 0.03 * dt * 60) { m.vx += rand(-60, 60); }
+
+                m.x += m.vx * dt;
+                m.y += m.vy * dt;
+                m.vx *= Math.pow(TRACK.friction, dt * 60);
+                m.vy *= Math.pow(TRACK.friction, dt * 60);
+
+                // 牆壁碰撞
+                if (m.x - m.r < mrState.trackLeft) { m.x = mrState.trackLeft + m.r; m.vx = Math.abs(m.vx) * m.restitution; }
+                if (m.x + m.r > mrState.trackRight) { m.x = mrState.trackRight - m.r; m.vx = -Math.abs(m.vx) * m.restitution; }
+
+                // 障礙物碰撞
+                for (const peg of mrState.pegs) {
+                    const dx = m.x - peg.x;
+                    const dy = m.y - peg.y;
+                    const dist = Math.hypot(dx, dy);
+                    const minDist = m.r + peg.r;
+                    if (dist < minDist && dist > 0) {
+                        const nx = dx / dist, ny = dy / dist;
+                        m.x += nx * (minDist - dist);
+                        m.y += ny * (minDist - dist);
+                        const vn = m.vx * nx + m.vy * ny;
+                        if (vn < 0) {
+                            m.vx -= (1 + m.restitution) * vn * nx;
+                            m.vy -= (1 + m.restitution) * vn * ny;
+                            m.vx += (-ny) * rand(-40, 40) * 0.08;
+                            m.vy += nx * rand(-20, 20) * 0.05;
+                        }
+                        if (Math.abs(vn) > 100 && Math.random() < 0.25) {
+                            const hue = peg.isSpecial ? rand(0, 30) : rand(200, 280);
+                            spawnParticles(peg.x, peg.y, 4, 80, hue, hue + 40);
+                        }
+                    }
+                }
+
+                // 終點線檢查
+                if (m.y > mrState.finishY && !m.finished) {
+                    m.finished = true;
+                    m.rank = mrState.rankings.length + 1;
+                    mrState.rankings.push(m);
+
+                    if (m.rank === 1) {
+                        spawnParticles(m.x, m.y, 60, 300, 40, 65);
+                    } else {
+                        spawnParticles(m.x, m.y, 12, 120, 0, 360);
+                    }
+
+                    // resolve waitForNextPick
+                    if (mrState.waiters.length > 0) {
+                        const resolve = mrState.waiters.shift();
+                        resolve();
+                    }
+
+                    if (mrState.rankings.length >= mrState.marbles.length) {
+                        mrState.phase = 'finished';
+                    }
+                }
+
+                // 超時：強制衝線
+                if (mrState.raceTimer > TRACK.raceTimeout && !m.finished) {
+                    m.finished = true;
+                    m.rank = mrState.rankings.length + 1;
+                    mrState.rankings.push(m);
+                    spawnParticles(m.x, m.y, 6, 60, 0, 360);
+                    if (mrState.waiters.length > 0) {
+                        const resolve = mrState.waiters.shift();
+                        resolve();
+                    }
+                    if (mrState.rankings.length >= mrState.marbles.length) {
+                        mrState.phase = 'finished';
+                    }
+                }
+            }
+
+            // 彈珠間碰撞
+            const arr = mrState.marbles;
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i].finished) continue;
+                for (let j = i + 1; j < arr.length; j++) {
+                    if (arr[j].finished) continue;
+                    const a = arr[i], b = arr[j];
+                    const dx = b.x - a.x, dy = b.y - a.y;
+                    const dist = Math.hypot(dx, dy);
+                    const minD = a.r + b.r;
+                    if (dist >= minD || dist === 0) continue;
+
+                    const nx = dx / dist, ny = dy / dist;
+                    const overlap = minD - dist;
+                    const ma = a.mass, mb = b.mass, sum = ma + mb;
+                    a.x -= nx * overlap * (mb / sum);
+                    a.y -= ny * overlap * (mb / sum);
+                    b.x += nx * overlap * (ma / sum);
+                    b.y += ny * overlap * (ma / sum);
+
+                    const rvx = b.vx - a.vx, rvy = b.vy - a.vy;
+                    const vn = rvx * nx + rvy * ny;
+                    if (vn > 0) continue;
+                    const e = Math.min(a.restitution, b.restitution);
+                    const jj = -(1 + e) * vn / (1 / ma + 1 / mb);
+                    a.vx -= jj * nx / ma; a.vy -= jj * ny / ma;
+                    b.vx += jj * nx / mb; b.vy += jj * ny / mb;
+                }
+            }
+        };
+
+        // ─── 攝影機 ───
+        const updateCamera = (dt) => {
+            const { H } = mrState;
+            if (mrState.phase !== 'racing' && mrState.phase !== 'finished') {
+                mrState.targetCameraY = 0;
+                mrState.cameraY = lerp(mrState.cameraY, 0, Math.min(1, dt * 3));
+                return;
+            }
+            let furthestY = 0;
+            let leadCount = 0;
+            for (const m of mrState.marbles) {
+                if (!m.finished && m.y > furthestY) furthestY = m.y;
+                if (!m.finished) leadCount++;
+            }
+            if (leadCount === 0) furthestY = mrState.finishY;
+            const viewCenter = H * 0.4;
+            mrState.targetCameraY = Math.max(0, furthestY - viewCenter);
+            mrState.cameraY = lerp(mrState.cameraY, mrState.targetCameraY, Math.min(1, dt * 2.5));
+        };
+
+        // ─── 繪製 ───
+        const lightenColor = (hex, pct) => {
+            const num = parseInt(hex.replace('#', ''), 16);
+            let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+            r = Math.min(255, r + pct); g = Math.min(255, g + pct); b = Math.min(255, b + pct);
+            return `rgb(${r},${g},${b})`;
+        };
+
+        const drawFrame = () => {
+            const { ctx, W, H } = mrState;
+            if (!ctx) return;
+            const camY = mrState.cameraY;
+
+            // 背景
+            ctx.fillStyle = '#0a0e17';
+            ctx.fillRect(0, 0, W, H);
+            const g1 = ctx.createRadialGradient(W / 2, H * 0.3, 50, W / 2, H * 0.3, Math.max(W, H) * 0.8);
+            g1.addColorStop(0, 'rgba(99,102,241,0.06)');
+            g1.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
+
+            // 賽道背景
+            const tl = mrState.trackLeft, tr = mrState.trackRight, tw = tr - tl;
+            ctx.fillStyle = 'rgba(255,255,255,0.02)';
+            ctx.fillRect(tl, mrState.trackTop - camY, tw, mrState.trackBottom - mrState.trackTop);
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(tl, mrState.trackTop - camY); ctx.lineTo(tl, mrState.trackBottom - camY);
+            ctx.moveTo(tr, mrState.trackTop - camY); ctx.lineTo(tr, mrState.trackBottom - camY);
+            ctx.stroke();
+
+            // 閘門
+            if (!mrState.gateOpen) {
+                const gy = TRACK.gateY + 70 - camY;
+                ctx.fillStyle = 'rgba(239,68,68,0.4)';
+                ctx.fillRect(tl, gy - 4, tw, 8);
+                ctx.fillStyle = 'rgba(239,68,68,0.7)';
+                ctx.font = '700 13px Inter,ui-sans-serif,system-ui,sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('READY', (tl + tr) / 2, gy - 10);
+            }
+
+            // 障礙物
+            for (const peg of mrState.pegs) {
+                const py = peg.y - camY;
+                if (py < -30 || py > H + 30) continue;
+                ctx.beginPath();
+                ctx.arc(peg.x, py, peg.r, 0, TAU);
+                ctx.fillStyle = peg.isSpecial ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.15)';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(peg.x - peg.r * 0.2, py - peg.r * 0.25, peg.r * 0.35, 0, TAU);
+                ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                ctx.fill();
+            }
+
+            // 終點線
+            const fy = mrState.finishY - camY;
+            if (fy > -20 && fy < H + 20) {
+                const segW = 12;
+                const segs = Math.ceil(tw / segW);
+                for (let i = 0; i < segs; i++) {
+                    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)';
+                    ctx.fillRect(tl + i * segW, fy - 4, segW, 8);
+                }
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.font = '700 11px Inter,ui-sans-serif,system-ui,sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🏁 FINISH', (tl + tr) / 2, fy - 10);
+            }
+
+            // 彈珠（已完成的先畫，比賽中的後畫）
+            const finishedArr = mrState.marbles.filter((m) => m.finished);
+            const racingArr = mrState.marbles.filter((m) => !m.finished);
+            [...finishedArr, ...racingArr].forEach((m) => {
+                const sy = m.y - camY;
+                if (sy < -40 || sy > H + 40) return;
+                const r = m.r;
+
+                // 陰影
+                ctx.globalAlpha = 0.25;
+                ctx.fillStyle = 'black';
+                ctx.beginPath(); ctx.arc(m.x + 2, sy + 3, r * 1.05, 0, TAU); ctx.fill();
+
+                // 主球體
+                ctx.globalAlpha = m.finished ? 0.5 : 1;
+                const grad = ctx.createRadialGradient(m.x - r * 0.3, sy - r * 0.3, r * 0.15, m.x, sy, r * 1.1);
+                grad.addColorStop(0, lightenColor(m.color, 30));
+                grad.addColorStop(1, m.color);
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(m.x, sy, r, 0, TAU); ctx.fill();
+
+                // 高光
+                ctx.globalAlpha = 0.35;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(m.x - r * 0.28, sy - r * 0.32, r * 0.35, 0, TAU); ctx.fill();
+                ctx.globalAlpha = 1;
+
+                // 名稱
+                ctx.fillStyle = 'rgba(255,255,255,0.88)';
+                ctx.font = '600 9px Inter,ui-sans-serif,system-ui,sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(m.label, m.x, sy - r - 3);
+
+                // 名次徽章
+                if (m.finished && m.rank <= 3) {
+                    const medals = ['🥇', '🥈', '🥉'];
+                    ctx.font = '12px serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(medals[m.rank - 1], m.x, sy);
+                }
+            });
+
+            // 粒子
+            drawParticles();
+
+            // 倒數計時覆蓋
+            if (mrState.phase === 'countdown') {
+                const elapsed = mrState.countdownTimer;
+                const step = Math.floor(elapsed / 0.8);
+                let text = '';
+                let color = '#6366f1';
+                if (step === 0) { text = '3'; color = '#FF4757'; }
+                else if (step === 1) { text = '2'; color = '#FFA502'; }
+                else if (step === 2) { text = '1'; color = '#2ED573'; }
+                else if (step === 3) { text = 'GO!'; color = '#6366f1'; }
+
+                if (text) {
+                    const frac = (elapsed % 0.8) / 0.8;
+                    const scale = frac < 0.3 ? lerp(2.5, 0.9, frac / 0.3)
+                        : frac < 0.6 ? lerp(0.9, 1.05, (frac - 0.3) / 0.3)
+                            : lerp(1.05, 1, (frac - 0.6) / 0.4);
+                    const alpha = frac < 0.3 ? frac / 0.3 : frac > 0.7 ? 1 - (frac - 0.7) / 0.3 : 1;
+                    ctx.save();
+                    ctx.globalAlpha = clamp(alpha, 0, 1);
+                    ctx.translate(W / 2, H / 2);
+                    ctx.scale(scale, scale);
+                    ctx.font = '900 120px Inter,ui-sans-serif,system-ui,sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 40;
+                    ctx.fillText(text, 0, 0);
+                    ctx.restore();
+                    ctx.globalAlpha = 1;
+                }
+            }
+        };
+
+        // ─── 動畫迴圈 ───
+        const loop = (now) => {
+            if (!mrState.running) return;
+            const rawDt = (now - mrState.last) / 1000;
+            mrState.last = now;
+            const dt = Math.min(rawDt, 0.033);
+
+            if (mrState.phase === 'countdown') {
+                mrState.countdownTimer += dt;
+                // 彈珠在閘門前晃動
+                updatePhysics(dt);
+                if (mrState.countdownTimer >= 3.2) {
+                    // 開閘！
+                    mrState.gateOpen = true;
+                    mrState.phase = 'racing';
+                    mrState.raceTimer = 0;
+                    const cx = (mrState.trackLeft + mrState.trackRight) / 2;
+                    spawnParticles(cx, TRACK.gateY + 70, 40, 200, 40, 65);
+                }
+            } else if (mrState.phase === 'racing') {
+                mrState.raceTimer += dt;
+                const steps = 3;
+                const subDt = dt / steps;
+                for (let s = 0; s < steps; s++) updatePhysics(subDt);
+                updateCamera(dt);
+            } else if (mrState.phase === 'idle') {
+                updatePhysics(dt);
+            } else if (mrState.phase === 'finished') {
+                updatePhysics(dt);
+                updateCamera(dt);
+            }
+
+            updateParticles(dt);
+            drawFrame();
+
+            mrState.rafId = requestAnimationFrame(loop);
+        };
+
+        // ─── 重置 ───
+        const reset = () => {
+            mrParticles.length = 0;
+            mrState.marbles = [];
+            mrState.rankings = [];
+            mrState.pending = [];
+            mrState.waiters.forEach((r) => r()); // resolve all pending
+            mrState.waiters = [];
+            mrState.phase = 'idle';
+            mrState.gateOpen = false;
+            mrState.cameraY = 0;
+            mrState.targetCameraY = 0;
+            mrState.countdownTimer = 0;
+            mrState.raceTimer = 0;
+
+            if (!resizeCanvas()) return;
+            generateTrack();
+            createMarbles();
+        };
+
+        // ─── 公開 API ───
+        const ensureReady = (forceReset = false) => {
+            if (forceReset || mrState.marbles.length === 0) {
+                reset();
+                // 開始動畫迴圈（待機繪製）
+                if (!mrState.running) {
+                    mrState.running = true;
+                    mrState.last = performance.now();
+                    mrState.rafId = requestAnimationFrame(loop);
+                }
+            }
+        };
+
+        const start = () => {
+            if (mrState.running) return;
+            mrState.running = true;
+            mrState.last = performance.now();
+            mrState.rafId = requestAnimationFrame(loop);
+        };
+
+        const startDraw = () => {
+            // 開始倒數
+            if (mrState.phase === 'racing' || mrState.phase === 'countdown') return;
+            reset();
+            if (!mrState.running) {
+                mrState.running = true;
+                mrState.last = performance.now();
+                mrState.rafId = requestAnimationFrame(loop);
+            }
+            mrState.phase = 'countdown';
+            mrState.countdownTimer = 0;
+        };
+
+        const stop = () => {
+            mrState.running = false;
+            if (mrState.rafId) { cancelAnimationFrame(mrState.rafId); mrState.rafId = null; }
+            // resolve 所有等待中的 Promise
+            mrState.waiters.forEach((r) => r());
+            mrState.waiters = [];
+            mrState.phase = 'idle';
+            mrState.gateOpen = false;
+            clearCanvas();
+        };
+
+        const setWinners = (names, opts = {}) => {
+            mrState.pending = [...names];
+            if (!opts.resetMarbles) {
+                // 將 pending 名稱對應到彈珠上
+                const available = mrState.marbles.filter((m) => !m.finished);
+                names.forEach((name, i) => {
+                    if (i < available.length) {
+                        available[i].name = name;
+                        available[i].label = shortLabel(name);
+                    }
+                });
+            }
+        };
+
+        const waitForNextPick = () => {
+            return new Promise((resolve) => {
+                // 如果已有彈珠衝線但尚未被消費
+                const consumed = mrState.waiters.length;
+                if (mrState.rankings.length > consumed) {
+                    resolve();
+                    return;
+                }
+                mrState.waiters.push(resolve);
+            });
+        };
+
+        const ensureCount = (n) => {
+            // 確保彈珠數量足夠
+            if (mrState.marbles.length < n) {
+                const names = buildNamePool();
+                const trackW = mrState.trackRight - mrState.trackLeft;
+                const cx = (mrState.trackLeft + mrState.trackRight) / 2;
+                for (let i = mrState.marbles.length; i < n; i++) {
+                    const name = names[i % names.length] || `Ball ${i + 1}`;
+                    const x = cx + rand(-trackW * 0.3, trackW * 0.3);
+                    const y = TRACK.gateY + 10 + rand(-5, 30);
+                    mrState.marbles.push({
+                        name, label: shortLabel(name),
+                        color: MARBLE_COLORS[i % MARBLE_COLORS.length],
+                        x, y,
+                        vx: rand(-15, 15), vy: rand(-5, 5),
+                        r: TRACK.marbleRadius,
+                        restitution: rand(0.45, 0.65),
+                        mass: rand(0.9, 1.1),
+                        finished: false, rank: 0, stuckTimer: 0,
+                    });
+                }
+            }
+        };
+
+        const setHoldSeconds = (s) => { mrState.holdSeconds = s; };
+
+        const resize = () => {
+            if (!mrState.running) return;
+            resizeCanvas();
+            generateTrack();
+            // 彈珠維持在賽道內
+            const cx = (mrState.trackLeft + mrState.trackRight) / 2;
+            mrState.marbles.forEach((m) => {
+                m.x = clamp(m.x, mrState.trackLeft + m.r + 2, mrState.trackRight - m.r - 2);
+            });
+            drawFrame();
+        };
+
+        return {
+            ensureReady, start, startDraw, stop,
+            setWinners, waitForNextPick, ensureCount,
+            setHoldSeconds, resize,
+        };
+    })();
+
     const stopAllAnimations = () => {
         lottoAir.stop();
         redPacketRain.stop();
         scratchCard.stop();
         treasureChest.stop();
         bigTreasureChest.stop();
+        marbleRace.stop();
     };
 
     const appendWinner = (winner) => {
@@ -5209,11 +5932,53 @@ const initLottery = () => {
             },
             stop: () => bigTreasureChest.stop(),
         },
+        marble_race: {
+            prepareIdle: ({ forceReset = false } = {}) => {
+                marbleRace.ensureReady(forceReset);
+            },
+            prepareToDraw: () => {
+                marbleRace.ensureReady();
+                marbleRace.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+                if (state.currentPrize?.drawMode === 'one_by_one' && state.eligibleNames?.length) {
+                    marbleRace.ensureCount(state.eligibleNames.length);
+                }
+            },
+            revealWinners: async (winners, runtime = {}) => {
+                const append = runtime.appendWinner ?? appendWinner;
+                const isRunStale = runtime.isRunStale ?? (() => false);
+                const clock = runtime.clock;
+                if (isRunStale()) return;
+
+                if (state.currentPrize?.drawMode === 'one_by_one') {
+                    marbleRace.startDraw();
+                    marbleRace.setWinners([winners[0]?.employee_name ?? randomLabel()], {
+                        resetMarbles: false,
+                    });
+                    await marbleRace.waitForNextPick();
+                    if (isRunStale()) return;
+                    append(winners[0]);
+                    if (clock) await clock.waitUntilEnd();
+                } else {
+                    marbleRace.setWinners(winners.map((w) => w.employee_name ?? randomLabel()));
+                    marbleRace.startDraw();
+                    for (const winner of winners) {
+                        await marbleRace.waitForNextPick();
+                        if (isRunStale()) return;
+                        append(winner);
+                    }
+                    if (clock) {
+                        const finalWait = Math.min(1500, clock.remainingMs());
+                        if (finalWait > 50) await delay(finalWait);
+                    }
+                }
+            },
+            stop: () => marbleRace.stop(),
+        },
         fallback: {
-            prepareIdle: () => {},
-            prepareToDraw: () => {},
-            revealWinners: async () => {},
-            stop: () => {},
+            prepareIdle: () => { },
+            prepareToDraw: () => { },
+            revealWinners: async () => { },
+            stop: () => { },
         },
     };
 
@@ -5223,6 +5988,7 @@ const initLottery = () => {
         if (isScratchCardStyle(style)) return animationDrivers.scratch_card;
         if (isTreasureChestStyle(style)) return animationDrivers.treasure_chest;
         if (isBigTreasureChestStyle(style)) return animationDrivers.big_treasure_chest;
+        if (isMarbleRaceStyle(style)) return animationDrivers.marble_race;
         return animationDrivers.fallback;
     };
 
@@ -5430,6 +6196,9 @@ const initLottery = () => {
         }
         if (isBigTreasureChestStyle(state.currentPrize?.animationStyle)) {
             bigTreasureChest.resize();
+        }
+        if (isMarbleRaceStyle(state.currentPrize?.animationStyle)) {
+            marbleRace.resize();
         }
     });
 
@@ -5717,7 +6486,7 @@ const initLottery = () => {
             },
             body: JSON.stringify({ ts: Date.now() }),
             keepalive: true,
-        }).catch(() => {});
+        }).catch(() => { });
     };
 
     // --- Drawing heartbeat management ---
@@ -5734,7 +6503,7 @@ const initLottery = () => {
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': config.csrfToken },
             body: JSON.stringify({ is_drawing: isDrawing, run_id: runId }),
             keepalive: true,
-        }).catch(() => {});
+        }).catch(() => { });
     };
 
     const startDrawingHeartbeat = (runId) => {

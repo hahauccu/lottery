@@ -57,7 +57,7 @@ class PrizesRelationManager extends RelationManager
             $processStatus = 'switching';
         } elseif ($isDrawing) {
             $processStatus = 'drawing';
-        } elseif (! $isOnline) {
+        } elseif (!$isOnline) {
             $processStatus = 'offline';
         } else {
             $processStatus = 'standby';
@@ -82,6 +82,7 @@ class PrizesRelationManager extends RelationManager
                     'scratch_card' => '刮刮樂',
                     'treasure_chest' => '寶箱開啟',
                     'big_treasure_chest' => '大寶箱',
+                    'marble_race' => '彈珠賽跑',
                     default => $currentPrize->animation_style,
                 },
                 'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
@@ -100,7 +101,7 @@ class PrizesRelationManager extends RelationManager
         }
 
         // suggestion
-        if (! $isOnline) {
+        if (!$isOnline) {
             $suggestion = '請先開啟前台抽獎頁面';
         } elseif ($isSwitching) {
             $suggestion = '等待前台載入完成…';
@@ -140,7 +141,7 @@ class PrizesRelationManager extends RelationManager
                                 table: Prize::class,
                                 column: 'name',
                                 ignoreRecord: true,
-                                modifyRuleUsing: fn ($rule) => $rule
+                                modifyRuleUsing: fn($rule) => $rule
                                     ->where('lottery_event_id', $this->getOwnerRecord()->getKey())
                             )
                             ->validationMessages([
@@ -168,6 +169,7 @@ class PrizesRelationManager extends RelationManager
                                 'scratch_card' => '刮刮樂',
                                 'treasure_chest' => '寶箱開啟',
                                 'big_treasure_chest' => '大寶箱',
+                                'marble_race' => '彈珠賽跑',
                             ])
                             ->required()
                             ->default('lotto_air')
@@ -193,7 +195,7 @@ class PrizesRelationManager extends RelationManager
                                     ?? $this->getOwnerRecord()?->organization?->slug;
 
                                 return $slug
-                                    ? 'lottery/'.$slug.'/prizes/backgrounds'
+                                    ? 'lottery/' . $slug . '/prizes/backgrounds'
                                     : 'lottery/pending/prizes/backgrounds';
                             })
                             ->image()
@@ -207,7 +209,7 @@ class PrizesRelationManager extends RelationManager
                                     ?? $this->getOwnerRecord()?->organization?->slug;
 
                                 return $slug
-                                    ? 'lottery/'.$slug.'/prizes/music'
+                                    ? 'lottery/' . $slug . '/prizes/music'
                                     : 'lottery/pending/prizes/music';
                             })
                             ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'])
@@ -237,8 +239,8 @@ class PrizesRelationManager extends RelationManager
                                 $options = [];
 
                                 if ($systemGroups->isNotEmpty()) {
-                                    $options['系統群組'] = $systemGroups->mapWithKeys(fn ($g) => [
-                                        $g->id => '🔴 '.$g->name,
+                                    $options['系統群組'] = $systemGroups->mapWithKeys(fn($g) => [
+                                        $g->id => '🔴 ' . $g->name,
                                     ])->all();
                                 }
 
@@ -254,7 +256,7 @@ class PrizesRelationManager extends RelationManager
                             ->live(),
                         Select::make('include_employee_ids')
                             ->label('包含員工')
-                            ->options(fn () => Employee::query()
+                            ->options(fn() => Employee::query()
                                 ->where('organization_id', Filament::getTenant()?->getKey())
                                 ->orderBy('name')
                                 ->pluck('name', 'id')
@@ -279,8 +281,8 @@ class PrizesRelationManager extends RelationManager
                                 $options = [];
 
                                 if ($systemGroups->isNotEmpty()) {
-                                    $options['系統群組'] = $systemGroups->mapWithKeys(fn ($g) => [
-                                        $g->id => '🔴 '.$g->name,
+                                    $options['系統群組'] = $systemGroups->mapWithKeys(fn($g) => [
+                                        $g->id => '🔴 ' . $g->name,
                                     ])->all();
                                 }
 
@@ -296,7 +298,7 @@ class PrizesRelationManager extends RelationManager
                             ->live(),
                         Select::make('exclude_employee_ids')
                             ->label('排除員工')
-                            ->options(fn () => Employee::query()
+                            ->options(fn() => Employee::query()
                                 ->where('organization_id', Filament::getTenant()?->getKey())
                                 ->orderBy('name')
                                 ->pluck('name', 'id')
@@ -305,7 +307,7 @@ class PrizesRelationManager extends RelationManager
                             ->searchable()
                             ->preload()
                             ->live(),
-                        LivewireComponent::make(EligibleEmployeesPreview::class, fn (Get $get, ?Prize $record) => [
+                        LivewireComponent::make(EligibleEmployeesPreview::class, fn(Get $get, ?Prize $record) => [
                             'context' => 'prize',
                             'organizationId' => Filament::getTenant()?->getKey(),
                             'eventId' => $this->getOwnerRecord()->getKey(),
@@ -316,7 +318,7 @@ class PrizesRelationManager extends RelationManager
                             'allowRepeatWithinPrize' => (bool) ($get('allow_repeat_within_prize') ?? false),
                             'currentPrizeId' => $record?->id,
                         ])
-                            ->key(fn (Get $get, ?Prize $record) => 'event-prize-preview-'.md5(json_encode([
+                            ->key(fn(Get $get, ?Prize $record) => 'event-prize-preview-' . md5(json_encode([
                                 $this->getOwnerRecord()->getKey(),
                                 $record?->id,
                                 $get('include_employee_ids'),
@@ -336,7 +338,7 @@ class PrizesRelationManager extends RelationManager
         $event = $this->getOwnerRecord();
         $lock = Cache::lock("switch-ack:{$event->id}", 5);
 
-        if (! $lock->get()) {
+        if (!$lock->get()) {
             return;
         }
 
@@ -360,7 +362,7 @@ class PrizesRelationManager extends RelationManager
     {
         $cacheKey = "lottery-ready:{$brandCode}";
         $lastSeen = Cache::get($cacheKey);
-        if (! $lastSeen) {
+        if (!$lastSeen) {
             return false;
         }
 
@@ -380,27 +382,28 @@ class PrizesRelationManager extends RelationManager
                 TextColumn::make('name')
                     ->label('獎項名稱')
                     ->searchable()
-                    ->icon(fn (Prize $record): ?string => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
-                            ? 'heroicon-s-play' : null)
+                    ->icon(fn(Prize $record): ?string => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
+                        ? 'heroicon-s-play' : null)
                     ->iconPosition(IconPosition::After)
-                    ->color(fn (Prize $record): ?string => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
-                            ? 'success' : null),
+                    ->color(fn(Prize $record): ?string => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
+                        ? 'success' : null),
                 TextColumn::make('drawn_count')
                     ->label('已抽 / 目標')
-                    ->getStateUsing(fn (Prize $record) => $record->winners()->count().' / '.$record->winners_count)
+                    ->getStateUsing(fn(Prize $record) => $record->winners()->count() . ' / ' . $record->winners_count)
                     ->badge()
-                    ->color(fn (Prize $record) => $record->winners()->count() >= $record->winners_count ? 'success' : 'gray'),
+                    ->color(fn(Prize $record) => $record->winners()->count() >= $record->winners_count ? 'success' : 'gray'),
                 TextColumn::make('draw_mode')
                     ->label('抽獎模式')
-                    ->formatStateUsing(fn (string $state) => $state === Prize::DRAW_MODE_ONE_BY_ONE ? '逐一抽出' : '一次全抽'),
+                    ->formatStateUsing(fn(string $state) => $state === Prize::DRAW_MODE_ONE_BY_ONE ? '逐一抽出' : '一次全抽'),
                 TextColumn::make('animation_style')
                     ->label('動畫')
-                    ->formatStateUsing(fn (string $state) => match ($state) {
+                    ->formatStateUsing(fn(string $state) => match ($state) {
                         'lotto_air' => '樂透氣流機',
                         'red_packet' => '紅包雨',
                         'scratch_card' => '刮刮樂',
                         'treasure_chest' => '寶箱開啟',
                         'big_treasure_chest' => '大寶箱',
+                        'marble_race' => '彈珠賽跑',
                         default => $state,
                     }),
             ])
@@ -427,7 +430,7 @@ class PrizesRelationManager extends RelationManager
                     ->action(function ($livewire): void {
                         $event = $this->getOwnerRecord();
                         $brandCode = $event->brand_code;
-                        if (! $this->frontendIsReady($brandCode)) {
+                        if (!$this->frontendIsReady($brandCode)) {
                             Notification::make()
                                 ->danger()
                                 ->title('無法切換預覽')
@@ -502,7 +505,7 @@ class PrizesRelationManager extends RelationManager
                             })();
                         ");
                     })
-                    ->disabled(fn () => $this->getOwnerRecord()->is_prize_switching),
+                    ->disabled(fn() => $this->getOwnerRecord()->is_prize_switching),
             ])
             ->actions([
                 \Filament\Tables\Actions\Action::make('set_current')
@@ -510,9 +513,9 @@ class PrizesRelationManager extends RelationManager
                     ->tooltip('需前台在線且未在抽獎中')
                     ->requiresConfirmation()
                     ->action(function (Prize $record, $livewire): void {
-                        $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'big_treasure_chest'];
+                        $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'big_treasure_chest', 'marble_race'];
 
-                        if (! in_array($record->animation_style, $validStyles, true)) {
+                        if (!in_array($record->animation_style, $validStyles, true)) {
                             Notification::make()
                                 ->danger()
                                 ->title('無法設為目前獎項')
@@ -536,7 +539,7 @@ class PrizesRelationManager extends RelationManager
 
                         $event = $this->getOwnerRecord();
                         $brandCode = $event->brand_code;
-                        if (! $this->frontendIsReady($brandCode)) {
+                        if (!$this->frontendIsReady($brandCode)) {
                             Notification::make()
                                 ->danger()
                                 ->title('無法設為目前獎項')
@@ -614,7 +617,7 @@ class PrizesRelationManager extends RelationManager
                             })();
                         ");
                     })
-                    ->disabled(fn () => $this->getOwnerRecord()->is_prize_switching),
+                    ->disabled(fn() => $this->getOwnerRecord()->is_prize_switching),
                 EditAction::make()
                     ->label('編輯抽獎項目')
                     ->modalHeading('編輯抽獎項目')
@@ -641,11 +644,11 @@ class PrizesRelationManager extends RelationManager
                             ->color('info')
                             ->requiresConfirmation()
                             ->modalHeading('發送中獎通知')
-                            ->modalDescription(fn (Prize $record) => sprintf(
+                            ->modalDescription(fn(Prize $record) => sprintf(
                                 '將發送通知給 %d 位尚未收到通知的中獎者。確定要發送嗎？',
                                 $record->winners()->whereNull('notified_at')->count()
                             ))
-                            ->visible(fn (Prize $record) => $record->winners()->whereNull('notified_at')->count() > 0)
+                            ->visible(fn(Prize $record) => $record->winners()->whereNull('notified_at')->count() > 0)
                             ->action(function (Prize $record): void {
                                 $unnotifiedCount = $record->winners()->whereNull('notified_at')->count();
 
