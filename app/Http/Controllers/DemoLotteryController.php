@@ -10,12 +10,36 @@ use Illuminate\Support\Collection;
 class DemoLotteryController extends Controller
 {
     private const DEMO_NAMES = [
-        '王大明', '陳小芳', '李美美', '張志偉', '林佳慧',
-        '黃建宏', '吳淑芬', '劉德華', '蔡依琳', '楊宗緯',
-        '鄭秀文', '周杰倫', '許志安', '趙小棠', '孫燕姿',
-        '何炅明', '蕭敬騰', '田馥甄', '韓庚義', '馬如龍',
-        '高以翔', '方大同', '潘瑋柏', '侯佩岑', '徐若瑄',
-        '郭富城', '梁靜茹', '陶喆宏', '丁噹兒', '盧廣仲',
+        '王大明',
+        '陳小芳',
+        '李美美',
+        '張志偉',
+        '林佳慧',
+        '黃建宏',
+        '吳淑芬',
+        '劉德華',
+        '蔡依琳',
+        '楊宗緯',
+        '鄭秀文',
+        '周杰倫',
+        '許志安',
+        '趙小棠',
+        '孫燕姿',
+        '何炅明',
+        '蕭敬騰',
+        '田馥甄',
+        '韓庚義',
+        '馬如龍',
+        '高以翔',
+        '方大同',
+        '潘瑋柏',
+        '侯佩岑',
+        '徐若瑄',
+        '郭富城',
+        '梁靜茹',
+        '陶喆宏',
+        '丁噹兒',
+        '盧廣仲',
     ];
 
     private const VALID_STYLES = [
@@ -24,12 +48,13 @@ class DemoLotteryController extends Controller
         'scratch_card',
         'treasure_chest',
         'big_treasure_chest',
+        'marble_race',
     ];
 
     private function ensureSession(): array
     {
         $data = session('demo_lottery');
-        if (! $data) {
+        if (!$data) {
             $data = [
                 'animation_style' => 'lotto_air',
                 'prize_id' => 1,
@@ -69,12 +94,14 @@ class DemoLotteryController extends Controller
             ],
             'winners' => $data['winners'],
             'eligible_names' => $data['eligible_names'],
-            'all_prizes' => [[
-                'id' => 1,
-                'name' => '範例抽獎',
-                'winnersCount' => count(self::DEMO_NAMES),
-                'drawnCount' => count($data['winners']),
-            ]],
+            'all_prizes' => [
+                [
+                    'id' => 1,
+                    'name' => '範例抽獎',
+                    'winnersCount' => count(self::DEMO_NAMES),
+                    'drawnCount' => count($data['winners']),
+                ]
+            ],
             'csrfToken' => csrf_token(),
             'drawUrl' => '/demo/lottery/draw',
             'readyUrl' => '/demo/lottery/ready',
@@ -123,7 +150,7 @@ class DemoLotteryController extends Controller
 
         $drawCount = min(5, count($eligible));
         $keys = array_rand($eligible, $drawCount);
-        if (! is_array($keys)) {
+        if (!is_array($keys)) {
             $keys = [$keys];
         }
 
@@ -162,7 +189,7 @@ class DemoLotteryController extends Controller
     public function setStyle(Request $request): JsonResponse
     {
         $request->validate([
-            'style' => 'required|in:'.implode(',', self::VALID_STYLES),
+            'style' => 'required|in:' . implode(',', self::VALID_STYLES),
         ]);
 
         $data = $this->ensureSession();
