@@ -123,8 +123,8 @@
             friction: 0.08,   // 每秒角速度衰減率（降低才夠久）
             minOmega: 1.5,    // 低於此才算倒下
             entrySpeed: 300,    // 入場速度
-            elasticity: 0.75,   // 碰撞彈性
-            walElasticity: 0.65,   // 牆壁反彈彈性
+            elasticity: 0.9,    // 碰撞彈性
+            walElasticity: 0.85,   // 牆壁反彈彈性
             omegaTransfer: 0.15,   // 碰撞轉移角速度比例
             winnerCount: 3,      // 本場中獎人數
             graceTime: 4.0,    // 入場後多少秒才能被淘汰
@@ -322,16 +322,23 @@
                         b.x += nx * overlap * (a.mass / totalMass) * 2;
                         b.y += ny * overlap * (a.mass / totalMass) * 2;
 
-                        // 速度分量交換
+                        // 速度分量交換（加入額外推力讓碰撞更有力）
                         const dvx = b.vx - a.vx;
                         const dvy = b.vy - a.vy;
                         const dot = dvx * nx + dvy * ny;
                         if (dot < 0) {
                             const impulse = (-(1 + BT.elasticity) * dot) / totalMass;
-                            a.vx -= impulse * b.mass * nx;
-                            a.vy -= impulse * b.mass * ny;
-                            b.vx += impulse * a.mass * nx;
-                            b.vy += impulse * a.mass * ny;
+                            const boost = 1.15; // 更適中的額外推力
+                            a.vx -= impulse * b.mass * nx * boost;
+                            a.vy -= impulse * b.mass * ny * boost;
+                            b.vx += impulse * a.mass * nx * boost;
+                            b.vy += impulse * a.mass * ny * boost;
+                            // 限制最大速度（防止碰之後飛出場外）
+                            const maxSpd = 600;
+                            const sA = Math.hypot(a.vx, a.vy);
+                            if (sA > maxSpd) { a.vx = a.vx / sA * maxSpd; a.vy = a.vy / sA * maxSpd; }
+                            const sB = Math.hypot(b.vx, b.vy);
+                            if (sB > maxSpd) { b.vx = b.vx / sB * maxSpd; b.vy = b.vy / sB * maxSpd; }
                         }
 
                         // 角速度轉移（強者吸收弱者的角速度）
@@ -533,96 +540,105 @@
         function drawTop(t, alpha = 1) {
             const { x, y, r, color, angle, omega, winner, wobble } = t;
 
-            // 搖晃效果：omega 低時 x 軸壓縮
-            const scaleX = lerp(0.7, 1, 1 - wobble);
-            const scaleY = 1;
+            // 搖晃效果：omega 低時傾斜
+            const tiltAngle = wobble > 0.05 ? Math.sin(angle * 2.5) * wobble * 0.4 : 0;
 
             ctx.save();
             ctx.globalAlpha = alpha;
             ctx.translate(x, y);
-
-            // 搖晃旋轉
-            if (wobble > 0.05) {
-                ctx.rotate(Math.sin(angle * 3) * wobble * 0.3);
-            }
-
-            ctx.scale(scaleX, scaleY);
+            ctx.rotate(tiltAngle);
 
             // 倖存者光環
             if (winner) {
-                const glowR = r + 10 + Math.sin(Date.now() * 0.008) * 5;
+                const glowR = r + 12 + Math.sin(Date.now() * 0.008) * 5;
                 ctx.shadowColor = '#fbbf24';
-                ctx.shadowBlur = 30;
+                ctx.shadowBlur = 35;
                 ctx.beginPath();
                 ctx.arc(0, 0, glowR, 0, TAU);
-                ctx.strokeStyle = `rgba(251,191,36,${0.4 + Math.sin(Date.now() * 0.01) * 0.2})`;
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = `rgba(251,191,36,${0.5 + Math.sin(Date.now() * 0.01) * 0.25})`;
+                ctx.lineWidth = 4;
                 ctx.stroke();
                 ctx.shadowBlur = 0;
             }
 
-            // 外旋轉圓環（依 omega 速度旋轉）
-            const ringAngle = angle * (omega / 20);
+            // ── 旋轉主體：彩色扇形葉片 ──
             ctx.save();
-            ctx.rotate(ringAngle);
-            for (let i = 0; i < 8; i++) {
-                const a = (TAU / 8) * i;
-                const segStart = a;
-                const segEnd = a + (TAU / 8) * 0.7;
-                ctx.beginPath();
-                ctx.arc(0, 0, r, segStart, segEnd);
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 4;
-                ctx.globalAlpha = alpha * (0.6 + (i % 2) * 0.3);
-                ctx.stroke();
-            }
-            ctx.restore();
-            ctx.globalAlpha = alpha;
+            ctx.rotate(angle);  // 整個主體隨 angle 旋轉
 
-            // 中間主體
-            const bodyGrad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, 0, 0, 0, r * 0.85);
-            bodyGrad.addColorStop(0, lightenColor(color, 40));
-            bodyGrad.addColorStop(1, darkenColor(color, 30));
+            // 圓形裁切範圍
             ctx.beginPath();
-            ctx.arc(0, 0, r * 0.82, 0, TAU);
-            ctx.fillStyle = bodyGrad;
-            ctx.fill();
+            ctx.arc(0, 0, r, 0, TAU);
+            ctx.clip();
 
-            // 內部旋轉花紋
-            ctx.save();
-            ctx.rotate(angle);
-            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-            ctx.lineWidth = 1.5;
-            for (let i = 0; i < 4; i++) {
-                const a = (TAU / 4) * i;
+            const blades = 6;  // 葉片數
+            const bladeAngle = TAU / blades;
+            for (let i = 0; i < blades; i++) {
+                const a0 = bladeAngle * i;
+                const a1 = a0 + bladeAngle * 0.5;  // 每個葉片佔半格（另半格是深色）
+                // 亮色葉片
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.lineTo(Math.cos(a) * r * 0.75, Math.sin(a) * r * 0.75);
-                ctx.stroke();
+                ctx.arc(0, 0, r, a0, a1);
+                ctx.closePath();
+                ctx.fillStyle = i % 2 === 0 ? color : lightenColor(color, 55);
+                ctx.globalAlpha = alpha;
+                ctx.fill();
+                // 深色間隔
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, r, a1, a0 + bladeAngle);
+                ctx.closePath();
+                ctx.fillStyle = darkenColor(color, 40);
+                ctx.fill();
             }
-            ctx.restore();
 
-            // 高光
-            const hlGrad = ctx.createRadialGradient(-r * 0.25, -r * 0.3, 0, -r * 0.1, -r * 0.15, r * 0.5);
-            hlGrad.addColorStop(0, 'rgba(255,255,255,0.35)');
-            hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            // 中心圓壓住葉片中心（搭配名字背景）
             ctx.beginPath();
-            ctx.arc(0, 0, r * 0.82, 0, TAU);
-            ctx.fillStyle = hlGrad;
+            ctx.arc(0, 0, r * 0.38, 0, TAU);
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
             ctx.fill();
 
-            // 中心黑點 + 名字
+            // 邊緣金屬環（不旋轉方向，只是裝飾圈）
             ctx.beginPath();
-            ctx.arc(0, 0, r * 0.32, 0, TAU);
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.fill();
+            ctx.arc(0, 0, r - 2, 0, TAU);
+            ctx.strokeStyle = `rgba(255,255,255,0.18)`;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
 
+            // 速度感模糊（高速時內圈加白色輻射線）
+            const speedRatio = clamp(omega / 35, 0, 1);
+            if (speedRatio > 0.3) {
+                ctx.globalAlpha = alpha * speedRatio * 0.18;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 12; i++) {
+                    const a = (TAU / 12) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(a) * r * 0.4, Math.sin(a) * r * 0.4);
+                    ctx.lineTo(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = alpha;
+            }
+
+            ctx.restore(); // 離開 rotate(angle)
+
+            // 名字（固定方向，不隨主體旋轉）
             ctx.fillStyle = '#fff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            const fontSize = Math.max(7, Math.min(12, r * 0.38));
+            const fontSize = Math.max(8, Math.min(13, r * 0.42));
             ctx.font = `700 ${fontSize}px Inter,system-ui,sans-serif`;
             ctx.fillText(t.label, 0, 0);
+
+            // 頂部高光（固定在左上角，不旋轉）
+            const hlGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, 0, 0, r * 0.7);
+            hlGrad.addColorStop(0, 'rgba(255,255,255,0.28)');
+            hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, TAU);
+            ctx.fillStyle = hlGrad;
+            ctx.fill();
 
             ctx.restore();
         }
