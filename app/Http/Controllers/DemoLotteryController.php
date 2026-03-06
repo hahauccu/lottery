@@ -49,6 +49,7 @@ class DemoLotteryController extends Controller
         'treasure_chest',
         'big_treasure_chest',
         'marble_race',
+        'battle_top',
     ];
 
     private function ensureSession(): array

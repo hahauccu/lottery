@@ -62,6 +62,7 @@
                 { key: 'treasure_chest', label: '寶箱' },
                 { key: 'big_treasure_chest', label: '大寶箱' },
                 { key: 'marble_race', label: '圓球賽跑' },
+                { key: 'battle_top', label: '戰鬥陀螺' },
             ],
 
             async switchStyle(style) {

@@ -1199,12 +1199,14 @@ const initLottery = () => {
     const isTreasureChestStyle = (style) => style === 'treasure_chest';
     const isBigTreasureChestStyle = (style) => style === 'big_treasure_chest';
     const isMarbleRaceStyle = (style) => style === 'marble_race';
+    const isBattleTopStyle = (style) => style === 'battle_top';
     const isCanvasStyle = (style) => isLottoAirStyle(style)
         || isRedPacketStyle(style)
         || isScratchCardStyle(style)
         || isTreasureChestStyle(style)
         || isBigTreasureChestStyle(style)
-        || isMarbleRaceStyle(style);
+        || isMarbleRaceStyle(style)
+        || isBattleTopStyle(style);
     const isLottoStyle = (style) => isLottoAirStyle(style);
     const mapRange = (value, min, max) => min + (max - min) * ((value - 1) / 9);
     const TAU = Math.PI * 2;
@@ -5793,6 +5795,763 @@ const initLottery = () => {
         };
     })();
 
+    // ─── BattleTop — 戰鬥陀螺抽獎動畫模組 ───
+    const battleTop = (() => {
+        // ─── 設定 ───
+        const BT = {
+            friction: 0.08,   // 每秒角速度衰減率
+            minOmega: 1.5,    // 低於此才算倒下
+            entrySpeed: 300,    // 入場速度
+            elasticity: 0.9,    // 碰撞彈性
+            walElasticity: 0.85,   // 牆壁反彈彈性
+            omegaTransfer: 0.15,   // 碰撞轉移角速度比例
+            graceTime: 4.0,    // 入場後多少秒才能被淘汰
+        };
+
+        const TOP_COLORS = [
+            '#f43f5e', '#f97316', '#eab308', '#22c55e',
+            '#06b6d4', '#6366f1', '#a855f7', '#ec4899',
+            '#10b981', '#3b82f6', '#f59e0b', '#dc2626',
+        ];
+
+        // ─── 內部狀態 ───
+        const btState = {
+            running: false,
+            phase: 'idle', // idle | countdown | entry | battle | reveal | finished
+            tops: [],
+            dying: [],
+            particles: [],
+            countdownTimer: 0,
+            entryTimer: 0,
+            battleTimer: 0,
+            revealTimer: 0,
+            arenaR: 0,
+            cx: 0,
+            cy: 0,
+            ctx: null,
+            dpr: 1,
+            rafId: null,
+            last: 0,
+            holdSeconds: 5,
+            winnerQueue: [],
+            totalWinners: 0,
+            waiters: [],
+            W: 0,
+            H: 0,
+        };
+
+        // ─── Canvas ───
+        const resizeCanvas = () => {
+            if (!lottoCanvasEl) return false;
+            const rect = (lottoWrapEl ?? lottoCanvasEl).getBoundingClientRect();
+            if (!rect.width || !rect.height) return false;
+
+            btState.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+            btState.W = rect.width;
+            btState.H = rect.height;
+            lottoCanvasEl.width = Math.floor(btState.W * btState.dpr);
+            lottoCanvasEl.height = Math.floor(btState.H * btState.dpr);
+            btState.ctx = lottoCanvasEl.getContext('2d');
+            if (btState.ctx) btState.ctx.setTransform(btState.dpr, 0, 0, btState.dpr, 0, 0);
+
+            // 適應可用空間，留出 padding
+            const padding = Math.min(btState.W, btState.H) * 0.08;
+            btState.arenaR = Math.min(btState.W, btState.H) / 2 - padding;
+            // 讓競技場稍微偏下一點，留空間給煙火和頂部
+            btState.cx = btState.W / 2;
+            btState.cy = btState.H / 2 + Math.min(btState.H * 0.05, 40);
+
+            return true;
+        };
+
+        // ─── 色彩工具 ───
+        function parseColor(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return { r, g, b };
+        }
+        function clampRGB(v) { return Math.max(0, Math.min(255, v)); }
+        function lightenColor(hex, amt) {
+            const { r, g, b } = parseColor(hex);
+            return `rgb(${clampRGB(r + amt)},${clampRGB(g + amt)},${clampRGB(b + amt)})`;
+        }
+        function darkenColor(hex, amt) {
+            return lightenColor(hex, -amt);
+        }
+
+        // ─── 陀螺建立 ───
+        function calcTopRadius(n) {
+            return clamp(320 / Math.sqrt(Math.max(1, n)), 18, 45);
+        }
+
+        const shortLabel = (name) => {
+            if (!name) return '??';
+            const chars = Array.from(name);
+            if (chars.length <= 4) return name;
+            return `${chars.slice(0, 4).join('')}…`;
+        };
+
+        function createTop(name, r) {
+            return {
+                name,
+                label: shortLabel(name),
+                color: TOP_COLORS[Math.floor(Math.random() * TOP_COLORS.length)],
+                x: btState.cx, y: btState.cy,
+                vx: 0, vy: 0,
+                r: r || 28,
+                omega: rand(22, 34),
+                angle: rand(0, TAU),
+                mass: 1,
+                alive: true,
+                winner: false,
+                alpha: 1,
+                wobble: 0,
+                entryDelay: 0,
+                entered: false,
+                dyingTimer: 0,
+                dyingDuration: 0.5,
+                winnerAssigned: false, // 是否已經被分配了 winnerQueue 裡的名字
+            };
+        }
+
+        const buildIdleTops = () => {
+            const n = 3;
+            btState.tops = [];
+            for (let i = 0; i < n; i++) {
+                const a = (TAU / n) * i;
+                const t = createTop(`Top${i}`);
+                t.label = '';
+                t.r = 36;
+                t.x = btState.cx + Math.cos(a) * 80;
+                t.y = btState.cy + Math.sin(a) * 80;
+                t.vx = 0; t.vy = 0; t.omega = 20;
+                t.entered = true; t.alive = true;
+                btState.tops.push(t);
+            }
+        };
+
+        const createTops = () => {
+            btState.tops = [];
+            btState.dying = [];
+            const names = buildNamePool();
+            const n = Math.max(1, names.length);
+            const r = calcTopRadius(n);
+
+            names.forEach((name, i) => {
+                const t = createTop(name, r);
+                t.mass = r * r / (28 * 28);
+                // 分散在場外圓周等待
+                const a = (TAU / n) * i + rand(-0.1, 0.1);
+                const spawnR = btState.arenaR + r + 20;
+                t.x = btState.cx + Math.cos(a) * spawnR;
+                t.y = btState.cy + Math.sin(a) * spawnR;
+                t.entryDelay = rand(0, 0.8);
+                t.entered = false;
+                btState.tops.push(t);
+            });
+        };
+
+        // ─── 粒子 ───
+        function spawnParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                const a = rand(0, TAU);
+                const spd = rand(60, 220);
+                btState.particles.push({
+                    x, y,
+                    vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+                    r: rand(2, 5),
+                    life: 1, color,
+                });
+            }
+        }
+
+        function updateParticles(dt) {
+            for (let i = btState.particles.length - 1; i >= 0; i--) {
+                const p = btState.particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vx *= (1 - 3 * dt);
+                p.vy *= (1 - 3 * dt);
+                p.life -= dt * 1.8;
+                if (p.life <= 0) btState.particles.splice(i, 1);
+            }
+        }
+
+        // ─── 物理 ───
+        function defeat(top, reason) {
+            top.alive = false;
+            spawnParticles(top.x, top.y, 25, top.color);
+            btState.dying.push({ ...top, dyingTimer: 0, dyingDuration: 0.5 });
+        }
+
+        function getAliveTops() {
+            return btState.tops.filter(t => t.alive && t.entered);
+        }
+
+        function updatePhysics(dt) {
+            const { tops, cx, cy, arenaR } = btState;
+            // 根據 holdSeconds 調整保護期 (預設 holdSeconds=5 時, graceTime=4)
+            const actualGraceTime = Math.max(2, btState.holdSeconds * 0.8);
+            const inGrace = btState.battleTimer < actualGraceTime;
+            const targetSurvivors = Math.max(1, btState.winnerQueue.length);
+            const isOvertime = btState.battleTimer > btState.holdSeconds;
+
+            tops.forEach(t => {
+                if (!t.alive || !t.entered) return;
+
+                t.x += t.vx * dt;
+                t.y += t.vy * dt;
+                t.angle += t.omega * dt;
+
+                if (isOvertime && btState.phase === 'battle') {
+                    // 超時：強制大幅增加阻力，快速淘汰
+                    t.omega *= (1 - 0.8 * dt);
+                    t.vx *= (1 - 1.2 * dt);
+                    t.vy *= (1 - 1.2 * dt);
+                } else {
+                    // 依靠 holdSeconds 縮放衰減率，讓比賽能撐到指定時間
+                    const frictionScale = 5 / Math.max(1, btState.holdSeconds);
+                    t.omega *= (1 - BT.friction * frictionScale * dt);
+                    t.vx *= (1 - 0.05 * dt);
+                    t.vy *= (1 - 0.05 * dt);
+                }
+
+                const omegaRatio = clamp(t.omega / 18, 0, 1);
+                t.wobble = lerp(0.4, 0, omegaRatio);
+
+                // 失去動力倒下
+                if (!inGrace && t.omega < BT.minOmega && btState.phase === 'battle') {
+                    let aliveCount = 0;
+                    for (let n of tops) { if (n.alive && n.entered) aliveCount++; }
+                    if (aliveCount > targetSurvivors) {
+                        defeat(t, 'spin_out');
+                        return; // 淘汰後不再計算後續碰撞
+                    } else {
+                        // 已經是倖存者，不准倒下，維持最低轉速等待揭曉
+                        t.omega = BT.minOmega + 0.1;
+                    }
+                }
+
+                // 圓形邊界處理
+                const dx = t.x - cx;
+                const dy = t.y - cy;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const boundary = arenaR - t.r;
+
+                if (dist > boundary && dist > 0.001) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    t.x = cx + nx * boundary;
+                    t.y = cy + ny * boundary;
+                    const dot = t.vx * nx + t.vy * ny;
+                    t.vx -= (1 + BT.walElasticity) * dot * nx;
+                    t.vy -= (1 + BT.walElasticity) * dot * ny;
+                    t.omega *= 0.92;
+                    spawnParticles(t.x + nx * (-t.r), t.y + ny * (-t.r), 4, t.color);
+                }
+            });
+
+            // 碰撞
+            for (let i = 0; i < tops.length; i++) {
+                for (let j = i + 1; j < tops.length; j++) {
+                    const a = tops[i], b = tops[j];
+                    if (!a.alive || !b.alive || !a.entered || !b.entered) continue;
+
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+                    const distSq = dx * dx + dy * dy;
+                    const minDist = a.r + b.r;
+
+                    if (distSq < minDist * minDist && distSq > 0.001) {
+                        const dist = Math.sqrt(distSq);
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        const overlap = (minDist - dist) / 2;
+                        const totalMass = a.mass + b.mass;
+                        a.x -= nx * overlap * (b.mass / totalMass) * 2;
+                        a.y -= ny * overlap * (b.mass / totalMass) * 2;
+                        b.x += nx * overlap * (a.mass / totalMass) * 2;
+                        b.y += ny * overlap * (a.mass / totalMass) * 2;
+
+                        const dvx = b.vx - a.vx;
+                        const dvy = b.vy - a.vy;
+                        const dot = dvx * nx + dvy * ny;
+                        if (dot < 0) {
+                            const impulse = (-(1 + BT.elasticity) * dot) / totalMass;
+                            const boost = 1.15;
+                            a.vx -= impulse * b.mass * nx * boost;
+                            a.vy -= impulse * b.mass * ny * boost;
+                            b.vx += impulse * a.mass * nx * boost;
+                            b.vy += impulse * a.mass * ny * boost;
+
+                            const maxSpd = 600;
+                            const sA = Math.hypot(a.vx, a.vy);
+                            if (sA > maxSpd) { a.vx = a.vx / sA * maxSpd; a.vy = a.vy / sA * maxSpd; }
+                            const sB = Math.hypot(b.vx, b.vy);
+                            if (sB > maxSpd) { b.vx = b.vx / sB * maxSpd; b.vy = b.vy / sB * maxSpd; }
+                        }
+
+                        const omegaDiff = a.omega - b.omega;
+                        a.omega -= omegaDiff * BT.omegaTransfer;
+                        b.omega += omegaDiff * BT.omegaTransfer;
+                        a.omega = Math.max(0, a.omega);
+                        b.omega = Math.max(0, b.omega);
+
+                        spawnParticles((a.x + b.x) / 2, (a.y + b.y) / 2, 6, '#ffe066');
+                    }
+                }
+            }
+
+            // dying
+            for (let i = btState.dying.length - 1; i >= 0; i--) {
+                const t = btState.dying[i];
+                t.dyingTimer += dt;
+                t.alpha = clamp(1 - t.dyingTimer / t.dyingDuration, 0, 1);
+                t.r *= (1 + dt * 1.5);
+                if (t.dyingTimer >= t.dyingDuration) btState.dying.splice(i, 1);
+            }
+
+            updateParticles(dt);
+        }
+
+        // ─── Phase 流程 ───
+        function startEntry() {
+            btState.phase = 'entry';
+            btState.entryTimer = 0;
+            const n = btState.tops.length;
+            btState.tops.forEach((t, i) => {
+                const a = (TAU / n) * i + rand(-0.2, 0.2);
+                const spawnR = btState.arenaR + t.r + 10;
+                t.x = btState.cx + Math.cos(a) * spawnR;
+                t.y = btState.cy + Math.sin(a) * spawnR;
+                const aimAngle = a + Math.PI + rand(-0.5, 0.5);
+                t.vx = Math.cos(aimAngle) * BT.entrySpeed;
+                t.vy = Math.sin(aimAngle) * BT.entrySpeed;
+                t.omega = rand(22, 40);
+                t.alive = true;
+                t.winner = false;
+            });
+        }
+
+        function assignWinnersFromQueue(winners) {
+            // 從 queue 取出真正中獎者的名字，蓋到倖存陀螺上
+            winners.forEach(t => {
+                if (t.winnerAssigned) return;
+                t.winnerAssigned = true;
+                t.winner = true;
+                if (btState.winnerQueue.length > 0) {
+                    const realName = btState.winnerQueue.shift();
+                    t.name = realName;
+                    t.label = shortLabel(realName);
+                }
+                // 解鎖一個正在等待的 waitForNextPick()
+                if (btState.waiters.length > 0) {
+                    const resolve = btState.waiters.shift();
+                    resolve();
+                }
+            });
+        }
+
+        function startReveal(winners) {
+            btState.phase = 'reveal';
+            btState.revealTimer = 0;
+            assignWinnersFromQueue(winners);
+
+            winners.forEach((t, i) => {
+                spawnParticles(t.x, t.y, 50, '#fbbf24');
+                const targetAngle = (TAU / winners.length) * i;
+                const targetR = winners.length === 1 ? 0 : btState.arenaR * 0.3;
+                t.vx = (btState.cx + Math.cos(targetAngle) * targetR - t.x) * 0.8;
+                t.vy = (btState.cy + Math.sin(targetAngle) * targetR - t.y) * 0.8;
+            });
+
+            // 確保所有尚未消耗的 queue 都被排出 (異常安全處理)
+            while (btState.winnerQueue.length > 0 && btState.waiters.length > 0) {
+                btState.winnerQueue.shift();
+                btState.waiters.shift()();
+            }
+        }
+
+        // ─── 繪製 ───
+        function drawHex(ctx, cx, cy, r) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const a = (Math.PI / 3) * i;
+                i === 0 ? ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r)
+                    : ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function drawArena() {
+            const { ctx, cx, cy, arenaR, W, H } = btState;
+
+            // 地板背景 (去除全畫面黑影以免遮擋其他 UI，改在圓形範圍內漸層)
+            const floorGrad = ctx.createRadialGradient(cx, cy - 40, 0, cx, cy, arenaR);
+            floorGrad.addColorStop(0, 'rgba(30, 37, 51, 0.8)');
+            floorGrad.addColorStop(1, 'rgba(17, 22, 31, 1)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR, 0, TAU);
+            ctx.fillStyle = floorGrad;
+            ctx.fill();
+
+            // 六角格
+            ctx.save();
+            ctx.clip();
+            ctx.globalAlpha = 0.04;
+            ctx.strokeStyle = '#6366f1';
+            ctx.lineWidth = 0.8;
+            const step = 36;
+            for (let yy = cy - arenaR; yy < cy + arenaR; yy += step * 0.866) {
+                for (let xx = cx - arenaR; xx < cx + arenaR; xx += step * 1.5) {
+                    drawHex(ctx, xx, yy, step / 2);
+                    drawHex(ctx, xx + step * 0.75, yy + step * 0.433, step / 2);
+                }
+            }
+            ctx.restore();
+
+            // 競技場邊框
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR, 0, TAU);
+            ctx.strokeStyle = 'rgba(99,102,241,0.5)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 內側發光圈
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR - 8, 0, TAU);
+            ctx.strokeStyle = 'rgba(99,102,241,0.15)';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+        }
+
+        function drawTop(t, alpha = 1) {
+            const { ctx } = btState;
+            const { x, y, r, color, angle, omega, winner, wobble } = t;
+
+            const tiltAngle = wobble > 0.05 ? Math.sin(angle * 2.5) * wobble * 0.4 : 0;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(x, y);
+            ctx.rotate(tiltAngle);
+
+            if (winner) {
+                const glowR = r + 12 + Math.sin(Date.now() * 0.008) * 5;
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 35;
+                ctx.beginPath();
+                ctx.arc(0, 0, glowR, 0, TAU);
+                ctx.strokeStyle = `rgba(251,191,36,${0.5 + Math.sin(Date.now() * 0.01) * 0.25})`;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // 扇形葉片
+            ctx.save();
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, TAU);
+            ctx.clip();
+
+            const blades = 6;
+            const bladeAngle = TAU / blades;
+            for (let i = 0; i < blades; i++) {
+                const a0 = bladeAngle * i;
+                const a1 = a0 + bladeAngle * 0.5;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, r, a0, a1);
+                ctx.closePath();
+                ctx.fillStyle = i % 2 === 0 ? color : lightenColor(color, 55);
+                ctx.globalAlpha = alpha;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, r, a1, a0 + bladeAngle);
+                ctx.closePath();
+                ctx.fillStyle = darkenColor(color, 40);
+                ctx.fill();
+            }
+
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.38, 0, TAU);
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, r - 2, 0, TAU);
+            ctx.strokeStyle = `rgba(255,255,255,0.18)`;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            const speedRatio = clamp(omega / 35, 0, 1);
+            if (speedRatio > 0.3) {
+                ctx.globalAlpha = alpha * speedRatio * 0.18;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 12; i++) {
+                    const a = (TAU / 12) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(a) * r * 0.4, Math.sin(a) * r * 0.4);
+                    ctx.lineTo(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = alpha;
+            }
+            ctx.restore();
+
+            // 名字
+            if (t.label) {
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const fontSize = Math.max(8, Math.min(13, r * 0.42));
+                ctx.font = `700 ${fontSize}px Inter,system-ui,sans-serif`;
+                ctx.fillText(t.label, 0, 0);
+            }
+
+            const hlGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, 0, 0, r * 0.7);
+            hlGrad.addColorStop(0, 'rgba(255,255,255,0.28)');
+            hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, TAU);
+            ctx.fillStyle = hlGrad;
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawCountdown() {
+            if (btState.phase !== 'countdown') return;
+            const { ctx, cx, cy } = btState;
+            const t = btState.countdownTimer;
+            const step = Math.floor(t);
+            let text = '', color = '#fff';
+
+            if (step === 0) { text = '3'; color = '#ef4444'; }
+            else if (step === 1) { text = '2'; color = '#f97316'; }
+            else if (step === 2) { text = '1'; color = '#22c55e'; }
+            else if (step === 3) { text = 'GO!'; color = '#6366f1'; }
+
+            if (!text) return;
+            const frac = t - step;
+            const scl = frac < 0.3 ? lerp(2.2, 0.9, frac / 0.3)
+                : frac < 0.7 ? lerp(0.9, 1.05, (frac - 0.3) / 0.4)
+                    : lerp(1.05, 1, (frac - 0.7) / 0.3);
+            const alpha = frac < 0.2 ? frac / 0.2 : frac > 0.75 ? 1 - (frac - 0.75) / 0.25 : 1;
+
+            ctx.save();
+            ctx.globalAlpha = clamp(alpha, 0, 1);
+            ctx.translate(cx, cy);
+            ctx.scale(scl, scl);
+            ctx.font = '900 100px Inter,system-ui,sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 40;
+            ctx.fillText(text, 0, 0);
+            ctx.restore();
+        }
+
+        function drawParticlesRender() {
+            const { ctx } = btState;
+            btState.particles.forEach(p => {
+                ctx.globalAlpha = clamp(p.life, 0, 1);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, TAU);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawFrame() {
+            const { ctx, W, H } = btState;
+            if (!ctx) return;
+            ctx.clearRect(0, 0, W, H);
+
+            drawArena();
+
+            btState.dying.forEach(t => drawTop(t, t.alpha * 0.6));
+            btState.tops.forEach(t => {
+                if (t.alive || t.entered) drawTop(t, t.alive ? 1 : 0);
+            });
+
+            drawParticlesRender();
+            drawCountdown();
+        }
+
+        // ─── 迴圈與控制 ───
+        function loop(now) {
+            if (!btState.running) return;
+            const dt = Math.min((now - btState.last) / 1000, 0.05);
+            btState.last = now;
+
+            const { phase } = btState;
+
+            if (phase === 'countdown') {
+                btState.countdownTimer += dt;
+                btState.tops.forEach(t => { t.angle += t.omega * dt; });
+                if (btState.countdownTimer >= 3.5) startEntry();
+            }
+            else if (phase === 'entry') {
+                btState.entryTimer += dt;
+                btState.tops.forEach(t => {
+                    if (!t.entered && btState.entryTimer > t.entryDelay) {
+                        t.entered = true;
+                    }
+                });
+                updatePhysics(dt);
+                if (btState.tops.every(t => t.entered) && btState.entryTimer > 1.2) {
+                    btState.phase = 'battle';
+                    btState.battleTimer = 0;
+                }
+            }
+            else if (phase === 'battle') {
+                btState.battleTimer += dt;
+                updatePhysics(dt);
+                const alive = getAliveTops();
+                // 動態保證倖存者數量至少能符合 winnerQueue 剩下的數量，但不會小於1
+                const targetSurvivors = Math.max(1, btState.winnerQueue.length);
+                const actualGraceTime = Math.max(2, btState.holdSeconds * 0.8);
+
+                // 超過保護期 且 只剩目標數量(或更少) 時，進入揭曉
+                if (btState.battleTimer > actualGraceTime && alive.length <= targetSurvivors) {
+                    // 若剛好等於目標數量，且 queue 不為空，就直接指派名字並揭曉
+                    if (alive.length === targetSurvivors && btState.winnerQueue.length > 0) {
+                        startReveal(alive);
+                    } else if (alive.length > 0 && btState.winnerQueue.length > 0) {
+                        // 異常：倖存人數竟然少於要抽的獎 (通常不會發生因為 targetSurvivors 擋住)
+                        startReveal(alive);
+                    }
+                }
+            }
+            else if (phase === 'reveal') {
+                btState.revealTimer += dt;
+                btState.tops.filter(t => t.winner).forEach(t => {
+                    t.angle += 8 * dt;
+                    t.vx *= 0.88;
+                    t.vy *= 0.88;
+                });
+                updateParticles(dt);
+                for (let i = btState.dying.length - 1; i >= 0; i--) {
+                    const d = btState.dying[i];
+                    d.dyingTimer += dt;
+                    d.alpha = clamp(1 - d.dyingTimer / d.dyingDuration, 0, 1);
+                    if (d.dyingTimer >= d.dyingDuration) btState.dying.splice(i, 1);
+                }
+                if (btState.revealTimer >= 3.5) {
+                    btState.phase = 'finished';
+                }
+            }
+            else if (phase === 'idle') {
+                btState.tops.forEach(t => { t.angle += 10 * dt; });
+            }
+            else if (phase === 'finished') {
+                btState.tops.filter(t => t.winner).forEach(t => { t.angle += 6 * dt; });
+            }
+
+            drawFrame();
+            btState.rafId = requestAnimationFrame(loop);
+        }
+
+        const reset = () => {
+            btState.particles = [];
+            btState.tops = [];
+            btState.dying = [];
+            btState.winnerQueue = [];
+            btState.totalWinners = 0;
+            btState.waiters.forEach((r) => r()); // resolve all pending
+            btState.waiters = [];
+            btState.phase = 'idle';
+            btState.countdownTimer = 0;
+            btState.entryTimer = 0;
+            btState.battleTimer = 0;
+            btState.revealTimer = 0;
+
+            if (!resizeCanvas()) return;
+            buildIdleTops();
+        };
+
+        // ─── 公開 API ───
+        const ensureReady = (forceReset = false) => {
+            if (forceReset || btState.tops.length === 0) {
+                reset();
+                if (!btState.running) {
+                    btState.running = true;
+                    btState.last = performance.now();
+                    btState.rafId = requestAnimationFrame(loop);
+                }
+            }
+        };
+
+        const start = () => {
+            if (btState.running) return;
+            btState.running = true;
+            btState.last = performance.now();
+            btState.rafId = requestAnimationFrame(loop);
+        };
+
+        const startDraw = () => {
+            // 從 idle 進入準備戰鬥
+            if (btState.phase === 'battle' || btState.phase === 'countdown' || btState.phase === 'entry') return;
+            const savedQueue = [...btState.winnerQueue];
+            const savedTotal = btState.totalWinners;
+            reset();
+            btState.winnerQueue = savedQueue;
+            btState.totalWinners = savedTotal;
+            createTops();
+
+            if (!btState.running) {
+                btState.running = true;
+                btState.last = performance.now();
+                btState.rafId = requestAnimationFrame(loop);
+            }
+            btState.phase = 'countdown';
+            btState.countdownTimer = 0;
+        };
+
+        const stop = () => {
+            btState.running = false;
+            if (btState.rafId) { cancelAnimationFrame(btState.rafId); btState.rafId = null; }
+            btState.waiters.forEach((r) => r());
+            btState.waiters = [];
+            btState.phase = 'idle';
+            clearCanvas();
+        };
+
+        const setWinnerQueue = (names) => {
+            btState.winnerQueue = [...names];
+            btState.totalWinners = names.length;
+        };
+
+        const waitForNextPick = () => {
+            return new Promise((resolve) => {
+                btState.waiters.push(resolve);
+            });
+        };
+
+        const setHoldSeconds = (s) => { btState.holdSeconds = s; };
+
+        const resize = () => {
+            if (!btState.running) return;
+            resizeCanvas();
+        };
+
+        return {
+            ensureReady, start, startDraw, stop,
+            setWinnerQueue, waitForNextPick,
+            setHoldSeconds, resize,
+        };
+    })();
+
     const stopAllAnimations = () => {
         lottoAir.stop();
         redPacketRain.stop();
@@ -5800,6 +6559,7 @@ const initLottery = () => {
         treasureChest.stop();
         bigTreasureChest.stop();
         marbleRace.stop();
+        battleTop.stop();
     };
 
     const appendWinner = (winner) => {
@@ -6155,6 +6915,47 @@ const initLottery = () => {
             },
             stop: () => marbleRace.stop(),
         },
+        battle_top: {
+            prepareIdle: ({ forceReset = false } = {}) => {
+                battleTop.ensureReady(forceReset);
+            },
+            prepareToDraw: () => {
+                battleTop.ensureReady();
+                battleTop.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+            },
+            revealWinners: async (winners, runtime = {}) => {
+                const append = runtime.appendWinner ?? appendWinner;
+                const isRunStale = runtime.isRunStale ?? (() => false);
+                const clock = runtime.clock;
+                if (isRunStale()) return;
+
+                if (state.currentPrize?.drawMode === 'one_by_one') {
+                    battleTop.setWinnerQueue([winners[0]?.employee_name ?? randomLabel()]);
+                    battleTop.startDraw();
+                    await battleTop.waitForNextPick();
+                    if (isRunStale()) return;
+                    append(winners[0]);
+                    await delay(5000);
+                    if (isRunStale()) return;
+                    if (clock) await clock.waitUntilEnd();
+                } else {
+                    battleTop.setWinnerQueue(winners.map((w) => w.employee_name ?? randomLabel()));
+                    battleTop.startDraw();
+                    for (const winner of winners) {
+                        await battleTop.waitForNextPick();
+                        if (isRunStale()) return;
+                        append(winner);
+                    }
+                    await delay(5000);
+                    if (isRunStale()) return;
+                    if (clock) {
+                        const finalWait = Math.min(1500, clock.remainingMs());
+                        if (finalWait > 50) await delay(finalWait);
+                    }
+                }
+            },
+            stop: () => battleTop.stop(),
+        },
         fallback: {
             prepareIdle: () => { },
             prepareToDraw: () => { },
@@ -6170,6 +6971,7 @@ const initLottery = () => {
         if (isTreasureChestStyle(style)) return animationDrivers.treasure_chest;
         if (isBigTreasureChestStyle(style)) return animationDrivers.big_treasure_chest;
         if (isMarbleRaceStyle(style)) return animationDrivers.marble_race;
+        if (isBattleTopStyle(style)) return animationDrivers.battle_top;
         return animationDrivers.fallback;
     };
 
@@ -6380,6 +7182,9 @@ const initLottery = () => {
         }
         if (isMarbleRaceStyle(state.currentPrize?.animationStyle)) {
             marbleRace.resize();
+        }
+        if (isBattleTopStyle(state.currentPrize?.animationStyle)) {
+            battleTop.resize();
         }
     });
 

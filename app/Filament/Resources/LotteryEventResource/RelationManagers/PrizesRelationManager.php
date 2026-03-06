@@ -83,6 +83,7 @@ class PrizesRelationManager extends RelationManager
                     'treasure_chest' => '寶箱開啟',
                     'big_treasure_chest' => '大寶箱',
                     'marble_race' => '圓球賽跑',
+                    'battle_top' => '戰鬥陀螺',
                     default => $currentPrize->animation_style,
                 },
                 'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
@@ -170,6 +171,7 @@ class PrizesRelationManager extends RelationManager
                                 'treasure_chest' => '寶箱開啟',
                                 'big_treasure_chest' => '大寶箱',
                                 'marble_race' => '圓球賽跑',
+                                'battle_top' => '戰鬥陀螺',
                             ])
                             ->required()
                             ->default('lotto_air')
@@ -404,6 +406,7 @@ class PrizesRelationManager extends RelationManager
                         'treasure_chest' => '寶箱開啟',
                         'big_treasure_chest' => '大寶箱',
                         'marble_race' => '圓球賽跑',
+                        'battle_top' => '戰鬥陀螺',
                         default => $state,
                     }),
             ])
@@ -513,7 +516,7 @@ class PrizesRelationManager extends RelationManager
                     ->tooltip('需前台在線且未在抽獎中')
                     ->requiresConfirmation()
                     ->action(function (Prize $record, $livewire): void {
-                        $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'big_treasure_chest', 'marble_race'];
+                        $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'big_treasure_chest', 'marble_race', 'battle_top'];
 
                         if (!in_array($record->animation_style, $validStyles, true)) {
                             Notification::make()
