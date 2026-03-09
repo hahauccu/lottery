@@ -5808,6 +5808,8 @@ const initLottery = () => {
             graceTime: 4.0,    // 入場後多少秒才能被淘汰
         };
 
+        const WAVE_CAP = 12; // 場地同時最多顯示的陀螺數（超過此數啟用波浪模式）
+
         const TOP_COLORS = [
             '#f43f5e', '#f97316', '#eab308', '#22c55e',
             '#06b6d4', '#6366f1', '#a855f7', '#ec4899',
@@ -5836,8 +5838,19 @@ const initLottery = () => {
             winnerQueue: [],
             totalWinners: 0,
             waiters: [],
+            pendingResolves: 0,   // 已觸發但尚未被 waitForNextPick 消費的次數
             W: 0,
             H: 0,
+            wavePool: [],           // 等待入場的名稱佇列
+            waveMode: false,        // 是否啟用波浪模式（人數 > WAVE_CAP）
+            totalParticipants: 0,   // 實際參與人數（用於 UI 提示）
+            waveBatchWinners: 0,      // 場上當前受保護的中獎者數量
+            waveElimTimer: 0,         // 淘汰計時累積
+            waveElimInterval: 0,      // 淘汰間隔
+            waveStartedElim: false,   // 是否已進入淘汰期
+            entryQueue: [],           // 待入場的名稱佇列
+            entrySpawnTimer: 0,       // spawn 計時
+            entrySpawnInterval: 0.15, // spawn 間隔
         };
 
         // ─── Canvas ───
@@ -5880,9 +5893,23 @@ const initLottery = () => {
             return lightenColor(hex, -amt);
         }
 
+        // ─── 名稱池 ───
+        const buildNamePool = () => {
+            const eligible = state.eligibleNames?.length ? [...state.eligibleNames] : [];
+            const won = state.winners.map((w) => w.employee_name).filter(Boolean);
+            const queued = btState.winnerQueue?.length ? [...btState.winnerQueue] : [];
+            // 合併後去重：避免 WS 尚未到達時 eligible 與 queued 重複
+            const base = [...new Set([...eligible, ...won, ...queued])].filter(Boolean);
+            if (base.length === 0) {
+                return Array.from({ length: 10 }, (_, i) => `陀螺 ${i + 1}`);
+            }
+            return shuffle(base);
+        };
+
         // ─── 陀螺建立 ───
         function calcTopRadius(n) {
-            return clamp(320 / Math.sqrt(Math.max(1, n)), 18, 45);
+            const ar = btState.arenaR || 250; // fallback 防止初始化前為 0
+            return clamp(ar * 1.28 / Math.sqrt(Math.max(1, n)), ar * 0.07, ar * 0.18);
         }
 
         const shortLabel = (name) => {
@@ -5934,11 +5961,24 @@ const initLottery = () => {
         const createTops = () => {
             btState.tops = [];
             btState.dying = [];
-            const names = buildNamePool();
-            const n = Math.max(1, names.length);
-            const r = calcTopRadius(n);
+            btState.wavePool = [];
+            btState.waveMode = false;
 
-            names.forEach((name, i) => {
+            const names = buildNamePool();
+            btState.totalParticipants = names.length;
+
+            const displayNames = names.length > WAVE_CAP
+                ? names.slice(0, WAVE_CAP)
+                : names;
+
+            if (names.length > WAVE_CAP) {
+                btState.waveMode = true;
+                btState.wavePool = names.slice(WAVE_CAP);
+            }
+
+            const n = Math.max(1, displayNames.length);
+            const r = calcTopRadius(n);
+            displayNames.forEach((name, i) => {
                 const t = createTop(name, r);
                 t.mass = r * r / (28 * 28);
                 // 分散在場外圓周等待
@@ -5963,6 +6003,44 @@ const initLottery = () => {
                     r: rand(2, 5),
                     life: 1, color,
                 });
+            }
+        }
+
+        function spawnWaveTop() {
+            if (btState.wavePool.length === 0) return;
+            const name = btState.wavePool.shift();
+            const r = calcTopRadius(WAVE_CAP);
+            const t = createTop(name, r);
+            t.mass = r * r / (28 * 28);
+            const a = rand(0, TAU);
+            const spawnR = btState.arenaR + t.r + 10;
+            t.x = btState.cx + Math.cos(a) * spawnR;
+            t.y = btState.cy + Math.sin(a) * spawnR;
+            const aimAngle = Math.atan2(btState.cy - t.y, btState.cx - t.x) + rand(-0.4, 0.4);
+            t.vx = Math.cos(aimAngle) * BT.entrySpeed;
+            t.vy = Math.sin(aimAngle) * BT.entrySpeed;
+            t.omega = rand(28, 42);  // 高初始轉速，確保能撐一段時間
+            t.entered = true;        // 直接進入戰鬥，不走 entry phase
+            t.alive = true;
+            btState.tops.push(t);
+            spawnParticles(t.x, t.y, 12, t.color); // 入場特效
+        }
+
+        // 波浪加入時同步淘汰一個非中獎者
+        function defeatOneLoser() {
+            const victim = getAliveTops().find(t => !t.protectedWinner && !t.winner);
+            if (victim) defeat(victim, 'wave_swap');
+        }
+
+        const WAVE_WINNER_CAP = 5;
+
+        function tagWaveBatchWinners() {
+            if (!btState.waveMode || btState.winnerQueue.length === 0) return;
+            const alive = getAliveTops().filter(t => !t.protectedWinner);
+            const need = Math.min(WAVE_WINNER_CAP - btState.waveBatchWinners, btState.winnerQueue.length);
+            for (let i = 0; i < need && i < alive.length; i++) {
+                alive[i].protectedWinner = true;
+                btState.waveBatchWinners++;
             }
         }
 
@@ -6020,11 +6098,19 @@ const initLottery = () => {
                 const omegaRatio = clamp(t.omega / 18, 0, 1);
                 t.wobble = lerp(0.4, 0, omegaRatio);
 
+                // 波浪模式：受保護的中獎者不會失速
+                if (t.protectedWinner) {
+                    t.omega = Math.max(t.omega, BT.minOmega + 1);
+                }
+
                 // 失去動力倒下
                 if (!inGrace && t.omega < BT.minOmega && btState.phase === 'battle') {
                     let aliveCount = 0;
                     for (let n of tops) { if (n.alive && n.entered) aliveCount++; }
-                    if (aliveCount > targetSurvivors) {
+                    // 波浪模式下：wavePool 還有人時允許淘汰（確保 wavePool 能排乾）
+                    // 非波浪模式或 wavePool 已空：只在存活數超過目標才淘汰
+                    const canEliminate = btState.wavePool.length > 0 || aliveCount > targetSurvivors;
+                    if (canEliminate) {
                         defeat(t, 'spin_out');
                         return; // 淘汰後不再計算後續碰撞
                     } else {
@@ -6120,19 +6206,13 @@ const initLottery = () => {
         function startEntry() {
             btState.phase = 'entry';
             btState.entryTimer = 0;
-            const n = btState.tops.length;
-            btState.tops.forEach((t, i) => {
-                const a = (TAU / n) * i + rand(-0.2, 0.2);
-                const spawnR = btState.arenaR + t.r + 10;
-                t.x = btState.cx + Math.cos(a) * spawnR;
-                t.y = btState.cy + Math.sin(a) * spawnR;
-                const aimAngle = a + Math.PI + rand(-0.5, 0.5);
-                t.vx = Math.cos(aimAngle) * BT.entrySpeed;
-                t.vy = Math.sin(aimAngle) * BT.entrySpeed;
-                t.omega = rand(22, 40);
-                t.alive = true;
-                t.winner = false;
-            });
+            // 清空 tops，改用 staggered spawn（逐一射入）
+            const names = btState.tops.map(t => t.name);
+            btState.tops = [];
+            btState.entryQueue = [...names];
+            btState.entrySpawnTimer = 0;
+            // 根據數量算 spawn 間隔，1.2 秒內全部入場
+            btState.entrySpawnInterval = Math.min(0.15, 1.2 / Math.max(1, names.length));
         }
 
         function assignWinnersFromQueue(winners) {
@@ -6146,10 +6226,11 @@ const initLottery = () => {
                     t.name = realName;
                     t.label = shortLabel(realName);
                 }
-                // 解鎖一個正在等待的 waitForNextPick()
+                // 若 waiter 已在等待則直接 resolve，否則計入 pending
                 if (btState.waiters.length > 0) {
-                    const resolve = btState.waiters.shift();
-                    resolve();
+                    btState.waiters.shift()();
+                } else {
+                    btState.pendingResolves++;
                 }
             });
         }
@@ -6159,6 +6240,13 @@ const initLottery = () => {
             btState.revealTimer = 0;
             assignWinnersFromQueue(winners);
 
+            // 淘汰所有非中獎的存活陀螺
+            btState.tops.forEach(t => {
+                if (t.alive && t.entered && !t.winner) {
+                    defeat(t, 'reveal_lose');
+                }
+            });
+
             winners.forEach((t, i) => {
                 spawnParticles(t.x, t.y, 50, '#fbbf24');
                 const targetAngle = (TAU / winners.length) * i;
@@ -6167,10 +6255,15 @@ const initLottery = () => {
                 t.vy = (btState.cy + Math.sin(targetAngle) * targetR - t.y) * 0.8;
             });
 
-            // 確保所有尚未消耗的 queue 都被排出 (異常安全處理)
-            while (btState.winnerQueue.length > 0 && btState.waiters.length > 0) {
+            // 確保所有尚未消耗的 queue 都被排出
+            // (波浪模式下存活陀螺數可能少於 winnerQueue，剩餘需全部 resolve)
+            while (btState.winnerQueue.length > 0) {
                 btState.winnerQueue.shift();
-                btState.waiters.shift()();
+                if (btState.waiters.length > 0) {
+                    btState.waiters.shift()();
+                } else {
+                    btState.pendingResolves++;
+                }
             }
         }
 
@@ -6372,6 +6465,8 @@ const initLottery = () => {
             ctx.globalAlpha = 1;
         }
 
+
+
         function drawFrame() {
             const { ctx, W, H } = btState;
             if (!ctx) return;
@@ -6403,13 +6498,34 @@ const initLottery = () => {
             }
             else if (phase === 'entry') {
                 btState.entryTimer += dt;
-                btState.tops.forEach(t => {
-                    if (!t.entered && btState.entryTimer > t.entryDelay) {
-                        t.entered = true;
-                    }
-                });
+                btState.entrySpawnTimer += dt;
+
+                // 定時從 entryQueue spawn 一個陀螺（逐一射入）
+                while (btState.entrySpawnTimer >= btState.entrySpawnInterval && btState.entryQueue.length > 0) {
+                    btState.entrySpawnTimer -= btState.entrySpawnInterval;
+                    const name = btState.entryQueue.shift();
+                    const totalCount = Math.max(btState.tops.length + btState.entryQueue.length + 1, 1);
+                    const r = calcTopRadius(totalCount);
+                    const t = createTop(name, r);
+                    t.mass = r * r / (28 * 28);
+                    const a = rand(0, TAU);
+                    const spawnR = btState.arenaR + t.r + 10;
+                    t.x = btState.cx + Math.cos(a) * spawnR;
+                    t.y = btState.cy + Math.sin(a) * spawnR;
+                    const aimAngle = Math.atan2(btState.cy - t.y, btState.cx - t.x) + rand(-0.4, 0.4);
+                    t.vx = Math.cos(aimAngle) * BT.entrySpeed;
+                    t.vy = Math.sin(aimAngle) * BT.entrySpeed;
+                    t.omega = rand(28, 42);
+                    t.entered = true;
+                    t.alive = true;
+                    btState.tops.push(t);
+                    spawnParticles(t.x, t.y, 12, t.color);
+                }
+
                 updatePhysics(dt);
-                if (btState.tops.every(t => t.entered) && btState.entryTimer > 1.2) {
+
+                // 全部 spawn 完且至少 1.2 秒後進入 battle
+                if (btState.entryQueue.length === 0 && btState.entryTimer > 1.2) {
                     btState.phase = 'battle';
                     btState.battleTimer = 0;
                 }
@@ -6422,13 +6538,72 @@ const initLottery = () => {
                 const targetSurvivors = Math.max(1, btState.winnerQueue.length);
                 const actualGraceTime = Math.max(2, btState.holdSeconds * 0.8);
 
-                // 超過保護期 且 只剩目標數量(或更少) 時，進入揭曉
-                if (btState.battleTimer > actualGraceTime && alive.length <= targetSurvivors) {
-                    // 若剛好等於目標數量，且 queue 不為空，就直接指派名字並揭曉
-                    if (alive.length === targetSurvivors && btState.winnerQueue.length > 0) {
-                        startReveal(alive);
-                    } else if (alive.length > 0 && btState.winnerQueue.length > 0) {
-                        // 異常：倖存人數竟然少於要抽的獎 (通常不會發生因為 targetSurvivors 擋住)
+                // 波浪模式：分批淘汰非中獎者、補入新陀螺
+                const isOvertimePhase = btState.battleTimer > btState.holdSeconds;
+                const elimPhaseStart = btState.holdSeconds / 6;
+
+                if (btState.waveMode) {
+                    // 首次標記第一批中獎者
+                    if (btState.waveBatchWinners === 0) {
+                        tagWaveBatchWinners();
+                    }
+
+                    if (btState.battleTimer > elimPhaseStart && !isOvertimePhase) {
+                        // 進入定時淘汰期
+                        if (!btState.waveStartedElim) {
+                            btState.waveStartedElim = true;
+                            const remaining = alive.filter(t => !t.protectedWinner).length + btState.wavePool.length;
+                            const remainTime = btState.holdSeconds - btState.battleTimer;
+                            btState.waveElimInterval = remaining > 0 ? remainTime / remaining : 1;
+                            btState.waveElimTimer = btState.waveElimInterval; // 立即觸發第一次
+                        }
+
+                        btState.waveElimTimer += dt;
+                        if (btState.waveElimTimer >= btState.waveElimInterval) {
+                            btState.waveElimTimer = 0;
+                            // 直接淘汰一個非中獎者
+                            defeatOneLoser();
+                            // 補入新陀螺
+                            if (btState.wavePool.length > 0) {
+                                spawnWaveTop();
+                                tagWaveBatchWinners();
+                            }
+                        }
+                    } else if (!btState.waveStartedElim && btState.wavePool.length > 0) {
+                        // 淘汰期前：補充到 WAVE_CAP，同時 1:1 置換
+                        if (alive.length < WAVE_CAP) {
+                            const slots = WAVE_CAP - alive.length;
+                            for (let s = 0; s < slots && btState.wavePool.length > 0; s++) {
+                                spawnWaveTop();
+                            }
+                            tagWaveBatchWinners();
+                        } else {
+                            // 場上已滿 WAVE_CAP：節流 1:1 置換
+                            if (!btState.waveSwapTimer) btState.waveSwapTimer = 0;
+                            btState.waveSwapTimer += dt;
+                            const swapInterval = 1.5; // 每 1.5 秒置換一個
+                            if (btState.waveSwapTimer >= swapInterval) {
+                                btState.waveSwapTimer = 0;
+                                defeatOneLoser();
+                                spawnWaveTop();
+                                tagWaveBatchWinners();
+                            }
+                        }
+                    }
+
+                    // 超時：補滿所有剩餘
+                    if (isOvertimePhase && btState.wavePool.length > 0) {
+                        while (btState.wavePool.length > 0) {
+                            spawnWaveTop();
+                        }
+                    }
+                }
+
+                // 揭曉條件：超過保護期 + wavePool 已清空 + 倖存者 ≤ 目標
+                if (btState.battleTimer > actualGraceTime
+                    && btState.wavePool.length === 0
+                    && alive.length <= targetSurvivors) {
+                    if (btState.winnerQueue.length > 0) {
                         startReveal(alive);
                     }
                 }
@@ -6470,11 +6645,21 @@ const initLottery = () => {
             btState.totalWinners = 0;
             btState.waiters.forEach((r) => r()); // resolve all pending
             btState.waiters = [];
+            btState.pendingResolves = 0;
             btState.phase = 'idle';
             btState.countdownTimer = 0;
             btState.entryTimer = 0;
             btState.battleTimer = 0;
             btState.revealTimer = 0;
+            btState.wavePool = [];
+            btState.waveMode = false;
+            btState.totalParticipants = 0;
+            btState.waveBatchWinners = 0;
+            btState.waveElimTimer = 0;
+            btState.waveElimInterval = 0;
+            btState.waveStartedElim = false;
+            btState.entryQueue = [];
+            btState.entrySpawnTimer = 0;
 
             if (!resizeCanvas()) return;
             buildIdleTops();
@@ -6509,6 +6694,11 @@ const initLottery = () => {
             btState.totalWinners = savedTotal;
             createTops();
 
+            // 波浪模式下自動延長 holdSeconds，確保每個中獎者至少 0.5 秒
+            if (btState.waveMode) {
+                btState.holdSeconds = Math.max(btState.holdSeconds, btState.totalWinners * 0.5);
+            }
+
             if (!btState.running) {
                 btState.running = true;
                 btState.last = performance.now();
@@ -6523,7 +6713,17 @@ const initLottery = () => {
             if (btState.rafId) { cancelAnimationFrame(btState.rafId); btState.rafId = null; }
             btState.waiters.forEach((r) => r());
             btState.waiters = [];
+            btState.pendingResolves = 0;   // 清空未消費的 pending
+            btState.tops = [];             // 清空殘留陀螺，確保下次 ensureReady(false) 也會 reset
             btState.phase = 'idle';
+            btState.wavePool = [];
+            btState.waveMode = false;
+            btState.waveBatchWinners = 0;
+            btState.waveElimTimer = 0;
+            btState.waveElimInterval = 0;
+            btState.waveStartedElim = false;
+            btState.entryQueue = [];
+            btState.entrySpawnTimer = 0;
             clearCanvas();
         };
 
@@ -6533,6 +6733,10 @@ const initLottery = () => {
         };
 
         const waitForNextPick = () => {
+            if (btState.pendingResolves > 0) {
+                btState.pendingResolves--;
+                return Promise.resolve();
+            }
             return new Promise((resolve) => {
                 btState.waiters.push(resolve);
             });
@@ -6921,7 +7125,11 @@ const initLottery = () => {
             },
             prepareToDraw: () => {
                 battleTop.ensureReady();
-                battleTop.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
+                const baseHold = state.currentPrize?.lottoHoldSeconds ?? 5;
+                const poolSize = (state.eligibleNames?.length ?? 0) + (state.winners?.length ?? 0);
+                // 波浪模式下，每個 wave top 需要約 1-2 秒入場+淘汰，額外給 wavePool 中每人 1.5 秒
+                const waveExtra = poolSize > 12 ? (poolSize - 12) * 1.5 : 0;
+                battleTop.setHoldSeconds(baseHold + waveExtra);
             },
             revealWinners: async (winners, runtime = {}) => {
                 const append = runtime.appendWinner ?? appendWinner;
@@ -6935,8 +7143,6 @@ const initLottery = () => {
                     await battleTop.waitForNextPick();
                     if (isRunStale()) return;
                     append(winners[0]);
-                    await delay(5000);
-                    if (isRunStale()) return;
                     if (clock) await clock.waitUntilEnd();
                 } else {
                     battleTop.setWinnerQueue(winners.map((w) => w.employee_name ?? randomLabel()));
@@ -6946,8 +7152,8 @@ const initLottery = () => {
                         if (isRunStale()) return;
                         append(winner);
                     }
-                    await delay(5000);
-                    if (isRunStale()) return;
+                    // 戰鬥陀螺 reveal 後多停 3 秒再跳結果
+                    await delay(3000);
                     if (clock) {
                         const finalWait = Math.min(1500, clock.remainingMs());
                         if (finalWait > 50) await delay(finalWait);
@@ -7108,21 +7314,29 @@ const initLottery = () => {
         } finally {
             ballRumbleSound?.stop();
 
-            if (isRunStale()) {
-                return;
-            }
-
-            // 停止持續播放的音效
+            // 不論 runId 是否過期，都需要清理狀態和檢查結果模式
             stopDrawAudio();
             stopDrawingHeartbeat();
             state.isDrawing = false;
+
+            if (isRunStale()) {
+                // 即使被中斷，若獎項已完成仍需顯示結果
+                if (isPrizeCompleted() || ((state.eligibleNames?.length === 0) && state.winners?.length > 0)) {
+                    render();
+                    sfx.playVictory();
+                    resultMode.show();
+                }
+                return;
+            }
+
             render();
 
-            // 延遲檢查是否抽完，切換到結果模式
+            // 檢查是否抽完，切換到結果模式
             const exhausted = (state.eligibleNames?.length === 0) && !isPrizeCompleted() && (state.winners?.length > 0);
             if (isPrizeCompleted() || exhausted) {
                 sfx.playVictory();
-                scheduleResultModeShow();
+                // 直接顯示結果，避免 timer 被後續 WebSocket 事件取消
+                resultMode.show();
             }
         }
     };
