@@ -77,6 +77,10 @@ class PrizeResource extends Resource
                             ->label('中獎人數')
                             ->numeric()
                             ->minValue(1)
+                            ->maxValue(fn (Get $get) => $get('animation_style') === 'battle_top' ? 15 : 9999)
+                            ->helperText(fn (Get $get) => $get('animation_style') === 'battle_top'
+                                ? '⚔️ 戰鬥陀螺模式：場地最多容納 15 個陀螺，中獎人數上限為 15'
+                                : null)
                             ->default(1)
                             ->required(),
                         Select::make('draw_mode')
@@ -95,6 +99,8 @@ class PrizeResource extends Resource
                                 'scratch_card' => '刮刮樂',
                                 'treasure_chest' => '寶箱開啟',
                                 'big_treasure_chest' => '大寶箱',
+                                'marble_race' => '圓球賽跑',
+                                'battle_top' => '戰鬥陀螺',
                             ])
                             ->required()
                             ->default('lotto_air')

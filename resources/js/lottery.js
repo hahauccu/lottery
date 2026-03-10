@@ -5808,7 +5808,7 @@ const initLottery = () => {
             graceTime: 4.0,    // 入場後多少秒才能被淘汰
         };
 
-        const WAVE_CAP = 12; // 場地同時最多顯示的陀螺數（超過此數啟用波浪模式）
+        const WAVE_CAP = 15; // 場地同時最多顯示的陀螺數（超過此數啟用波浪模式）
 
         const TOP_COLORS = [
             '#f43f5e', '#f97316', '#eab308', '#22c55e',
