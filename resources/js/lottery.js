@@ -6036,11 +6036,16 @@ const initLottery = () => {
 
         function tagWaveBatchWinners() {
             if (!btState.waveMode || btState.winnerQueue.length === 0) return;
-            const alive = getAliveTops().filter(t => !t.protectedWinner);
-            const need = Math.min(WAVE_WINNER_CAP - btState.waveBatchWinners, btState.winnerQueue.length);
-            for (let i = 0; i < need && i < alive.length; i++) {
-                alive[i].protectedWinner = true;
-                btState.waveBatchWinners++;
+            const aliveTops = getAliveTops();
+            const currentlyProtected = aliveTops.filter(t => t.protectedWinner).length;
+            // 受保護數量上限：取 WAVE_WINNER_CAP 與實際需要的中獎者數量中較小值
+            // 避免 one_by_one 模式（winnerQueue.length=1）下標記過多保護陀螺導致 alive 無法降到 targetSurvivors
+            const maxProtect = Math.min(WAVE_WINNER_CAP, btState.winnerQueue.length);
+            const need = maxProtect - currentlyProtected;
+            if (need <= 0) return;
+            const unprotected = aliveTops.filter(t => !t.protectedWinner);
+            for (let i = 0; i < need && i < unprotected.length; i++) {
+                unprotected[i].protectedWinner = true;
             }
         }
 
@@ -6543,10 +6548,8 @@ const initLottery = () => {
                 const elimPhaseStart = btState.holdSeconds / 6;
 
                 if (btState.waveMode) {
-                    // 首次標記第一批中獎者
-                    if (btState.waveBatchWinners === 0) {
-                        tagWaveBatchWinners();
-                    }
+                    // 確保場上保持足夠數量的受保護中獎者
+                    tagWaveBatchWinners();
 
                     if (btState.battleTimer > elimPhaseStart && !isOvertimePhase) {
                         // 進入定時淘汰期
@@ -7126,9 +7129,10 @@ const initLottery = () => {
             prepareToDraw: () => {
                 battleTop.ensureReady();
                 const baseHold = state.currentPrize?.lottoHoldSeconds ?? 5;
-                const poolSize = (state.eligibleNames?.length ?? 0) + (state.winners?.length ?? 0);
+                // wave pool 只包含 eligibleNames（未得獎者），winners 已離場，不計入
+                const eligibleForWave = state.eligibleNames?.length ?? 0;
                 // 波浪模式下，每個 wave top 需要約 1-2 秒入場+淘汰，額外給 wavePool 中每人 1.5 秒
-                const waveExtra = poolSize > 12 ? (poolSize - 12) * 1.5 : 0;
+                const waveExtra = eligibleForWave > 12 ? (eligibleForWave - 12) * 1.5 : 0;
                 battleTop.setHoldSeconds(baseHold + waveExtra);
             },
             revealWinners: async (winners, runtime = {}) => {
