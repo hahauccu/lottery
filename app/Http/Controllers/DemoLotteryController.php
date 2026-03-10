@@ -133,7 +133,10 @@ class DemoLotteryController extends Controller
             'currentWinners' => collect(),
             'bgUrl' => null,
             'isDemo' => true,
-            'title' => '範例抽獎',
+            'title' => '線上抽獎 Demo｜即時體驗抽獎動畫效果',
+            'seoTitle' => '線上抽獎 Demo｜即時體驗抽獎動畫效果',
+            'seoDescription' => '免費試玩線上抽獎系統 Demo，體驗樂透氣流機、紅包雨、刮刮樂、寶箱、圓球賽跑、戰鬥陀螺等多種動畫，即時感受企業尾牙抽獎的趣味與互動。',
+            'seoCanonical' => url('/demo/lottery'),
         ]);
     }
 

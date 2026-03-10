@@ -3,7 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @unless($isDemo ?? false)
     <meta name="robots" content="noindex, nofollow">
+    @endunless
+    @if($isDemo ?? false)
+    <meta name="description" content="{{ $seoDescription ?? '' }}">
+    <link rel="canonical" href="{{ $seoCanonical ?? url('/demo/lottery') }}">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ $seoTitle ?? '範例抽獎' }}">
+    <meta property="og:description" content="{{ $seoDescription ?? '' }}">
+    <meta property="og:url" content="{{ $seoCanonical ?? url('/demo/lottery') }}">
+    <meta property="og:site_name" content="抽獎系統">
+    <meta property="og:locale" content="zh_TW">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $seoTitle ?? '範例抽獎' }}">
+    <meta name="twitter:description" content="{{ $seoDescription ?? '' }}">
+    @endif
     <title>{{ $title ?? ($currentPrize?->name ?? $event->name) }} - 抽獎</title>
     <script>
         window.LotteryConfig = {!! json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!};

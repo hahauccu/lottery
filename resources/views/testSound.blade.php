@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>testSound 音效試聽台</title>
     <meta name="description" content="抽獎系統音效試聽頁：原有音效說明、播放控制、建議新增音效樣本與寶箱噴金幣音效示範。">
 

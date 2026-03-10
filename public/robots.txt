@@ -1,5 +1,10 @@
 User-agent: *
 Disallow: /admin/
 Disallow: /claim/
+Disallow: /payment/
+Disallow: /register
+Disallow: /register-account
+Disallow: /forgot-password
+Disallow: /reset-password
 
 Sitemap: https://lottery.dindin168.com/sitemap.xml
