@@ -5,10 +5,12 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\LotteryEventResource\Pages;
 use App\Filament\Resources\LotteryEventResource\RelationManagers\PrizesRelationManager;
 use App\Models\LotteryEvent;
+use App\Support\AccessCodeGenerator;
 use App\Support\LotteryBroadcaster;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -48,6 +50,13 @@ class LotteryEventResource extends Resource
                             ->helperText('建立後自動產生，可用於前台 URL')
                             ->disabled()
                             ->dehydrated(),
+                        Placeholder::make('today_access_code')
+                            ->label('今日存取碼')
+                            ->content(fn (?LotteryEvent $record) => $record?->brand_code
+                                ? AccessCodeGenerator::generate($record->brand_code)
+                                : '—')
+                            ->helperText('每日自動更換，操作員需輸入此碼才能執行抽獎')
+                            ->visibleOn('edit'),
                         DateTimePicker::make('draw_starts_at')
                             ->label('抽獎開始時間')
                             ->required()
@@ -89,6 +98,14 @@ class LotteryEventResource extends Resource
                     ->label('代碼')
                     ->copyable()
                     ->copyMessage('已複製')
+                    ->toggleable(),
+                TextColumn::make('access_code')
+                    ->label('今日存取碼')
+                    ->badge()
+                    ->color('warning')
+                    ->copyable()
+                    ->copyMessage('已複製存取碼')
+                    ->getStateUsing(fn (LotteryEvent $record) => AccessCodeGenerator::generate($record->brand_code))
                     ->toggleable(),
                 TextColumn::make('draw_starts_at')
                     ->label('抽獎開始時間')

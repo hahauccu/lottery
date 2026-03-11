@@ -9,6 +9,8 @@ use App\Models\LotteryEvent;
 use App\Models\Prize;
 use App\Services\EligibleEmployeesService;
 use App\Services\LotteryDrawService;
+use App\Support\AccessCodeGenerator;
+use App\Support\DataMasker;
 use App\Support\LotteryBroadcaster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,8 +88,7 @@ class LotteryFrontendController extends Controller
             'winners' => $winners->map(fn ($winner) => [
                 'id' => $winner->id,
                 'employee_name' => $winner->employee?->name,
-                'employee_email' => $winner->employee?->email,
-                'employee_phone' => $winner->employee?->phone,
+                'employee_email' => DataMasker::maskEmail($winner->employee?->email),
                 'sequence' => $winner->sequence,
                 'won_at' => optional($winner->won_at)->toDateTimeString(),
             ])->values()->all(),
@@ -99,7 +100,15 @@ class LotteryFrontendController extends Controller
             'switchAckUrl' => route('lottery.switch-ack', ['brandCode' => $event->brand_code]),
             'readyUrl' => route('lottery.ready', ['brandCode' => $event->brand_code]),
             'drawingStateUrl' => route('lottery.drawing-state', ['brandCode' => $event->brand_code]),
+            'verifyAccessUrl' => route('lottery.verify-access', ['brandCode' => $event->brand_code]),
         ];
+
+        // 如果有 cookie 中的存取碼，注入 operatorToken
+        $accessCookieName = 'lottery_access_'.preg_replace('/[^a-zA-Z0-9_]/', '_', $event->brand_code);
+        $accessToken = $request->cookie($accessCookieName);
+        if ($accessToken && AccessCodeGenerator::verify($event->brand_code, $accessToken)) {
+            $payload['operatorToken'] = $accessToken;
+        }
 
         if ($request->boolean('payload')) {
             return response()->json([
@@ -142,28 +151,100 @@ class LotteryFrontendController extends Controller
         ]);
     }
 
-    public function winners(string $brandCode): Response
+    public function verifyAccess(Request $request, string $brandCode): JsonResponse
     {
-        $cacheKey = "winners:{$brandCode}";
+        $event = LotteryEvent::where('brand_code', $brandCode)->firstOrFail();
 
-        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($brandCode) {
-            $event = LotteryEvent::query()
-                ->where('brand_code', $brandCode)
-                ->firstOrFail();
+        $validated = $request->validate([
+            'access_code' => 'required|string|max:20',
+        ]);
 
-            $prizes = Prize::query()
-                ->where('lottery_event_id', $event->id)
-                ->with(['winners.employee'])
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get();
+        if (! AccessCodeGenerator::verify($brandCode, $validated['access_code'])) {
+            return response()->json(['message' => '存取碼錯誤'], 403);
+        }
 
-            return ['event' => $event, 'prizes' => $prizes];
-        });
+        $cookieName = 'lottery_access_'.preg_replace('/[^a-zA-Z0-9_]/', '_', $brandCode);
+        $code = AccessCodeGenerator::generate($brandCode);
+
+        return response()->json([
+            'success' => true,
+            'operatorToken' => $code,
+        ])->withCookie(cookie($cookieName, $code, 60 * 24)); // 24h
+    }
+
+    public function winners(Request $request, string $brandCode): Response
+    {
+        $event = LotteryEvent::query()
+            ->where('brand_code', $brandCode)
+            ->firstOrFail();
+
+        // 檢查是否已驗證 email（透過 encrypted cookie）
+        $verifiedEmail = null;
+        $cookieName = 'lottery_email_'.preg_replace('/[^a-zA-Z0-9_]/', '_', $brandCode);
+
+        try {
+            $cookieValue = $request->cookie($cookieName);
+            if ($cookieValue) {
+                $verifiedEmail = $cookieValue;
+            }
+        } catch (\Exception $e) {
+            // cookie 解密失敗，視為未驗證
+        }
+
+        if (! $verifiedEmail) {
+            return response()
+                ->view('lottery.winners', [
+                    'event' => $event,
+                    'prizes' => collect(),
+                    'needsVerification' => true,
+                    'verifiedEmail' => null,
+                ])
+                ->header('Cache-Control', 'no-store');
+        }
+
+        $prizes = Prize::query()
+            ->where('lottery_event_id', $event->id)
+            ->with(['winners.employee'])
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
 
         return response()
-            ->view('lottery.winners', $data)
-            ->header('Cache-Control', 'public, max-age=60');
+            ->view('lottery.winners', [
+                'event' => $event,
+                'prizes' => $prizes,
+                'needsVerification' => false,
+                'verifiedEmail' => $verifiedEmail,
+            ])
+            ->header('Cache-Control', 'no-store');
+    }
+
+    public function verifyWinnersEmail(Request $request, string $brandCode): \Illuminate\Http\RedirectResponse
+    {
+        $event = LotteryEvent::query()
+            ->where('brand_code', $brandCode)
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+        ]);
+
+        $employee = Employee::query()
+            ->where('organization_id', $event->organization_id)
+            ->where('email', $validated['email'])
+            ->first();
+
+        if (! $employee) {
+            return redirect()
+                ->route('lottery.winners', ['brandCode' => $brandCode])
+                ->withErrors(['email' => '找不到對應的員工資料，請確認您的 Email 正確']);
+        }
+
+        $cookieName = 'lottery_email_'.preg_replace('/[^a-zA-Z0-9_]/', '_', $brandCode);
+
+        return redirect()
+            ->route('lottery.winners', ['brandCode' => $brandCode])
+            ->withCookie(cookie($cookieName, $validated['email'], 60 * 24)); // 24h
     }
 
     public function draw(Request $request, string $brandCode): JsonResponse
@@ -212,8 +293,7 @@ class LotteryFrontendController extends Controller
                 'winners' => $winners->map(fn ($winner) => [
                     'id' => $winner->id,
                     'employee_name' => $winner->employee?->name,
-                    'employee_email' => $winner->employee?->email,
-                    'employee_phone' => $winner->employee?->phone,
+                    'employee_email' => DataMasker::maskEmail($winner->employee?->email),
                     'sequence' => $winner->sequence,
                     'won_at' => optional($winner->won_at)->toDateTimeString(),
                 ])->values()->all(),

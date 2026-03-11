@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Organization;
 use App\Models\Payment;
 use App\Models\SubscriptionPlan;
+use Illuminate\Support\Facades\DB;
 
 class EcpayService
 {
@@ -72,12 +73,26 @@ class EcpayService
             return $result;
         }
 
+        // 驗證 MerchantID
+        if (($data['MerchantID'] ?? '') !== config('ecpay.merchant_id')) {
+            $result['message'] = 'MerchantID 不符';
+
+            return $result;
+        }
+
         // 查詢付款記錄
         $merchantTradeNo = $data['MerchantTradeNo'] ?? '';
         $payment = Payment::where('merchant_trade_no', $merchantTradeNo)->first();
 
         if (! $payment) {
             $result['message'] = '找不到對應的付款記錄';
+
+            return $result;
+        }
+
+        // 驗證 TradeAmt
+        if ((int) ($data['TradeAmt'] ?? 0) !== (int) $payment->amount) {
+            $result['message'] = 'TradeAmt 不符';
 
             return $result;
         }
@@ -96,16 +111,24 @@ class EcpayService
         $rtnCode = $data['RtnCode'] ?? '';
 
         if ($rtnCode === '1') {
-            // 付款成功
-            $payment->markAsPaid($data);
+            // 使用 DB Transaction + lockForUpdate 確保原子性
+            DB::transaction(function () use ($payment, $data, $merchantTradeNo) {
+                $payment = Payment::where('merchant_trade_no', $merchantTradeNo)
+                    ->lockForUpdate()
+                    ->first();
 
-            // 啟用訂閱
-            $subscriptionService = app(SubscriptionService::class);
-            $subscriptionService->purchaseSubscription(
-                $payment->organization,
-                $payment->plan,
-                '線上付款購買 - 訂單編號: '.$merchantTradeNo
-            );
+                if ($payment->isPaid()) {
+                    return; // 冪等：已處理過
+                }
+
+                $payment->markAsPaid($data);
+
+                app(SubscriptionService::class)->purchaseSubscription(
+                    $payment->organization,
+                    $payment->plan,
+                    '線上付款購買 - 訂單編號: '.$merchantTradeNo
+                );
+            });
 
             $result['success'] = true;
             $result['message'] = '付款成功，訂閱已啟用';

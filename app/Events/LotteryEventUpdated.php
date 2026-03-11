@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Models\LotteryEvent;
 use App\Services\EligibleEmployeesService;
+use App\Support\DataMasker;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -89,8 +90,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
                     ->map(fn ($winner) => [
                         'id' => $winner->id,
                         'employee_name' => $winner->employee?->name,
-                        'employee_email' => $winner->employee?->email,
-                        'employee_phone' => $winner->employee?->phone,
+                        'employee_email' => DataMasker::maskEmail($winner->employee?->email),
                         'sequence' => $winner->sequence,
                         'won_at' => optional($winner->won_at)->toDateTimeString(),
                     ])

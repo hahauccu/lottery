@@ -170,10 +170,7 @@
                         <li class="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                             <span class="font-semibold">{{ $winner->employee?->name }}</span>
                             <span class="text-sm text-slate-200/70">
-                                {{ $winner->employee?->email }}
-                                @if($winner->employee?->phone)
-                                    · {{ $winner->employee?->phone }}
-                                @endif
+                                {{ \App\Support\DataMasker::maskEmail($winner->employee?->email) }}
                             </span>
                         </li>
                     @empty

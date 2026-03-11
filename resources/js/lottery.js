@@ -54,6 +54,85 @@ const initLottery = () => {
         needsAnimationReset: false,
     };
 
+    // --- 存取碼保護機制 ---
+    let operatorToken = config.operatorToken ?? null;
+
+    const operatorHeaders = () => {
+        const h = {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': config.csrfToken,
+        };
+        if (operatorToken) {
+            h['X-Operator-Token'] = operatorToken;
+        }
+        return h;
+    };
+
+    const showAccessCodeModal = () => {
+        // 如果已有 modal 則不重複建立
+        if (document.getElementById('access-code-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'access-code-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85)';
+        modal.innerHTML = `
+            <div style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.1);border-radius:1rem;padding:2rem;max-width:400px;width:90%;text-align:center">
+                <h2 style="color:white;font-size:1.5rem;font-weight:700;margin-bottom:0.5rem">請輸入存取碼</h2>
+                <p style="color:rgba(255,255,255,0.6);font-size:0.875rem;margin-bottom:1.5rem">請向活動管理員索取今日存取碼</p>
+                <input id="access-code-input" type="text" maxlength="8" placeholder="8 碼存取碼"
+                    style="width:100%;padding:0.75rem 1rem;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.2);border-radius:0.5rem;color:white;font-size:1.25rem;text-align:center;letter-spacing:0.3em;text-transform:uppercase;outline:none"
+                >
+                <p id="access-code-error" style="color:#f87171;font-size:0.875rem;margin-top:0.5rem;display:none"></p>
+                <button id="access-code-submit"
+                    style="width:100%;margin-top:1rem;padding:0.75rem;background:linear-gradient(to right,#4f46e5,#7c3aed);color:white;font-weight:600;border:none;border-radius:0.5rem;cursor:pointer;font-size:1rem"
+                >驗證</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const input = document.getElementById('access-code-input');
+        const errorEl = document.getElementById('access-code-error');
+        const submitBtn = document.getElementById('access-code-submit');
+
+        const doVerify = async () => {
+            const code = input.value.trim();
+            if (!code) return;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '驗證中…';
+            errorEl.style.display = 'none';
+
+            try {
+                const res = await fetch(config.verifyAccessUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': config.csrfToken },
+                    body: JSON.stringify({ access_code: code }),
+                });
+                const data = await res.json();
+                if (res.ok && data.operatorToken) {
+                    operatorToken = data.operatorToken;
+                    modal.remove();
+                } else {
+                    errorEl.textContent = data.message || '存取碼錯誤';
+                    errorEl.style.display = 'block';
+                }
+            } catch {
+                errorEl.textContent = '驗證失敗，請稍後再試';
+                errorEl.style.display = 'block';
+            }
+            submitBtn.disabled = false;
+            submitBtn.textContent = '驗證';
+        };
+
+        submitBtn.addEventListener('click', doVerify);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doVerify(); });
+        input.focus();
+    };
+
+    // 頁面載入時，如果沒有 operatorToken 就顯示 modal
+    if (!operatorToken && config.verifyAccessUrl) {
+        showAccessCodeModal();
+    }
+
     const switchingMask = (() => {
         let hideTimer = null;
         const show = () => {
@@ -199,7 +278,7 @@ const initLottery = () => {
         const slice = state.winners.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
         winnerListEl.innerHTML = slice
             .map((winner) => {
-                const details = [winner.employee_email, winner.employee_phone].filter(Boolean).map(escapeHtml).join(' · ');
+                const details = winner.employee_email ? escapeHtml(winner.employee_email) : '';
                 return `
                     <li class="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                         <span class="font-semibold">${escapeHtml(winner.employee_name ?? '')}</span>
@@ -7258,10 +7337,7 @@ const initLottery = () => {
             const drawTimeout = setTimeout(() => drawAbort.abort(), 15000);
             const response = await fetch(config.drawUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': config.csrfToken,
-                },
+                headers: operatorHeaders(),
                 body: JSON.stringify({ run_id: backendRunId }),
                 signal: drawAbort.signal,
             });
@@ -7276,6 +7352,10 @@ const initLottery = () => {
                 stopDrawingHeartbeat();
                 state.isDrawing = false;
                 render();
+                if (response.status === 403) {
+                    operatorToken = null;
+                    showAccessCodeModal();
+                }
                 return;
             }
 
@@ -7550,10 +7630,7 @@ const initLottery = () => {
             console.log('[lottery] sending switch-ack for nonce:', switchNonce);
             fetch(config.switchAckUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': config.csrfToken,
-                },
+                headers: operatorHeaders(),
                 body: JSON.stringify({ prize_id: payload.current_prize?.id ?? null }),
             }).then(res => {
                 console.log('[lottery] switch-ack sent, status:', res.status, 'nonce:', switchNonce);
@@ -7684,10 +7761,7 @@ const initLottery = () => {
         if (!config.readyUrl) return;
         fetch(config.readyUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': config.csrfToken,
-            },
+            headers: operatorHeaders(),
             body: JSON.stringify({ ts: Date.now() }),
             keepalive: true,
         }).catch(() => { });
@@ -7704,7 +7778,7 @@ const initLottery = () => {
         if (!config.drawingStateUrl) return;
         fetch(config.drawingStateUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': config.csrfToken },
+            headers: operatorHeaders(),
             body: JSON.stringify({ is_drawing: isDrawing, run_id: runId }),
             keepalive: true,
         }).catch(() => { });

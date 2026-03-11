@@ -34,16 +34,25 @@ Route::post('/demo/lottery/switch-ack', [DemoLotteryController::class, 'switchAc
 
 Route::get('/{brandCode}/lottery', [LotteryFrontendController::class, 'show'])
     ->name('lottery.show');
-Route::post('/{brandCode}/draw', [LotteryFrontendController::class, 'draw'])
-    ->name('lottery.draw');
+Route::post('/{brandCode}/verify-access', [LotteryFrontendController::class, 'verifyAccess'])
+    ->name('lottery.verify-access');
 Route::get('/{brandCode}/winners', [LotteryFrontendController::class, 'winners'])
     ->name('lottery.winners');
-Route::post('/{brandCode}/switch-ack', [LotteryFrontendController::class, 'switchAck'])
-    ->name('lottery.switch-ack');
-Route::post('/{brandCode}/ready', [LotteryFrontendController::class, 'ready'])
-    ->name('lottery.ready');
-Route::post('/{brandCode}/drawing-state', [LotteryFrontendController::class, 'drawingState'])
-    ->name('lottery.drawing-state');
+Route::post('/{brandCode}/winners/verify-email', [LotteryFrontendController::class, 'verifyWinnersEmail'])
+    ->name('lottery.winners.verify-email');
+
+// 需要 Operator 存取碼的控制端點
+Route::middleware(\App\Http\Middleware\VerifyOperatorAccess::class)->group(function () {
+    Route::post('/{brandCode}/draw', [LotteryFrontendController::class, 'draw'])
+        ->name('lottery.draw');
+    Route::post('/{brandCode}/switch-ack', [LotteryFrontendController::class, 'switchAck'])
+        ->name('lottery.switch-ack');
+    Route::post('/{brandCode}/ready', [LotteryFrontendController::class, 'ready'])
+        ->name('lottery.ready');
+    Route::post('/{brandCode}/drawing-state', [LotteryFrontendController::class, 'drawingState'])
+        ->name('lottery.drawing-state');
+});
+
 Route::post('/{brandCode}/danmaku', [LotteryFrontendController::class, 'sendDanmaku'])
     ->name('lottery.danmaku')
     ->middleware('throttle:danmaku');

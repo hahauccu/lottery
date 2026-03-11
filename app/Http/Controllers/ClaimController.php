@@ -29,7 +29,11 @@ class ClaimController extends Controller
             'prize_id' => 'required|integer',
         ]);
 
-        $winner = PrizeWinner::where('claim_token', $validated['token'])
+        // 只允許查詢自己所屬組織的中獎者
+        $userOrgIds = auth()->user()->organizations()->pluck('organizations.id');
+
+        $winner = PrizeWinner::whereHas('prize.lotteryEvent', fn ($q) => $q->whereIn('organization_id', $userOrgIds))
+            ->where('claim_token', $validated['token'])
             ->where('prize_id', $validated['prize_id'])
             ->with(['employee', 'prize'])
             ->first();
