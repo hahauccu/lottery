@@ -228,10 +228,16 @@
                                     </div>
                                 </div>
 
+                                <template x-if="preview.released">
+                                    <div class="p-3 rounded-lg bg-danger-50 dark:bg-danger-950 text-danger-600 dark:text-danger-400 text-sm">
+                                        此中獎資格已於 <span x-text="preview.released_at"></span> 被取消
+                                    </div>
+                                </template>
+
                                 <div class="flex gap-2 pt-2 border-t border-gray-100 dark:border-white/5">
                                     <button
                                         x-on:click="confirm()"
-                                        x-bind:disabled="preview.claimed || loading"
+                                        x-bind:disabled="preview.claimed || preview.released || loading"
                                         type="button"
                                         class="fi-btn fi-btn-size-md relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-color-custom fi-btn-color-success fi-color-success fi-size-md fi-btn-size-md gap-1.5 px-3 py-2 text-sm inline-grid shadow-sm bg-custom-600 text-white hover:bg-custom-500 focus-visible:ring-custom-500/50 dark:bg-custom-500 dark:hover:bg-custom-400 dark:focus-visible:ring-custom-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
                                         style="--c-400:var(--success-400);--c-500:var(--success-500);--c-600:var(--success-600);"

@@ -19,6 +19,10 @@ class ClaimController extends Controller
             abort(404, '找不到領獎資訊');
         }
 
+        if ($winner->isReleased()) {
+            return view('claim.released', compact('winner'));
+        }
+
         return view('claim.verify', compact('winner'));
     }
 
@@ -43,6 +47,13 @@ class ClaimController extends Controller
                 'success' => false,
                 'message' => '無效的領獎代碼或不屬於此獎項',
             ], 404);
+        }
+
+        if ($winner->isReleased()) {
+            return response()->json([
+                'success' => false,
+                'message' => '此中獎資格已被取消',
+            ], 410);
         }
 
         if ($winner->isClaimed()) {

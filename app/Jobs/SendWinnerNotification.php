@@ -14,6 +14,7 @@ class SendWinnerNotification implements ShouldQueue
     use Queueable;
 
     public $tries = 3;
+
     public $backoff = [60, 300, 900]; // 1min, 5min, 15min
 
     public function __construct(
@@ -29,6 +30,12 @@ class SendWinnerNotification implements ShouldQueue
 
         if (! $winner) {
             Log::warning("SendWinnerNotification: Winner {$this->winnerId} not found");
+
+            return;
+        }
+
+        if ($winner->isReleased()) {
+            Log::info("SendWinnerNotification: Winner {$this->winnerId} has been released, skipping");
 
             return;
         }

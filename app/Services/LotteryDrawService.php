@@ -30,16 +30,41 @@ class LotteryDrawService
             $drawCount = $prize->draw_mode === Prize::DRAW_MODE_ONE_BY_ONE ? 1 : $remaining;
             $now = now();
             $created = collect();
-            $sequence = $alreadyDrawn + 1;
+
+            // 收集空出的 sequence（已釋出且尚無替補者）
+            $vacantSequences = $prize->allWinnerRecords()
+                ->whereNotNull('released_at')
+                ->whereDoesntHave('replacement')
+                ->orderBy('sequence')
+                ->pluck('sequence', 'id');
+
+            $vacantList = $vacantSequences->values()->all();
+            $vacantWinnerIds = $vacantSequences->keys()->all();
+            $vacantIndex = 0;
+
+            // 下一個新 sequence（用於空位用完後）
+            $maxSequence = $prize->allWinnerRecords()->max('sequence') ?? 0;
+            $nextSequence = $maxSequence + 1;
 
             if ($prize->allow_repeat_within_prize) {
                 for ($index = 0; $index < $drawCount; $index++) {
                     $winner = $eligible->random();
+
+                    if ($vacantIndex < count($vacantList)) {
+                        $seq = $vacantList[$vacantIndex];
+                        $replacementForId = $vacantWinnerIds[$vacantIndex];
+                        $vacantIndex++;
+                    } else {
+                        $seq = $nextSequence++;
+                        $replacementForId = null;
+                    }
+
                     $created->push(PrizeWinner::create([
                         'prize_id' => $prize->id,
                         'employee_id' => $winner->id,
-                        'sequence' => $sequence++,
+                        'sequence' => $seq,
                         'won_at' => $now,
+                        'replacement_for_winner_id' => $replacementForId,
                     ]));
                 }
 
@@ -54,11 +79,21 @@ class LotteryDrawService
             $selected = $eligible->shuffle()->take(min($drawCount, $eligible->count()));
 
             foreach ($selected as $winner) {
+                if ($vacantIndex < count($vacantList)) {
+                    $seq = $vacantList[$vacantIndex];
+                    $replacementForId = $vacantWinnerIds[$vacantIndex];
+                    $vacantIndex++;
+                } else {
+                    $seq = $nextSequence++;
+                    $replacementForId = null;
+                }
+
                 $created->push(PrizeWinner::create([
                     'prize_id' => $prize->id,
                     'employee_id' => $winner->id,
-                    'sequence' => $sequence++,
+                    'sequence' => $seq,
                     'won_at' => $now,
+                    'replacement_for_winner_id' => $replacementForId,
                 ]));
             }
 

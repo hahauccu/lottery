@@ -99,6 +99,12 @@ class ManageClaims extends Page implements HasTable
                     ->dateTime('Y/m/d H:i')
                     ->sortable()
                     ->toggleable(),
+                TextColumn::make('released_at')
+                    ->label('狀態')
+                    ->formatStateUsing(fn ($state, PrizeWinner $record) => $record->isReleased() ? '已釋出' : '有效')
+                    ->badge()
+                    ->color(fn ($state, PrizeWinner $record) => $record->isReleased() ? 'danger' : 'success')
+                    ->sortable(),
                 TextColumn::make('notified_at')
                     ->label('通知')
                     ->formatStateUsing(fn ($state) => $state ? '已通知' : '未通知')
@@ -128,6 +134,19 @@ class ManageClaims extends Page implements HasTable
                         return match ($data['value']) {
                             'claimed' => $query->whereNotNull('claimed_at'),
                             'pending' => $query->whereNull('claimed_at'),
+                            default => $query,
+                        };
+                    }),
+                SelectFilter::make('release_status')
+                    ->label('釋出狀態')
+                    ->options([
+                        'active' => '有效',
+                        'released' => '已釋出',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return match ($data['value']) {
+                            'active' => $query->whereNull('released_at'),
+                            'released' => $query->whereNotNull('released_at'),
                             default => $query,
                         };
                     }),
@@ -161,7 +180,7 @@ class ManageClaims extends Page implements HasTable
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn (PrizeWinner $record) => ! $record->isClaimed())
+                    ->visible(fn (PrizeWinner $record) => ! $record->isClaimed() && ! $record->isReleased())
                     ->action(function (PrizeWinner $record): void {
                         $record->update(['claimed_at' => now()]);
 
@@ -176,7 +195,7 @@ class ManageClaims extends Page implements HasTable
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->visible(fn (PrizeWinner $record) => $record->isClaimed())
+                    ->visible(fn (PrizeWinner $record) => $record->isClaimed() && ! $record->isReleased())
                     ->action(function (PrizeWinner $record): void {
                         $record->update(['claimed_at' => null]);
 
@@ -205,6 +224,22 @@ class ManageClaims extends Page implements HasTable
             return ['found' => false, 'error' => '找不到中獎記錄，代碼無效或不屬於此活動'];
         }
 
+        if ($winner->isReleased()) {
+            return [
+                'found' => true,
+                'released' => true,
+                'token' => $winner->claim_token,
+                'name' => $winner->employee->name,
+                'prize' => $winner->prize->name,
+                'sequence' => $winner->sequence,
+                'department' => $winner->employee->department ?? '',
+                'won_at' => $winner->won_at?->format('Y/m/d H:i'),
+                'released_at' => $winner->released_at?->format('Y/m/d H:i'),
+                'claimed' => false,
+                'claimed_at' => null,
+            ];
+        }
+
         return [
             'found' => true,
             'token' => $winner->claim_token,
@@ -223,6 +258,7 @@ class ManageClaims extends Page implements HasTable
         $updated = PrizeWinner::where('claim_token', $token)
             ->whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
             ->whereNull('claimed_at')
+            ->whereNull('released_at')
             ->update(['claimed_at' => now()]);
 
         if ($updated) {
@@ -271,12 +307,15 @@ class ManageClaims extends Page implements HasTable
 
     public function getWinnersCount(): int
     {
-        return PrizeWinner::whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))->count();
+        return PrizeWinner::whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
+            ->whereNull('released_at')
+            ->count();
     }
 
     public function getNotifiedCount(): int
     {
         return PrizeWinner::whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
+            ->whereNull('released_at')
             ->whereNotNull('notified_at')
             ->count();
     }
@@ -284,6 +323,7 @@ class ManageClaims extends Page implements HasTable
     public function getUnnotifiedCount(): int
     {
         return PrizeWinner::whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
+            ->whereNull('released_at')
             ->whereNull('notified_at')
             ->count();
     }
@@ -291,6 +331,7 @@ class ManageClaims extends Page implements HasTable
     public function getClaimedCount(): int
     {
         return PrizeWinner::whereHas('prize', fn (Builder $q) => $q->where('lottery_event_id', $this->record->id))
+            ->whereNull('released_at')
             ->whereNotNull('claimed_at')
             ->count();
     }

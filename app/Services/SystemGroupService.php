@@ -127,6 +127,7 @@ class SystemGroupService
 
         $winnerIds = PrizeWinner::query()
             ->whereHas('prize', fn ($q) => $q->where('lottery_event_id', $group->lottery_event_id))
+            ->whereNull('released_at')
             ->pluck('employee_id')
             ->unique();
 
@@ -146,6 +147,7 @@ class SystemGroupService
 
         $winnerIds = PrizeWinner::query()
             ->where('prize_id', $group->prize_id)
+            ->whereNull('released_at')
             ->pluck('employee_id')
             ->unique();
 

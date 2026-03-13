@@ -61,6 +61,11 @@ class Prize extends Model
 
     public function winners(): HasMany
     {
+        return $this->hasMany(PrizeWinner::class)->whereNull('released_at');
+    }
+
+    public function allWinnerRecords(): HasMany
+    {
         return $this->hasMany(PrizeWinner::class);
     }
 }

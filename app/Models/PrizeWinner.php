@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
-use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Builder\Builder as QrBuilder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -21,12 +23,17 @@ class PrizeWinner extends Model
         'claim_token',
         'claimed_at',
         'notified_at',
+        'released_at',
+        'release_reason',
+        'released_by_user_id',
+        'replacement_for_winner_id',
     ];
 
     protected $casts = [
         'won_at' => 'datetime',
         'claimed_at' => 'datetime',
         'notified_at' => 'datetime',
+        'released_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -78,7 +85,7 @@ class PrizeWinner extends Model
 
     public function generateQrCodeBase64(): string
     {
-        $result = Builder::create()
+        $result = QrBuilder::create()
             ->writer(new PngWriter)
             ->encoding(new Encoding('UTF-8'))
             ->errorCorrectionLevel(ErrorCorrectionLevel::High)
@@ -88,5 +95,40 @@ class PrizeWinner extends Model
             ->build();
 
         return 'data:image/png;base64,'.base64_encode($result->getString());
+    }
+
+    public function isReleased(): bool
+    {
+        return $this->released_at !== null;
+    }
+
+    public function isReleasable(): bool
+    {
+        return ! $this->isReleased() && ! $this->isClaimed();
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('released_at');
+    }
+
+    public function scopeReleased(Builder $query): Builder
+    {
+        return $query->whereNotNull('released_at');
+    }
+
+    public function releasedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'released_by_user_id');
+    }
+
+    public function replacementFor(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replacement_for_winner_id');
+    }
+
+    public function replacement(): HasOne
+    {
+        return $this->hasOne(self::class, 'replacement_for_winner_id');
     }
 }
