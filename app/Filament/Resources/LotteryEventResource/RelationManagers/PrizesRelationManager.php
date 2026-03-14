@@ -379,6 +379,15 @@ class PrizesRelationManager extends RelationManager
     {
         return $table
             ->poll('5s')
+            ->description(function (): ?string {
+                $max = $this->getOwnerRecord()->organization->maxPrizesPerEvent();
+                if ($max === null) {
+                    return null;
+                }
+                $current = $this->getOwnerRecord()->prizes()->count();
+
+                return "獎項數：{$current} / {$max}";
+            })
             ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->columns([
@@ -392,7 +401,18 @@ class PrizesRelationManager extends RelationManager
                         ? 'heroicon-s-play' : null)
                     ->iconPosition(IconPosition::After)
                     ->color(fn (Prize $record): ?string => (int) $this->getOwnerRecord()->current_prize_id === (int) $record->getKey()
-                        ? 'success' : null),
+                        ? 'success' : null)
+                    ->description(function (Prize $record): ?string {
+                        $max = $this->getOwnerRecord()->organization->maxPrizesPerEvent();
+                        if ($max === null) {
+                            return null;
+                        }
+                        $allowedIds = $this->getOwnerRecord()->prizes()
+                            ->orderBy('sort_order')->limit($max)->pluck('id');
+
+                        return $allowedIds->contains($record->getKey())
+                            ? null : '超出方案上限，無法切換';
+                    }),
                 TextColumn::make('drawn_count')
                     ->label('已抽 / 目標')
                     ->getStateUsing(fn (Prize $record) => $record->winners()->count().' / '.$record->winners_count)
@@ -417,6 +437,19 @@ class PrizesRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('新增抽獎項目')
+                    ->before(function (\Filament\Tables\Actions\CreateAction $action) {
+                        $event = $this->getOwnerRecord();
+                        $max = $event->organization->maxPrizesPerEvent();
+                        if ($max !== null && $event->prizes()->count() >= $max) {
+                            Notification::make()
+                                ->danger()
+                                ->title('已達獎項上限')
+                                ->body("目前方案每場活動最多 {$max} 個獎項，請至「訂閱管理」升級方案。")
+                                ->persistent()
+                                ->send();
+                            $action->cancel();
+                        }
+                    })
                     ->mutateFormDataUsing(function (array $data): array {
                         $data['lottery_event_id'] = $this->getOwnerRecord()->getKey();
                         $data['sort_order'] = $this->nextSortOrder();
@@ -519,7 +552,30 @@ class PrizesRelationManager extends RelationManager
                     ->label('切換本輪抽獎')
                     ->tooltip('需前台在線且未在抽獎中')
                     ->requiresConfirmation()
+                    ->visible(function (Prize $record): bool {
+                        $max = $this->getOwnerRecord()->organization->maxPrizesPerEvent();
+                        if ($max === null) {
+                            return true;
+                        }
+                        $allowedIds = $this->getOwnerRecord()->prizes()
+                            ->orderBy('sort_order')->limit($max)->pluck('id');
+
+                        return $allowedIds->contains($record->getKey());
+                    })
                     ->action(function (Prize $record, $livewire): void {
+                        // 方案限制 guard
+                        $max = $this->getOwnerRecord()->organization->maxPrizesPerEvent();
+                        if ($max !== null) {
+                            $allowedIds = $this->getOwnerRecord()->prizes()
+                                ->orderBy('sort_order')->limit($max)->pluck('id');
+                            if (! $allowedIds->contains($record->getKey())) {
+                                Notification::make()->danger()
+                                    ->title('此獎項超出方案上限，無法切換')->send();
+
+                                return;
+                            }
+                        }
+
                         $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'big_treasure_chest', 'marble_race', 'battle_top'];
 
                         if (! in_array($record->animation_style, $validStyles, true)) {

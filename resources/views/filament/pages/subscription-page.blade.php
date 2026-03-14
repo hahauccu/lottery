@@ -42,6 +42,20 @@
                 </div>
             </div>
 
+            @if($expiredPaidSub)
+                <div class="mt-4 p-4 rounded-lg bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800">
+                    <div class="flex items-center gap-2 text-danger-600 dark:text-danger-400">
+                        <x-heroicon-o-arrow-down-circle class="w-5 h-5" />
+                        <span class="font-medium">方案已過期</span>
+                    </div>
+                    <p class="mt-1 text-sm text-danger-600 dark:text-danger-400">
+                        您的「{{ $expiredPaidSub->plan->name }}」已於
+                        {{ $expiredPaidSub->expires_at->format('Y-m-d') }} 到期，
+                        目前適用「{{ $effectivePlan->name }}」方案限制。
+                    </p>
+                </div>
+            @endif
+
             @if($isTestMode)
                 <div class="mt-4 p-4 rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800">
                     <div class="flex items-center gap-2 text-warning-600 dark:text-warning-400">
@@ -85,6 +99,14 @@
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">員工上限</span>
                                     <span class="font-medium">{{ number_format($availablePlan->max_employees) }} 人</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">獎項上限/場</span>
+                                    <span class="font-medium">
+                                        {{ $availablePlan->max_prizes_per_event
+                                            ? $availablePlan->max_prizes_per_event . ' 個'
+                                            : '無限制' }}
+                                    </span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">有效天數</span>

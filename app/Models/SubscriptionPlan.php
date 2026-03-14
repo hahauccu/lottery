@@ -11,6 +11,7 @@ class SubscriptionPlan extends Model
         'name',
         'code',
         'max_employees',
+        'max_prizes_per_event',
         'price',
         'duration_days',
         'description',
@@ -20,6 +21,7 @@ class SubscriptionPlan extends Model
 
     protected $casts = [
         'max_employees' => 'integer',
+        'max_prizes_per_event' => 'integer',
         'price' => 'integer',
         'duration_days' => 'integer',
         'is_active' => 'boolean',
@@ -39,6 +41,11 @@ class SubscriptionPlan extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order');
+    }
+
+    public static function freePlan(): ?self
+    {
+        return static::where('code', 'free')->first();
     }
 
     public function getFormattedPriceAttribute(): string

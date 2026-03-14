@@ -64,6 +64,9 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
                 \App\Http\Middleware\LogAdminActions::class,
             ])
+            ->tenantMiddleware([
+                \App\Http\Middleware\EnsureSubscription::class,
+            ])
             ->authMiddleware([
                 Authenticate::class,
             ]);

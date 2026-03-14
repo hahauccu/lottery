@@ -54,6 +54,14 @@ class SubscriptionPage extends Page
             ->limit(5)
             ->get();
 
+        // 找最近過期的付費訂閱（用於顯示降級 banner）
+        $expiredPaidSub = $organization->subscriptions()
+            ->whereHas('plan', fn ($q) => $q->where('code', '!=', 'free'))
+            ->where('status', 'active')
+            ->where('expires_at', '<=', now())
+            ->latest('expires_at')
+            ->first();
+
         return [
             'organization' => $organization,
             'subscription' => $subscription,
@@ -62,6 +70,8 @@ class SubscriptionPage extends Page
             'availablePlans' => $availablePlans,
             'isTestMode' => $organization->isTestMode(),
             'recentPayments' => $recentPayments,
+            'effectivePlan' => $organization->getEffectivePlan(),
+            'expiredPaidSub' => $expiredPaidSub,
         ];
     }
 

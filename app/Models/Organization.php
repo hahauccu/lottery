@@ -105,8 +105,55 @@ class Organization extends Model
         return $this->employees()->count() <= $plan->max_employees;
     }
 
+    public function getEffectivePlan(): ?SubscriptionPlan
+    {
+        return $this->getActivePlan() ?? SubscriptionPlan::freePlan();
+    }
+
+    public function maxPrizesPerEvent(): ?int
+    {
+        return $this->getEffectivePlan()?->max_prizes_per_event;
+    }
+
+    public function ensureSubscription(): bool
+    {
+        if ($this->getActivePlan()) {
+            return false;
+        }
+
+        $freePlan = SubscriptionPlan::freePlan();
+        if (! $freePlan) {
+            return false;
+        }
+
+        $alreadyHasFree = $this->subscriptions()
+            ->where('subscription_plan_id', $freePlan->id)
+            ->where('status', 'active')
+            ->where('expires_at', '>', now())
+            ->exists();
+        if ($alreadyHasFree) {
+            return false;
+        }
+
+        OrganizationSubscription::create([
+            'organization_id' => $this->id,
+            'subscription_plan_id' => $freePlan->id,
+            'starts_at' => now(),
+            'expires_at' => now()->addDays($freePlan->duration_days),
+            'status' => 'active',
+            'notes' => '方案過期自動降級',
+        ]);
+
+        return true;
+    }
+
     public function isTestMode(): bool
     {
-        return ! $this->hasValidSubscription();
+        $plan = $this->getEffectivePlan();
+        if (! $plan) {
+            return true;
+        }
+
+        return $this->employees()->count() > $plan->max_employees;
     }
 }

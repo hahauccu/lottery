@@ -60,6 +60,13 @@ class SubscriptionPlanResource extends Resource
                             ->required()
                             ->numeric()
                             ->minValue(1),
+                        TextInput::make('max_prizes_per_event')
+                            ->label('最多獎項數/場')
+                            ->numeric()
+                            ->minValue(1)
+                            ->nullable()
+                            ->placeholder('留空 = 無限制')
+                            ->helperText('每場活動可新增的獎項上限'),
                         TextInput::make('price')
                             ->label('價格（元）')
                             ->required()
@@ -105,6 +112,10 @@ class SubscriptionPlanResource extends Resource
                 TextColumn::make('max_employees')
                     ->label('員工上限')
                     ->suffix(' 人')
+                    ->sortable(),
+                TextColumn::make('max_prizes_per_event')
+                    ->label('獎項上限/場')
+                    ->placeholder('無限制')
                     ->sortable(),
                 TextColumn::make('price')
                     ->label('價格')
