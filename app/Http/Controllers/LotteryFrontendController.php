@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -103,9 +104,15 @@ class LotteryFrontendController extends Controller
             'verifyAccessUrl' => route('lottery.verify-access', ['brandCode' => $event->brand_code]),
         ];
 
-        // 如果有 cookie 中的存取碼，注入 operatorToken
+        // 存取碼處理：優先處理 ?_lac= query param（後台自動帶入），否則走 cookie
         $accessCookieName = 'lottery_access_'.preg_replace('/[^a-zA-Z0-9_]/', '_', $event->brand_code);
-        $accessToken = $request->cookie($accessCookieName);
+        $lacCode = $request->query('_lac');
+        if ($lacCode && AccessCodeGenerator::verify($event->brand_code, $lacCode)) {
+            $accessToken = AccessCodeGenerator::generate($event->brand_code);
+            Cookie::queue($accessCookieName, $accessToken, 60 * 24);
+        } else {
+            $accessToken = $request->cookie($accessCookieName);
+        }
         if ($accessToken && AccessCodeGenerator::verify($event->brand_code, $accessToken)) {
             $payload['operatorToken'] = $accessToken;
         }
