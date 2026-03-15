@@ -23,19 +23,9 @@ class EditLotteryEvent extends EditRecord
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->requiresConfirmation()
                 ->modalHeading('開啟前台抽獎')
-                ->modalDescription(function (): HtmlString {
-                    $code = AccessCodeGenerator::generate($this->record->brand_code);
-
-                    return new HtmlString(
-                        '<div class="space-y-3">'.
-                        '<div class="rounded-xl bg-warning-50 dark:bg-warning-500/10 p-4 text-center">'.
-                        '<p class="text-xs text-warning-600 dark:text-warning-400 mb-1">今日存取碼（已自動帶入，無需手動輸入）</p>'.
-                        '<p class="text-3xl font-mono font-bold tracking-widest text-warning-900 dark:text-warning-100">'.$code.'</p>'.
-                        '</div>'.
-                        '<p class="text-sm text-gray-500 dark:text-gray-400">⚠ 若前台已有分頁開啟，舊分頁將自動失效。</p>'.
-                        '</div>'
-                    );
-                })
+                ->modalDescription(new HtmlString(
+                    '<p class="text-sm text-gray-500 dark:text-gray-400">⚠ 若前台已有分頁開啟，舊分頁將自動失效。</p>'
+                ))
                 ->modalSubmitActionLabel('開啟前台')
                 ->modalIcon('heroicon-o-arrow-top-right-on-square')
                 ->action(function ($livewire): void {
