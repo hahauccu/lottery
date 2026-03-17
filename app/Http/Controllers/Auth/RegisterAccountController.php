@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use App\Rules\Recaptcha;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -27,6 +28,7 @@ class RegisterAccountController extends Controller
         $validated = $request->validate([
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'organization_name' => ['nullable', 'string', 'max:255'],
+            'g-recaptcha-response' => array_filter([config('recaptcha.secret_key') ? 'required' : null, new Recaptcha]),
         ]);
 
         $email = strtolower(trim($validated['email']));

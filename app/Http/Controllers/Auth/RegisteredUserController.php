@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use App\Rules\Recaptcha;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -38,6 +39,7 @@ class RegisteredUserController extends Controller
             'organization_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'g-recaptcha-response' => array_filter([config('recaptcha.secret_key') ? 'required' : null, new Recaptcha]),
         ]);
 
         [$user, $organization] = DB::transaction(function () use ($request) {

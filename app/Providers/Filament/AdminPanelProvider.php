@@ -26,7 +26,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(\App\Filament\Pages\Auth\Login::class)
             ->passwordReset()
             ->tenant(Organization::class, 'slug', ownershipRelationship: 'organization')
             ->tenantMenu(false)
@@ -44,13 +44,17 @@ class AdminPanelProvider extends PanelProvider
             )
             ->renderHook(
                 'panels::auth.login.form.after',
-                fn () => new HtmlString('
-                    <div style="text-align: center; margin-top: 1rem;">
+                fn () => new HtmlString(
+                    (config('recaptcha.site_key') ? '
+                    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                    <div class="g-recaptcha" data-sitekey="' . config('recaptcha.site_key') . '" style="margin-top: 1rem;"></div>
+                    ' : '') .
+                    '<div style="text-align: center; margin-top: 1rem;">
                         <a href="/register-account" style="font-size: 0.875rem; color: rgb(var(--primary-600)); text-decoration: underline;">
                             還沒有帳號？立即註冊
                         </a>
-                    </div>
-                '),
+                    </div>'
+                ),
             )
             ->middleware([
                 EncryptCookies::class,

@@ -32,6 +32,14 @@
             </label>
         </div>
 
+        @if(config('recaptcha.site_key'))
+            <div class="mt-4">
+                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}"></div>
+                @error('g-recaptcha-response') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+            </div>
+        @endif
+
         <div class="flex items-center justify-end mt-4">
             @if (Route::has('password.request'))
                 <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
