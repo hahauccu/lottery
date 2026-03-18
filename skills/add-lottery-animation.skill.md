@@ -445,34 +445,35 @@ $validStyles = ['lotto_air', 'red_packet', 'scratch_card', 'treasure_chest', 'bi
 
 ### 步驟 9：Demo 頁面整合
 
-需修改 **2 個檔案**，讓 `/demo/lottery` 範例頁面也能切換到新動畫：
-
-#### 9.1 DemoLotteryController
-
 **檔案**：`app/Http/Controllers/DemoLotteryController.php`
 
-在 `VALID_STYLES` 常數中新增：
+在以下 3 個常數各加入一行：
 
+**STYLE_SLUGS**（slug → style 對照）：
 ```php
-private const VALID_STYLES = [
-    'lotto_air', 'red_packet', 'scratch_card',
-    'treasure_chest', 'big_treasure_chest',
-    '{{STYLE_KEY}}',   // ← 新增
+private const STYLE_SLUGS = [
+    // ...existing...
+    '{{SLUG}}' => '{{STYLE_KEY}}',   // ← 新增（slug 用 kebab-case）
 ];
 ```
 
-#### 9.2 Demo Toolbar 模板
-
-**檔案**：`resources/views/lottery/partials/demo-toolbar.blade.php`
-
-在 `styles` 陣列中新增：
-
-```javascript
-styles: [
-    // ...existing styles...
-    { key: '{{STYLE_KEY}}', label: '{{STYLE_LABEL}}' },  // ← 新增
-],
+**STYLE_LABELS**（中文名稱）：
+```php
+private const STYLE_LABELS = [
+    // ...existing...
+    '{{STYLE_KEY}}' => '{{STYLE_LABEL}}',   // ← 新增
+];
 ```
+
+**STYLE_DESCRIPTIONS**（一句話描述，顯示在 landing 卡片）：
+```php
+private const STYLE_DESCRIPTIONS = [
+    // ...existing...
+    '{{STYLE_KEY}}' => '{{STYLE_DESCRIPTION}}',   // ← 新增
+];
+```
+
+> Landing page (`/demo/lottery`) 和 style page (`/demo/lottery/{slug}`) 會自動從這些常數產生，**不需要修改任何 Blade 模板**。
 
 ---
 
@@ -492,7 +493,7 @@ styles: [
 | 10 | **winnerQueue 順序** | 連續型動畫必須用 winnerQueue 匹配名稱，不可直接分配名字到元素 |
 | 11 | **名稱池不去重** | `buildNamePool` 不可用 `new Set()`，需支援重複中獎 |
 | 12 | **holdSeconds 控制節奏** | 連續型用物理參數拉長比賽，不可用硬超時強制結束 |
-| 13 | **Demo 頁面** | 新動畫必須也加入 `DemoLotteryController.VALID_STYLES` 和 `demo-toolbar` |
+| 13 | **Demo 頁面** | 新動畫必須加入 `DemoLotteryController` 的 `STYLE_SLUGS`、`STYLE_LABELS`、`STYLE_DESCRIPTIONS` 三個常數 |
 | 14 | **結束延遲** | 動畫結束後應 `await delay(5000)` 讓使用者欣賞，再跳名單 |
 
 ---
@@ -524,8 +525,9 @@ styles: [
 - [ ] 所有 `match` 中文對照已新增（共 3 處）
 
 **Demo 頁面**
-- [ ] `DemoLotteryController.VALID_STYLES` 已新增
-- [ ] `demo-toolbar.blade.php` styles 已新增
+- [ ] `DemoLotteryController` 的 `STYLE_SLUGS`、`STYLE_LABELS`、`STYLE_DESCRIPTIONS` 已新增
+- [ ] `/demo/lottery` landing 頁面顯示新風格卡片
+- [ ] `/demo/lottery/{slug}` 可正常進入新風格
 
 **測試驗證**
 - [ ] 後台可選擇新動畫風格
@@ -536,7 +538,8 @@ styles: [
 - [ ] 切換到其他獎項時新動畫正確停止
 - [ ] 視窗 resize 後動畫佈局正確
 - [ ] 開啟「同一獎項可重複中獎」後正常運作
-- [ ] `/demo/lottery` 可切換到新動畫
+- [ ] `/demo/lottery` landing 頁面顯示新風格卡片，點擊可進入 `/demo/lottery/{slug}`
+- [ ] 新風格頁的「預設抽獎」和「設定抽獎」功能正常
 
 ---
 
