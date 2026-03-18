@@ -46,8 +46,28 @@ class AdminPanelProvider extends PanelProvider
                 'panels::auth.login.form.after',
                 fn () => new HtmlString(
                     (config('recaptcha.site_key') ? '
-                    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-                    <div class="g-recaptcha" data-sitekey="' . config('recaptcha.site_key') . '" style="margin-top: 1rem;"></div>
+                    <div wire:ignore style="margin-top: 1rem;">
+                        <script src="https://www.google.com/recaptcha/api.js?onload=_rcOnLoad&render=explicit" async defer></script>
+                        <div id="recaptcha-box"></div>
+                    </div>
+                    <script>
+                        function _rcFindLW() {
+                            var el = document.querySelector("[wire\\\\:id]");
+                            return el && el.__livewire ? el.__livewire : null;
+                        }
+                        function _rcOnLoad() {
+                            grecaptcha.render("recaptcha-box", {
+                                sitekey: "' . config('recaptcha.site_key') . '",
+                                callback: function(t) { var c = _rcFindLW(); if (c) c.set("recaptchaToken", t); },
+                                "expired-callback": function() { var c = _rcFindLW(); if (c) c.set("recaptchaToken", null); }
+                            });
+                        }
+                        document.addEventListener("livewire:init", function() {
+                            Livewire.on("recaptcha-reset", function() {
+                                if (typeof grecaptcha !== "undefined") grecaptcha.reset();
+                            });
+                        });
+                    </script>
                     ' : '') .
                     '<div style="text-align: center; margin-top: 1rem;">
                         <a href="/register-account" style="font-size: 0.875rem; color: rgb(var(--primary-600)); text-decoration: underline;">
