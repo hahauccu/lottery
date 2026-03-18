@@ -133,7 +133,11 @@
 </head>
 <body class="h-[100svh] overflow-hidden bg-black text-white">
     @if (!empty($isDemo))
-        @include('lottery.partials.demo-toolbar')
+        @if (!empty($demoSetupMode))
+            @include('lottery.partials.demo-style-toolbar')
+        @else
+            @include('lottery.partials.demo-toolbar')
+        @endif
     @endif
         <div
             id="lottery-root"

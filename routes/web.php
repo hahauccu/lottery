@@ -24,13 +24,14 @@ Route::get('/claim/{token}', [ClaimController::class, 'verify'])
     ->name('claim.verify');
 
 // Demo 抽獎（免登入）
-Route::get('/demo/lottery', [DemoLotteryController::class, 'show'])->name('demo.lottery.show');
-Route::post('/demo/lottery/draw', [DemoLotteryController::class, 'draw'])->name('demo.lottery.draw');
-Route::post('/demo/lottery/style', [DemoLotteryController::class, 'setStyle'])->name('demo.lottery.style');
-Route::post('/demo/lottery/reset', [DemoLotteryController::class, 'reset'])->name('demo.lottery.reset');
-Route::post('/demo/lottery/ready', [DemoLotteryController::class, 'ready'])->name('demo.lottery.ready');
-Route::post('/demo/lottery/drawing-state', [DemoLotteryController::class, 'drawingState'])->name('demo.lottery.drawing-state');
-Route::post('/demo/lottery/switch-ack', [DemoLotteryController::class, 'switchAck'])->name('demo.lottery.switch-ack');
+Route::get('/demo/lottery', [DemoLotteryController::class, 'landing'])->name('demo.lottery.landing');
+Route::get('/demo/lottery/{slug}', [DemoLotteryController::class, 'showStyle'])->name('demo.lottery.style');
+Route::post('/demo/lottery/{slug}/configure', [DemoLotteryController::class, 'configure'])->name('demo.lottery.configure');
+Route::post('/demo/lottery/{slug}/draw', [DemoLotteryController::class, 'draw'])->name('demo.lottery.draw');
+Route::post('/demo/lottery/{slug}/reset', [DemoLotteryController::class, 'reset'])->name('demo.lottery.reset');
+Route::post('/demo/lottery/{slug}/ready', [DemoLotteryController::class, 'ready'])->name('demo.lottery.ready');
+Route::post('/demo/lottery/{slug}/drawing-state', [DemoLotteryController::class, 'drawingState'])->name('demo.lottery.drawing-state');
+Route::post('/demo/lottery/{slug}/switch-ack', [DemoLotteryController::class, 'switchAck'])->name('demo.lottery.switch-ack');
 
 Route::get('/{brandCode}/lottery', [LotteryFrontendController::class, 'show'])
     ->name('lottery.show');

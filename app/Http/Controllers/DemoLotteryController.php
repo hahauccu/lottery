@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 
 class DemoLotteryController extends Controller
 {
@@ -42,34 +41,77 @@ class DemoLotteryController extends Controller
         '盧廣仲',
     ];
 
-    private const VALID_STYLES = [
-        'lotto_air',
-        'red_packet',
-        'scratch_card',
-        'treasure_chest',
-        'big_treasure_chest',
-        'marble_race',
-        'battle_top',
+    private const STYLE_SLUGS = [
+        'lotto-air' => 'lotto_air',
+        'red-packet' => 'red_packet',
+        'scratch-card' => 'scratch_card',
+        'treasure-chest' => 'treasure_chest',
+        'big-treasure-chest' => 'big_treasure_chest',
+        'marble-race' => 'marble_race',
+        'battle-top' => 'battle_top',
     ];
 
-    private function ensureSession(): array
+    private const STYLE_LABELS = [
+        'lotto_air' => '樂透氣流機',
+        'red_packet' => '紅包雨',
+        'scratch_card' => '刮刮樂',
+        'treasure_chest' => '寶箱',
+        'big_treasure_chest' => '大寶箱',
+        'marble_race' => '圓球賽跑',
+        'battle_top' => '戰鬥陀螺',
+    ];
+
+    private const STYLE_DESCRIPTIONS = [
+        'lotto_air' => '彩球在氣流中翻滾飛舞，逐一揭曉幸運得主',
+        'red_packet' => '紅包從天而降，點擊拆開揭曉驚喜',
+        'scratch_card' => '刮開銀色塗層，發現隱藏的中獎名單',
+        'treasure_chest' => '開啟神秘寶箱，獲得專屬獎品',
+        'big_treasure_chest' => '巨型寶箱隆重登場，大獎即刻揭曉',
+        'marble_race' => '彩色圓球競速衝刺，率先抵達者獲獎',
+        'battle_top' => '戰鬥陀螺激烈對決，最後站立者勝出',
+    ];
+
+    private function resolveStyle(string $slug): string
     {
-        $data = session('demo_lottery');
+        $style = self::STYLE_SLUGS[$slug] ?? null;
+        if (!$style) {
+            abort(404);
+        }
+
+        return $style;
+    }
+
+    private function sessionKey(string $style): string
+    {
+        return "demo_lottery_{$style}";
+    }
+
+    private function ensureSession(string $style): array
+    {
+        $key = $this->sessionKey($style);
+        $data = session($key);
         if (!$data) {
             $data = [
-                'animation_style' => 'lotto_air',
+                'animation_style' => $style,
                 'prize_id' => 1,
                 'winners' => [],
                 'eligible_names' => self::DEMO_NAMES,
+                'draw_count' => 5,
+                'draw_mode' => 'all_at_once',
+                'is_custom' => false,
             ];
-            session(['demo_lottery' => $data]);
+            session([$key => $data]);
         }
 
         return $data;
     }
 
-    private function buildPayload(array $data): array
+    private function buildPayload(array $data, string $slug): array
     {
+        $totalNames = $data['is_custom']
+            ? count($data['winners']) + count($data['eligible_names'])
+            : count(self::DEMO_NAMES);
+
         return [
             'brandCode' => 'DEMO',
             'eventId' => 0,
@@ -84,13 +126,13 @@ class DemoLotteryController extends Controller
             'current_prize' => [
                 'id' => $data['prize_id'],
                 'name' => '範例抽獎',
-                'draw_mode' => 'all_at_once',
+                'draw_mode' => $data['draw_mode'] ?? 'all_at_once',
                 'animation_style' => $data['animation_style'],
                 'lotto_hold_seconds' => 10,
                 'sound_enabled' => true,
                 'music_url' => null,
-                'winners_count' => count(self::DEMO_NAMES),
-                'is_completed' => count($data['winners']) >= count(self::DEMO_NAMES),
+                'winners_count' => $totalNames,
+                'is_completed' => count($data['winners']) >= $totalNames,
                 'is_exhausted' => empty($data['eligible_names']),
             ],
             'winners' => $data['winners'],
@@ -99,25 +141,43 @@ class DemoLotteryController extends Controller
                 [
                     'id' => 1,
                     'name' => '範例抽獎',
-                    'winnersCount' => count(self::DEMO_NAMES),
+                    'winnersCount' => $totalNames,
                     'drawnCount' => count($data['winners']),
-                ]
+                ],
             ],
             'csrfToken' => csrf_token(),
-            'drawUrl' => '/demo/lottery/draw',
-            'readyUrl' => '/demo/lottery/ready',
-            'drawingStateUrl' => '/demo/lottery/drawing-state',
-            'switchAckUrl' => '/demo/lottery/switch-ack',
-            'winnersUrl' => '/demo/lottery',
+            'drawUrl' => "/demo/lottery/{$slug}/draw",
+            'readyUrl' => "/demo/lottery/{$slug}/ready",
+            'drawingStateUrl' => "/demo/lottery/{$slug}/drawing-state",
+            'switchAckUrl' => "/demo/lottery/{$slug}/switch-ack",
+            'winnersUrl' => "/demo/lottery/{$slug}",
             'bgUrl' => null,
             'danmakuEnabled' => false,
         ];
     }
 
-    public function show(Request $request)
+    public function landing()
     {
-        $data = $this->ensureSession();
-        $payload = $this->buildPayload($data);
+        $styles = [];
+        foreach (self::STYLE_SLUGS as $slug => $style) {
+            $styles[] = [
+                'slug' => $slug,
+                'style' => $style,
+                'label' => self::STYLE_LABELS[$style],
+                'description' => self::STYLE_DESCRIPTIONS[$style],
+            ];
+        }
+
+        return view('demo.landing', [
+            'styles' => $styles,
+        ]);
+    }
+
+    public function showStyle(Request $request, string $slug)
+    {
+        $style = $this->resolveStyle($slug);
+        $data = $this->ensureSession($style);
+        $payload = $this->buildPayload($data, $slug);
 
         if ($request->has('payload') || $request->expectsJson()) {
             return response()->json($payload);
@@ -125,6 +185,7 @@ class DemoLotteryController extends Controller
 
         $event = (object) ['name' => '範例抽獎'];
         $currentPrize = (object) ['name' => '範例抽獎'];
+        $label = self::STYLE_LABELS[$style];
 
         return view('lottery.show', [
             'payload' => $payload,
@@ -133,16 +194,65 @@ class DemoLotteryController extends Controller
             'currentWinners' => collect(),
             'bgUrl' => null,
             'isDemo' => true,
-            'title' => '線上抽獎 Demo｜即時體驗抽獎動畫效果',
-            'seoTitle' => '線上抽獎 Demo｜即時體驗抽獎動畫效果',
-            'seoDescription' => '免費試玩線上抽獎系統 Demo，體驗樂透氣流機、紅包雨、刮刮樂、寶箱、圓球賽跑、戰鬥陀螺等多種動畫，即時感受企業尾牙抽獎的趣味與互動。',
-            'seoCanonical' => url('/demo/lottery'),
+            'demoSlug' => $slug,
+            'demoStyleLabel' => $label,
+            'demoSetupMode' => true,
+            'title' => "{$label} — 線上抽獎動畫 Demo",
+            'seoTitle' => "{$label} — 線上抽獎動畫 Demo｜即時體驗",
+            'seoDescription' => "免費試玩「{$label}」抽獎動畫，即時體驗企業尾牙、活動抽獎的趣味與互動效果。",
+            'seoCanonical' => url("/demo/lottery/{$slug}"),
         ]);
     }
 
-    public function draw(Request $request): JsonResponse
+    public function configure(Request $request, string $slug): JsonResponse
     {
-        $data = $this->ensureSession();
+        $style = $this->resolveStyle($slug);
+
+        $request->validate([
+            'names' => 'nullable|string|max:10000',
+            'draw_count' => 'nullable|integer|min:1|max:50',
+            'draw_mode' => 'nullable|in:all_at_once,one_by_one',
+        ]);
+
+        $rawNames = $request->input('names', '');
+        $names = collect(preg_split('/[\n,]+/', $rawNames))
+            ->map(fn ($n) => trim($n))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $isCustom = !empty($names);
+        if (empty($names)) {
+            $names = self::DEMO_NAMES;
+        }
+
+        $drawCount = $request->input('draw_count', 5);
+        $drawMode = $request->input('draw_mode', 'all_at_once');
+
+        $key = $this->sessionKey($style);
+        $data = session($key, []);
+        $newPrizeId = ($data['prize_id'] ?? 0) + 1;
+
+        $data = [
+            'animation_style' => $style,
+            'prize_id' => $newPrizeId,
+            'winners' => [],
+            'eligible_names' => $names,
+            'draw_count' => (int) $drawCount,
+            'draw_mode' => $drawMode,
+            'is_custom' => $isCustom,
+        ];
+        session([$key => $data]);
+
+        return response()->json($this->buildPayload($data, $slug));
+    }
+
+    public function draw(Request $request, string $slug): JsonResponse
+    {
+        $style = $this->resolveStyle($slug);
+        $key = $this->sessionKey($style);
+        $data = $this->ensureSession($style);
         $eligible = $data['eligible_names'];
 
         if (empty($eligible)) {
@@ -152,7 +262,7 @@ class DemoLotteryController extends Controller
             ]);
         }
 
-        $drawCount = min(5, count($eligible));
+        $drawCount = min($data['draw_count'] ?? 5, count($eligible));
         $keys = array_rand($eligible, $drawCount);
         if (!is_array($keys)) {
             $keys = [$keys];
@@ -162,8 +272,8 @@ class DemoLotteryController extends Controller
         $existingCount = count($data['winners']);
         $newWinners = [];
 
-        foreach ($keys as $i => $key) {
-            $name = $eligible[$key];
+        foreach ($keys as $i => $key2) {
+            $name = $eligible[$key2];
             $winnerId = $existingCount + $i + 1;
             $newWinners[] = [
                 'id' => $winnerId,
@@ -175,13 +285,12 @@ class DemoLotteryController extends Controller
             ];
         }
 
-        // 移除已抽人員
-        foreach ($keys as $key) {
-            unset($eligible[$key]);
+        foreach ($keys as $key2) {
+            unset($eligible[$key2]);
         }
         $data['eligible_names'] = array_values($eligible);
         $data['winners'] = array_merge($data['winners'], $newWinners);
-        session(['demo_lottery' => $data]);
+        session([$key => $data]);
 
         return response()->json([
             'prize_id' => $data['prize_id'],
@@ -190,50 +299,49 @@ class DemoLotteryController extends Controller
         ]);
     }
 
-    public function setStyle(Request $request): JsonResponse
+    public function reset(Request $request, string $slug): JsonResponse
     {
-        $request->validate([
-            'style' => 'required|in:' . implode(',', self::VALID_STYLES),
-        ]);
-
-        $data = $this->ensureSession();
-        $data['animation_style'] = $request->input('style');
-        $data['prize_id'] += 1;
-        $data['winners'] = [];
-        $data['eligible_names'] = self::DEMO_NAMES;
-        session(['demo_lottery' => $data]);
-
-        return response()->json($this->buildPayload($data));
-    }
-
-    public function reset(): JsonResponse
-    {
-        $data = $this->ensureSession();
+        $style = $this->resolveStyle($slug);
+        $key = $this->sessionKey($style);
+        $data = $this->ensureSession($style);
         $newPrizeId = $data['prize_id'] + 1;
 
+        $eligibleNames = ($data['is_custom'] ?? false)
+            ? array_merge($data['winners'] ? array_map(fn ($w) => $w['employee_name'], $data['winners']) : [], $data['eligible_names'])
+            : self::DEMO_NAMES;
+
         $data = [
-            'animation_style' => $data['animation_style'],
+            'animation_style' => $style,
             'prize_id' => $newPrizeId,
             'winners' => [],
-            'eligible_names' => self::DEMO_NAMES,
+            'eligible_names' => array_values(array_unique($eligibleNames)),
+            'draw_count' => $data['draw_count'] ?? 5,
+            'draw_mode' => $data['draw_mode'] ?? 'all_at_once',
+            'is_custom' => $data['is_custom'] ?? false,
         ];
-        session(['demo_lottery' => $data]);
+        session([$key => $data]);
 
-        return response()->json($this->buildPayload($data));
+        return response()->json($this->buildPayload($data, $slug));
     }
 
-    public function ready(): JsonResponse
+    public function ready(Request $request, string $slug): JsonResponse
     {
+        $this->resolveStyle($slug);
+
         return response()->json(['ok' => true, 'ts' => now()->timestamp]);
     }
 
-    public function drawingState(): JsonResponse
+    public function drawingState(Request $request, string $slug): JsonResponse
     {
+        $this->resolveStyle($slug);
+
         return response()->json(['ok' => true]);
     }
 
-    public function switchAck(): JsonResponse
+    public function switchAck(Request $request, string $slug): JsonResponse
     {
+        $this->resolveStyle($slug);
+
         return response()->json(['message' => 'ack_ok']);
     }
 }
