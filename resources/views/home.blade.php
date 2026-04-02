@@ -422,7 +422,6 @@
             width: 100%;
             height: 100%;
             border: none;
-            pointer-events: none;
             transition: opacity 0.35s ease;
         }
         .preview-desc {
