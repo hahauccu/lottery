@@ -6,10 +6,11 @@ use App\Http\Controllers\LotteryAnalysisController;
 use App\Http\Controllers\LotteryFrontendController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
+use App\Support\AnimationStyles;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('home');
+    return view('home', ['animationStyles' => AnimationStyles::all()]);
 });
 
 Route::get('/testSound', function () {

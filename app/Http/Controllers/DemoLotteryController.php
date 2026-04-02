@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AnimationStyles;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -41,39 +42,10 @@ class DemoLotteryController extends Controller
         '盧廣仲',
     ];
 
-    private const STYLE_SLUGS = [
-        'lotto-air' => 'lotto_air',
-        'red-packet' => 'red_packet',
-        'scratch-card' => 'scratch_card',
-        'treasure-chest' => 'treasure_chest',
-        'big-treasure-chest' => 'big_treasure_chest',
-        'marble-race' => 'marble_race',
-        'battle-top' => 'battle_top',
-    ];
-
-    private const STYLE_LABELS = [
-        'lotto_air' => '樂透氣流機',
-        'red_packet' => '紅包雨',
-        'scratch_card' => '刮刮樂',
-        'treasure_chest' => '寶箱',
-        'big_treasure_chest' => '大寶箱',
-        'marble_race' => '圓球賽跑',
-        'battle_top' => '戰鬥陀螺',
-    ];
-
-    private const STYLE_DESCRIPTIONS = [
-        'lotto_air' => '彩球在氣流中翻滾飛舞，逐一揭曉幸運得主',
-        'red_packet' => '紅包從天而降，點擊拆開揭曉驚喜',
-        'scratch_card' => '刮開銀色塗層，發現隱藏的中獎名單',
-        'treasure_chest' => '開啟神秘寶箱，獲得專屬獎品',
-        'big_treasure_chest' => '巨型寶箱隆重登場，大獎即刻揭曉',
-        'marble_race' => '彩色圓球競速衝刺，率先抵達者獲獎',
-        'battle_top' => '戰鬥陀螺激烈對決，最後站立者勝出',
-    ];
 
     private function resolveStyle(string $slug): string
     {
-        $style = self::STYLE_SLUGS[$slug] ?? null;
+        $style = AnimationStyles::slugToKey()[$slug] ?? null;
         if (!$style) {
             abort(404);
         }
@@ -158,18 +130,8 @@ class DemoLotteryController extends Controller
 
     public function landing()
     {
-        $styles = [];
-        foreach (self::STYLE_SLUGS as $slug => $style) {
-            $styles[] = [
-                'slug' => $slug,
-                'style' => $style,
-                'label' => self::STYLE_LABELS[$style],
-                'description' => self::STYLE_DESCRIPTIONS[$style],
-            ];
-        }
-
         return view('demo.landing', [
-            'styles' => $styles,
+            'styles' => AnimationStyles::all(),
         ]);
     }
 
@@ -185,7 +147,8 @@ class DemoLotteryController extends Controller
 
         $event = (object) ['name' => '範例抽獎'];
         $currentPrize = (object) ['name' => '範例抽獎'];
-        $label = self::STYLE_LABELS[$style];
+        $allStyles = array_column(AnimationStyles::all(), null, 'key');
+        $label = $allStyles[$style]['label'] ?? '範例抽獎';
 
         return view('lottery.show', [
             'payload' => $payload,

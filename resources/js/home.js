@@ -25,38 +25,8 @@ function initScrollReveal() {
 
 /* ── Animation Preview Carousel ── */
 Alpine.data('animationPreview', () => ({
-    items: [
-        {
-            key: 'lotto_air',
-            label: '樂透氣流機',
-            desc: '適合正式抽獎流程，節奏穩定，彩球翻飛的經典視覺',
-            img: '/images/previews/lotto_air.svg',
-        },
-        {
-            key: 'red_packet',
-            label: '紅包雨',
-            desc: '適合加碼與高潮段落，滿天紅包洋溢喜慶氣氛',
-            img: '/images/previews/red_packet.svg',
-        },
-        {
-            key: 'scratch_card',
-            label: '刮刮樂',
-            desc: '適合逐步揭曉，刮開的瞬間提高期待感',
-            img: '/images/previews/scratch_card.svg',
-        },
-        {
-            key: 'treasure_chest',
-            label: '寶箱',
-            desc: '適合大獎揭曉，開箱儀式感十足',
-            img: '/images/previews/treasure_chest.svg',
-        },
-        {
-            key: 'big_treasure_chest',
-            label: '大寶箱',
-            desc: '適合壓軸時刻，聚焦全場的終極視覺效果',
-            img: '/images/previews/big_treasure_chest.svg',
-        },
-    ],
+    // 從後端注入的 PHP 資料讀取，每項加上 iframeSrc: null（懶載入）
+    items: (window.__animationStyles__ || []).map((s) => ({ ...s, iframeSrc: null })),
     active: 0,
     paused: false,
     timer: null,
@@ -66,17 +36,28 @@ Alpine.data('animationPreview', () => ({
         return this.items[this.active];
     },
 
+    loadIframe(i) {
+        if (!this.items[i].iframeSrc) {
+            this.items[i].iframeSrc = '/demo/lottery/' + this.items[i].slug;
+        }
+    },
+
     switchTo(i) {
+        this.loadIframe(i);
         this.active = i;
         this.restartTimer();
     },
 
     next() {
-        this.active = (this.active + 1) % this.items.length;
+        const i = (this.active + 1) % this.items.length;
+        this.loadIframe(i);
+        this.active = i;
     },
 
     prev() {
-        this.active = (this.active - 1 + this.items.length) % this.items.length;
+        const i = (this.active - 1 + this.items.length) % this.items.length;
+        this.loadIframe(i);
+        this.active = i;
     },
 
     restartTimer() {

@@ -102,6 +102,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
+    <script>
+        window.__animationStyles__ = @json($animationStyles);
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/home.js'])
 
     <style>
@@ -412,12 +416,13 @@
             border: 1px solid var(--c-border);
             background: var(--c-bg-card);
         }
-        .preview-window img {
+        .preview-window iframe {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            border: none;
+            pointer-events: none;
             transition: opacity 0.35s ease;
         }
         .preview-desc {
@@ -720,7 +725,7 @@
             <div class="section-header" data-reveal>
                 <div class="section-divider"></div>
                 <h2><span class="accent">抽獎動畫</span>即時預覽</h2>
-                <p>五種風格任你切換，點擊預覽實際效果</p>
+                <p>{{ count($animationStyles) }} 種風格任你切換，點擊預覽實際效果</p>
             </div>
 
             <div class="preview-tabs" data-reveal data-reveal-delay="100">
@@ -734,9 +739,10 @@
 
             <div class="preview-window" data-reveal data-reveal-delay="180">
                 <template x-for="(item, i) in items" :key="item.key">
-                    <img :src="item.img"
-                         :alt="item.label + ' 動畫預覽'"
-                         :style="{ opacity: active === i ? 1 : 0, zIndex: active === i ? 1 : 0 }">
+                    <iframe :src="item.iframeSrc ?? ''"
+                            :aria-label="item.label + ' 動畫預覽'"
+                            :style="{ opacity: active === i ? 1 : 0, zIndex: active === i ? 1 : 0 }"
+                            frameborder="0" scrolling="no"></iframe>
                 </template>
             </div>
 
