@@ -93,6 +93,17 @@ draw()  → prepareToDraw()   # 準備抽獎
   - 搜尋 `animation_style` 的 `->options([`（約行 90）
   - 加入 `'xxx' => '中文名稱'`
 
+- [ ] **C6. AnimationStyles.php — 統一風格清單（自動更新首頁預覽）**
+  - 檔案：`app/Support/AnimationStyles.php`
+  - 在 `public static function all(): array` 的陣列中加入：
+    ```php
+    ['key' => 'xxx', 'slug' => 'xxx-name', 'label' => '中文名稱', 'desc' => '簡短描述'],
+    ```
+  - 這會自動在以下位置同步：
+    - 首頁 `/` 的預覽區 iframe（無需改 home.js）
+    - Demo landing 頁面 `/demo/lottery`
+    - DemoLotteryController 的風格解析
+
 ---
 
 ## D. 動畫模組 IIFE 模板
@@ -455,6 +466,7 @@ xxx: {
 
 - [ ] 後台：表單 Select 出現新選項
 - [ ] 後台：將獎項切換到新動畫風格並儲存成功
+- [ ] 首頁 `/`：預覽區自動出現新動畫的 tab（無需改 home.js）
 - [ ] 前台：待機狀態正確顯示動畫
 - [ ] 前台：`one_by_one` 模式正常抽獎，中獎者逐一揭曉
 - [ ] 前台：`all_at_once` 模式正常抽獎，中獎者批次揭曉
@@ -479,3 +491,4 @@ xxx: {
 | C3 | `PrizesRelationManager.php` | `$validStyles` |
 | C4 | `PrizesRelationManager.php` | `'animation_style' => match` |
 | C5 | `PrizeResource.php` | `animation_style` → `->options` |
+| C6 | `app/Support/AnimationStyles.php` | `all()` 陣列中新增一筆 |
