@@ -1,0 +1,3 @@
+- [Animation Styles Inventory](project_animation_styles_inventory.md) -- 7 styles: stop() cleanup status, marble_race partial
+- [Test Failures Baseline](project_test_failures_baseline.md) -- 2 pre-existing test failures (Auth login, ExampleTest)
+- [Pint Style Baseline](project_pint_baseline.md) -- 6 files with pre-existing style issues

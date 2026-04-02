@@ -11,7 +11,20 @@
       "Bash(git fetch:*)",
       "Bash(npx vite build:*)",
       "Bash(php -l:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(lsof:*)",
+      "Bash(git status:*)",
+      "Bash(php:*)",
+      "Bash(xargs basename:*)",
+      "Bash(git reset:*)",
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(head:*)",
+      "Bash(python3:*)",
+      "Bash(find:*)",
+      "Bash(npx:*)",
+      "Bash(xargs ls:*)"
     ]
-  }
+  },
+  "prefersReducedMotion": false
 }
