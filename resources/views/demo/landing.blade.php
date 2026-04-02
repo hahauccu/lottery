@@ -259,7 +259,7 @@
                     </div>
                     <div class="style-card__icon">{{ $icons[$i] }}</div>
                     <div class="style-card__name">{{ $s['label'] }}</div>
-                    <div class="style-card__desc">{{ $s['description'] }}</div>
+                    <div class="style-card__desc">{{ $s['desc'] }}</div>
                 </a>
             @endforeach
         </div>
