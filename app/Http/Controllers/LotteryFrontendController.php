@@ -279,7 +279,18 @@ class LotteryFrontendController extends Controller
         }
 
         try {
-            if ($runId = $request->input('run_id')) {
+            $runId = $request->input('run_id');
+
+            if ($runId && (! is_string($runId) || strlen($runId) > 64)) {
+                $runId = null;
+            }
+
+            if ($runId) {
+                $dedupKey = "draw-dedup:{$event->id}:{$runId}";
+                if (Cache::has($dedupKey)) {
+                    return response()->json(['message' => 'already_processed'], 409);
+                }
+                Cache::put($dedupKey, true, now()->addMinutes(2));
                 Cache::put("lottery-drawing:{$brandCode}", $runId, now()->addSeconds(15));
             }
 
@@ -289,14 +300,22 @@ class LotteryFrontendController extends Controller
                 return response()->json(['message' => 'no_winners', 'winners' => []]);
             }
 
-            event(new PrizeWinnersUpdated($event->brand_code, $event->currentPrize, $winners));
+            $prize = $event->currentPrize;
+
+            event(new PrizeWinnersUpdated($event->brand_code, $prize, $winners));
 
             // 清除 winners 頁面快取
             Cache::forget("winners:{$brandCode}");
 
+            $drawnCount = $prize->winners()->count();
+            $isCompleted = $drawnCount >= $prize->winners_count;
+
             return response()->json([
-                'prize_id' => $event->currentPrize->id,
-                'prize_name' => $event->currentPrize->name,
+                'prize_id' => $prize->id,
+                'prize_name' => $prize->name,
+                'is_completed' => $isCompleted,
+                'is_exhausted' => ! $isCompleted && app(EligibleEmployeesService::class)
+                    ->eligibleForStoredPrize($prize)->isEmpty(),
                 'winners' => $winners->map(fn ($winner) => [
                     'id' => $winner->id,
                     'employee_name' => $winner->employee?->name,

@@ -47,12 +47,14 @@ class PrizeWinnersUpdated implements ShouldBroadcastNow
         $isExhausted = empty($eligibleNames) && ! $isCompleted;
 
         // 計算所有獎項的最新狀態（含 drawnCount）
-        $allPrizes = $this->prize->lotteryEvent->prizes
+        $allPrizes = $this->prize->lotteryEvent->prizes()
+            ->withCount(['winners as drawn_count'])
+            ->get()
             ->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
                 'winnersCount' => $p->winners_count,
-                'drawnCount' => $p->winners()->count(),
+                'drawnCount' => $p->drawn_count,
             ])->all();
 
         return [

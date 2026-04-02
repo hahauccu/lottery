@@ -83,12 +83,14 @@ class EligibleEmployeesService
 
     public function eligibleForStoredPrize(Prize $prize): Collection
     {
+        $rules = $prize->rules()->get()->groupBy('type');
+
         return $this->eligibleForPrize(
             $prize->lotteryEvent,
-            $prize->rules()->where('type', \App\Models\PrizeRule::TYPE_INCLUDE_EMPLOYEE)->pluck('ref_id')->all(),
-            $prize->rules()->where('type', \App\Models\PrizeRule::TYPE_INCLUDE_GROUP)->pluck('ref_id')->all(),
-            $prize->rules()->where('type', \App\Models\PrizeRule::TYPE_EXCLUDE_EMPLOYEE)->pluck('ref_id')->all(),
-            $prize->rules()->where('type', \App\Models\PrizeRule::TYPE_EXCLUDE_GROUP)->pluck('ref_id')->all(),
+            $rules->get(\App\Models\PrizeRule::TYPE_INCLUDE_EMPLOYEE)?->pluck('ref_id')->all() ?? [],
+            $rules->get(\App\Models\PrizeRule::TYPE_INCLUDE_GROUP)?->pluck('ref_id')->all() ?? [],
+            $rules->get(\App\Models\PrizeRule::TYPE_EXCLUDE_EMPLOYEE)?->pluck('ref_id')->all() ?? [],
+            $rules->get(\App\Models\PrizeRule::TYPE_EXCLUDE_GROUP)?->pluck('ref_id')->all() ?? [],
             $prize->allow_repeat_within_prize,
             $prize->id,
         );

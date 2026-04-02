@@ -48,12 +48,14 @@ class LotteryEventUpdated implements ShouldBroadcastNow
             ? asset('storage/'.$currentPrize->music_path)
             : null;
 
-        $allPrizes = $this->event->prizes
+        $allPrizes = $this->event->prizes()
+            ->withCount(['winners as drawn_count'])
+            ->get()
             ->map(fn ($prize) => [
                 'id' => $prize->id,
                 'name' => $prize->name,
                 'winnersCount' => $prize->winners_count,
-                'drawnCount' => $prize->winners()->count(),
+                'drawnCount' => $prize->drawn_count,
             ])->all();
 
         $bgPath = $currentPrize?->bg_image_path ?: $this->event->default_bg_image_path;
@@ -73,17 +75,23 @@ class LotteryEventUpdated implements ShouldBroadcastNow
             ],
             'bg_url' => $bgUrl,
             'all_prizes' => $allPrizes,
-            'current_prize' => $currentPrize ? [
-                'id' => $currentPrize->id,
-                'name' => $currentPrize->name,
-                'draw_mode' => $currentPrize->draw_mode,
-                'animation_style' => $currentPrize->animation_style,
-                'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
-                'sound_enabled' => $currentPrize->sound_enabled,
-                'music_url' => $musicUrl,
-                'winners_count' => $currentPrize->winners_count,
-                'is_completed' => $currentPrize->winners()->count() >= $currentPrize->winners_count,
-            ] : null,
+            'current_prize' => $currentPrize ? (function () use ($currentPrize, $musicUrl, $eligibleNames) {
+                $drawnCount = $currentPrize->winners()->count();
+                $isCompleted = $drawnCount >= $currentPrize->winners_count;
+
+                return [
+                    'id' => $currentPrize->id,
+                    'name' => $currentPrize->name,
+                    'draw_mode' => $currentPrize->draw_mode,
+                    'animation_style' => $currentPrize->animation_style,
+                    'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
+                    'sound_enabled' => $currentPrize->sound_enabled,
+                    'music_url' => $musicUrl,
+                    'winners_count' => $currentPrize->winners_count,
+                    'is_completed' => $isCompleted,
+                    'is_exhausted' => ! $isCompleted && empty($eligibleNames),
+                ];
+            })() : null,
             'winners' => $currentPrize
                 ? $currentPrize->winners
                     ->sortBy('sequence')

@@ -1310,6 +1310,7 @@ const initLottery = () => {
     const rand = (min, max) => min + Math.random() * (max - min);
     const isLottoAirStyle = (style) => style === 'lotto_air';
     const isRedPacketStyle = (style) => style === 'red_packet';
+    const easeOutBack = (t, s = 1.4) => 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2);
     const isScratchCardStyle = (style) => style === 'scratch_card';
     const isTreasureChestStyle = (style) => style === 'treasure_chest';
     const isBigTreasureChestStyle = (style) => style === 'big_treasure_chest';
@@ -2182,6 +2183,12 @@ const initLottery = () => {
             airState.pending.length = 0;
             particles.length = 0;
             stopTrayCarousel();
+            airState.mode = 'idle';
+            airState.t = 0;
+            airState.paused = false;
+            airState.slowStop = false;
+            airState.slowFactor = 1;
+            shake.power = 0;
         };
 
         const ensureCount = (count) => {
@@ -3410,6 +3417,7 @@ const initLottery = () => {
                 card.maskCtx = null;
             }
             cards.length = 0;
+            revealedCount = 0;
             if (revealResolve) { revealResolve(); revealResolve = null; }
         };
 
@@ -4071,6 +4079,7 @@ const initLottery = () => {
             if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
             coins.length = 0;
             sparkles.length = 0;
+            openedCount = 0;
             if (openResolve) { openResolve(); openResolve = null; }
         };
 
@@ -4225,7 +4234,6 @@ const initLottery = () => {
         let holdSeconds = 5;
         let phaseTime = 0;
         let openProgress = 0;
-        let burstDone = false;
         let revealResolve = null;
         let spawnTimer = 0;
 
@@ -4241,24 +4249,18 @@ const initLottery = () => {
         const ingots = [];
         const gourds = [];
         const sparkles = [];
-        const heroToken = {
+        const redPackets = [];
+        const nameEruption = {
             active: false,
-            phase: 'idle',
-            t: 0,
-            total: 0,
-            x: 0,
-            y: 0,
-            startX: 0,
-            startY: 0,
-            targetX: 0,
-            targetY: 0,
-            size: 0,
-            scale: 0.7,
-            opacity: 0,
-            rotation: 0,
-            floatPhase: 0,
+            phase: 'idle',   // 'idle' | 'erupting' | 'displaying' | 'exiting'
+            t: 0, total: 0,
             name: '',
-            variant: 'ingot',
+            x: 0, y: 0,
+            startX: 0, startY: 0,
+            targetX: 0, targetY: 0,
+            scale: 0, opacity: 0,
+            rotation: 0, floatPhase: 0,
+            fontSize: 0,
         };
 
         const chest = {
@@ -4339,70 +4341,64 @@ const initLottery = () => {
 
         const getTiming = () => {
             const total = Math.max(3, holdSeconds || 5);
-            const open = clamp(total * 0.25, 0.7, 1.5);
-            const fly = clamp(total * 0.15, 0.4, 0.8);
-            const heroHold = clamp(total * 0.4, 1.0, 3.5);
-            const fade = clamp(total * 0.08, 0.3, 0.6);
-            return { open, fly, heroHold, fade };
+            const erupt = clamp(total * 0.15, 0.4, 0.8);
+            const display = clamp(total * 0.5, 1.0, 4.0);
+            const exit = clamp(total * 0.1, 0.3, 0.6);
+            return { erupt, display, exit };
         };
 
         const spawnBurst = () => {
-            const coinCount = 60;
-            const ingotCount = 14;
-            const gourdCount = 4;
+            const base = chest.w * 0.08;
+            const coinCount = 30;
+            const ingotCount = 6;
+            const redPacketCount = 5;
+            const gourdCount = 2;
             for (let i = 0; i < coinCount; i++) {
                 const { x, y } = getEmitPoint();
                 const { vx, vy, ax, ay, boostTime } = getEmitVelocity(360, 780, 900, 1400);
                 coins.push({
-                    x,
-                    y,
-                    vx,
-                    vy,
-                    size: rand(14, 24),
+                    x, y, vx, vy,
+                    size: rand(base * 0.8, base * 1.4),
                     rotation: rand(0, TAU),
                     rotSpeed: rand(-10, 10),
                     life: rand(1.6, 2.4),
-                    t: 0,
-                    ax,
-                    ay,
-                    boostTime,
+                    t: 0, ax, ay, boostTime,
                 });
             }
             for (let i = 0; i < ingotCount; i++) {
                 const { x, y } = getEmitPoint();
                 const { vx, vy, ax, ay, boostTime } = getEmitVelocity(300, 640, 800, 1200);
                 ingots.push({
-                    x,
-                    y,
-                    vx,
-                    vy,
-                    w: rand(22, 36),
-                    h: rand(14, 24),
+                    x, y, vx, vy,
+                    w: rand(base * 1.0, base * 1.6), h: rand(base * 0.6, base * 1.0),
                     rotation: rand(-0.6, 0.6),
                     rotSpeed: rand(-6, 6),
                     life: rand(1.7, 2.5),
-                    t: 0,
-                    ax,
-                    ay,
-                    boostTime,
+                    t: 0, ax, ay, boostTime,
+                });
+            }
+            for (let i = 0; i < redPacketCount; i++) {
+                const { x, y } = getEmitPoint();
+                const { vx, vy, ax, ay, boostTime } = getEmitVelocity(280, 600, 780, 1150);
+                redPackets.push({
+                    x, y, vx, vy,
+                    w: rand(base * 0.7, base * 1.1), h: rand(base * 1.0, base * 1.4),
+                    rotation: rand(-0.5, 0.5),
+                    rotSpeed: rand(-5, 5),
+                    life: rand(1.6, 2.4),
+                    t: 0, ax, ay, boostTime,
                 });
             }
             for (let i = 0; i < gourdCount; i++) {
                 const { x, y } = getEmitPoint();
                 const { vx, vy, ax, ay, boostTime } = getEmitVelocity(260, 520, 720, 1100);
                 gourds.push({
-                    x,
-                    y,
-                    vx,
-                    vy,
-                    size: rand(16, 26),
+                    x, y, vx, vy,
+                    size: rand(base * 0.9, base * 1.3),
                     rotation: rand(-0.4, 0.4),
                     rotSpeed: rand(-4, 4),
                     life: rand(1.6, 2.4),
-                    t: 0,
-                    ax,
-                    ay,
-                    boostTime,
+                    t: 0, ax, ay, boostTime,
                 });
             }
             const sparkleCount = 26;
@@ -4411,11 +4407,10 @@ const initLottery = () => {
                 const angle = rand(-Math.PI * 0.9, -Math.PI * 0.1);
                 const speed = rand(160, 300);
                 sparkles.push({
-                    x,
-                    y,
+                    x, y,
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed - 40,
-                    size: rand(3, 7),
+                    size: rand(base * 0.25, base * 0.45),
                     life: rand(0.6, 1.1),
                     t: 0,
                 });
@@ -4424,122 +4419,252 @@ const initLottery = () => {
 
         const spawnStream = (dt) => {
             spawnTimer += dt;
-            const interval = 0.06;
-            const maxParticles = 180;
+            const base = chest.w * 0.08;
+            const interval = 0.10;
+            const maxParticles = 100;
 
             while (spawnTimer >= interval) {
                 spawnTimer -= interval;
-                const total = coins.length + ingots.length + gourds.length;
+                const total = coins.length + ingots.length + gourds.length + redPackets.length;
                 if (total >= maxParticles) break;
 
                 const roll = Math.random();
-                if (roll < 0.72) {
+                if (roll < 0.55) {
                     const { x, y } = getEmitPoint();
                     const { vx, vy, ax, ay, boostTime } = getEmitVelocity(220, 420, 520, 900);
                     coins.push({
-                        x,
-                        y,
-                        vx,
-                        vy,
-                        size: rand(10, 16),
+                        x, y, vx, vy,
+                        size: rand(base * 0.8, base * 1.4),
                         rotation: rand(0, TAU),
                         rotSpeed: rand(-10, 10),
                         life: rand(1.1, 1.9),
-                        t: 0,
-                        ax,
-                        ay,
-                        boostTime,
+                        t: 0, ax, ay, boostTime,
                     });
-                } else if (roll < 0.93) {
+                } else if (roll < 0.73) {
                     const { x, y } = getEmitPoint();
                     const { vx, vy, ax, ay, boostTime } = getEmitVelocity(200, 380, 480, 820);
                     ingots.push({
-                        x,
-                        y,
-                        vx,
-                        vy,
-                        w: rand(16, 24),
-                        h: rand(10, 16),
+                        x, y, vx, vy,
+                        w: rand(base * 1.0, base * 1.6), h: rand(base * 0.6, base * 1.0),
                         rotation: rand(-0.6, 0.6),
                         rotSpeed: rand(-6, 6),
                         life: rand(1.2, 2.0),
-                        t: 0,
-                        ax,
-                        ay,
-                        boostTime,
+                        t: 0, ax, ay, boostTime,
+                    });
+                } else if (roll < 0.90) {
+                    const { x, y } = getEmitPoint();
+                    const { vx, vy, ax, ay, boostTime } = getEmitVelocity(200, 380, 480, 800);
+                    redPackets.push({
+                        x, y, vx, vy,
+                        w: rand(base * 0.7, base * 1.1), h: rand(base * 1.0, base * 1.4),
+                        rotation: rand(-0.5, 0.5),
+                        rotSpeed: rand(-5, 5),
+                        life: rand(1.2, 2.0),
+                        t: 0, ax, ay, boostTime,
                     });
                 } else {
                     const { x, y } = getEmitPoint();
                     const { vx, vy, ax, ay, boostTime } = getEmitVelocity(200, 360, 460, 760);
                     gourds.push({
-                        x,
-                        y,
-                        vx,
-                        vy,
-                        size: rand(12, 20),
+                        x, y, vx, vy,
+                        size: rand(base * 0.9, base * 1.3),
                         rotation: rand(-0.4, 0.4),
                         rotSpeed: rand(-4, 4),
                         life: rand(1.3, 2.1),
-                        t: 0,
-                        ax,
-                        ay,
-                        boostTime,
+                        t: 0, ax, ay, boostTime,
                     });
                 }
             }
         };
 
-        const spawnHeroToken = () => {
-            if (!winner) return;
-            heroToken.active = true;
-            heroToken.phase = 'fly';
-            heroToken.t = 0;
-            heroToken.total = 0;
-            heroToken.name = winner;
-            heroToken.variant = Math.random() < 0.65 ? 'ingot' : 'coin';
-            heroToken.rotation = rand(-0.12, 0.12);
-            heroToken.floatPhase = rand(0, TAU);
-            heroToken.size = clamp(chest.w * 0.36, 170, 260);
-            heroToken.startX = chest.x + chest.w / 2 + rand(-24, 24);
-            heroToken.startY = chest.y + chest.h * 0.12;
-            heroToken.targetX = canvasRect.width * 0.5;
-            heroToken.targetY = canvasRect.height * 0.42;
-            heroToken.x = heroToken.startX;
-            heroToken.y = heroToken.startY;
-            heroToken.opacity = 0;
-            heroToken.scale = 0.65;
+        let idleSpawnTimer = 0;
+        const spawnIdleStream = (dt) => {
+            idleSpawnTimer += dt;
+            const base = chest.w * 0.08;
+            const interval = 0.18;
+            const maxParticles = 60;
+
+            while (idleSpawnTimer >= interval) {
+                idleSpawnTimer -= interval;
+                const total = coins.length + ingots.length + gourds.length + redPackets.length;
+                if (total >= maxParticles) break;
+
+                const roll = Math.random();
+                const speedMul = 0.7;
+                if (roll < 0.50) {
+                    const { x, y } = getEmitPoint();
+                    const { vx, vy, ax, ay, boostTime } = getEmitVelocity(220 * speedMul, 420 * speedMul, 520 * speedMul, 900 * speedMul);
+                    coins.push({
+                        x, y, vx, vy,
+                        size: rand(base * 0.8, base * 1.4),
+                        rotation: rand(0, TAU),
+                        rotSpeed: rand(-10, 10),
+                        life: rand(1.1, 1.9),
+                        t: 0, ax, ay, boostTime,
+                    });
+                } else if (roll < 0.65) {
+                    const { x, y } = getEmitPoint();
+                    const { vx, vy, ax, ay, boostTime } = getEmitVelocity(200 * speedMul, 380 * speedMul, 480 * speedMul, 820 * speedMul);
+                    ingots.push({
+                        x, y, vx, vy,
+                        w: rand(base * 1.0, base * 1.6), h: rand(base * 0.6, base * 1.0),
+                        rotation: rand(-0.6, 0.6),
+                        rotSpeed: rand(-6, 6),
+                        life: rand(1.2, 2.0),
+                        t: 0, ax, ay, boostTime,
+                    });
+                } else if (roll < 0.85) {
+                    const { x, y } = getEmitPoint();
+                    const { vx, vy, ax, ay, boostTime } = getEmitVelocity(200 * speedMul, 380 * speedMul, 480 * speedMul, 800 * speedMul);
+                    redPackets.push({
+                        x, y, vx, vy,
+                        w: rand(base * 0.7, base * 1.1), h: rand(base * 1.0, base * 1.4),
+                        rotation: rand(-0.5, 0.5),
+                        rotSpeed: rand(-5, 5),
+                        life: rand(1.2, 2.0),
+                        t: 0, ax, ay, boostTime,
+                    });
+                } else if (roll < 0.90) {
+                    const { x, y } = getEmitPoint();
+                    const { vx, vy, ax, ay, boostTime } = getEmitVelocity(200 * speedMul, 360 * speedMul, 460 * speedMul, 760 * speedMul);
+                    gourds.push({
+                        x, y, vx, vy,
+                        size: rand(base * 0.9, base * 1.3),
+                        rotation: rand(-0.4, 0.4),
+                        rotSpeed: rand(-4, 4),
+                        life: rand(1.3, 2.1),
+                        t: 0, ax, ay, boostTime,
+                    });
+                } else {
+                    const { x, y } = getEmitPoint();
+                    const angle = rand(-Math.PI * 0.9, -Math.PI * 0.1);
+                    const speed = rand(100, 200);
+                    sparkles.push({
+                        x, y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 30,
+                        size: rand(base * 0.25, base * 0.45),
+                        life: rand(0.5, 0.9),
+                        t: 0,
+                    });
+                }
+            }
         };
 
-        const updateHero = (dt, timing) => {
-            if (!heroToken.active) return false;
-            heroToken.total += dt;
-            heroToken.t += dt;
+        const spawnNameBurst = () => {
+            // 粒子尺寸跟名字一樣大（fontSize 約 36-72）
+            const fs = nameEruption.fontSize || 48;
+            const coinCount = 30;
+            const ingotCount = 8;
+            const redPacketCount = 6;
+            const sparkleCount = 16;
+            for (let i = 0; i < coinCount; i++) {
+                const { x, y } = getEmitPoint();
+                const { vx, vy, ax, ay, boostTime } = getEmitVelocity(400, 850, 1000, 1500);
+                coins.push({
+                    x, y, vx: vx * 1.2, vy: vy * 1.2,
+                    size: rand(fs * 0.6, fs * 1.0),
+                    rotation: rand(0, TAU),
+                    rotSpeed: rand(-10, 10),
+                    life: rand(1.2, 1.8),
+                    t: 0, ax, ay, boostTime,
+                });
+            }
+            for (let i = 0; i < ingotCount; i++) {
+                const { x, y } = getEmitPoint();
+                const { vx, vy, ax, ay, boostTime } = getEmitVelocity(340, 700, 900, 1300);
+                ingots.push({
+                    x, y, vx: vx * 1.2, vy: vy * 1.2,
+                    w: rand(fs * 0.7, fs * 1.1), h: rand(fs * 0.45, fs * 0.75),
+                    rotation: rand(-0.6, 0.6),
+                    rotSpeed: rand(-6, 6),
+                    life: rand(1.3, 2.0),
+                    t: 0, ax, ay, boostTime,
+                });
+            }
+            for (let i = 0; i < redPacketCount; i++) {
+                const { x, y } = getEmitPoint();
+                const { vx, vy, ax, ay, boostTime } = getEmitVelocity(320, 660, 850, 1250);
+                redPackets.push({
+                    x, y, vx: vx * 1.2, vy: vy * 1.2,
+                    w: rand(fs * 0.5, fs * 0.8), h: rand(fs * 0.7, fs * 1.0),
+                    rotation: rand(-0.5, 0.5),
+                    rotSpeed: rand(-5, 5),
+                    life: rand(1.2, 1.8),
+                    t: 0, ax, ay, boostTime,
+                });
+            }
+            for (let i = 0; i < sparkleCount; i++) {
+                const { x, y } = getEmitPoint();
+                const angle = rand(-Math.PI * 0.85, -Math.PI * 0.15);
+                const speed = rand(200, 380);
+                sparkles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 50,
+                    size: rand(fs * 0.2, fs * 0.4),
+                    life: rand(0.5, 0.9),
+                    t: 0,
+                });
+            }
+        };
 
-            if (heroToken.phase === 'fly') {
-                const progress = clamp(heroToken.t / timing.fly, 0, 1);
-                const eased = easeOutCubic(progress);
-                heroToken.x = lerp(heroToken.startX, heroToken.targetX, eased);
-                heroToken.y = lerp(heroToken.startY, heroToken.targetY, eased);
-                heroToken.scale = lerp(0.65, 1, easeOutCubic(progress));
-                heroToken.opacity = Math.min(1, progress * 1.2);
+        const spawnNameEruption = () => {
+            if (!winner) return;
+            const timing = getTiming();
+            const emitPt = getEmitPoint();
+            nameEruption.active = true;
+            nameEruption.phase = 'erupting';
+            nameEruption.t = 0;
+            nameEruption.total = 0;
+            nameEruption.name = winner;
+            nameEruption.startX = chest.x + chest.w / 2;
+            nameEruption.startY = chest.y + chest.h * 0.18;
+            nameEruption.targetX = canvasRect.width * 0.5;
+            nameEruption.targetY = canvasRect.height * 0.38;
+            nameEruption.x = nameEruption.startX;
+            nameEruption.y = nameEruption.startY;
+            nameEruption.scale = 0.3;
+            nameEruption.opacity = 0;
+            nameEruption.rotation = rand(-0.08, 0.08);
+            nameEruption.floatPhase = rand(0, TAU);
+            const maxTextW = canvasRect.width * 0.7;
+            nameEruption.fontSize = getFittedFontSize(winner, maxTextW, clamp(chest.w * 0.14, 36, 72), 18);
+        };
+
+        const updateNameEruption = (dt) => {
+            if (!nameEruption.active) return false;
+            const timing = getTiming();
+            nameEruption.total += dt;
+            nameEruption.t += dt;
+
+            if (nameEruption.phase === 'erupting') {
+                const progress = clamp(nameEruption.t / timing.erupt, 0, 1);
+                const eased = easeOutBack(progress);
+                nameEruption.x = lerp(nameEruption.startX, nameEruption.targetX, eased);
+                nameEruption.y = lerp(nameEruption.startY, nameEruption.targetY, eased);
+                nameEruption.scale = lerp(0.3, 1, eased);
+                nameEruption.opacity = Math.min(1, progress * 2.5);
                 if (progress >= 1) {
-                    heroToken.phase = 'hold';
-                    heroToken.t = 0;
+                    nameEruption.phase = 'displaying';
+                    nameEruption.t = 0;
                 }
-            } else if (heroToken.phase === 'hold') {
-                heroToken.opacity = 1;
-                heroToken.scale = 1 + Math.sin(heroToken.total * 2.2) * 0.02;
-                if (heroToken.t >= timing.heroHold) {
-                    heroToken.phase = 'fade';
-                    heroToken.t = 0;
+            } else if (nameEruption.phase === 'displaying') {
+                nameEruption.opacity = 1;
+                nameEruption.scale = 1 + Math.sin(nameEruption.total * 2.5) * 0.025;
+                nameEruption.y = nameEruption.targetY + Math.sin(nameEruption.total * 1.8 + nameEruption.floatPhase) * 6;
+                if (nameEruption.t >= timing.display) {
+                    nameEruption.phase = 'exiting';
+                    nameEruption.t = 0;
                 }
-            } else if (heroToken.phase === 'fade') {
-                const progress = clamp(heroToken.t / timing.fade, 0, 1);
-                heroToken.opacity = 1 - progress;
-                heroToken.scale = 1 - progress * 0.08;
+            } else if (nameEruption.phase === 'exiting') {
+                const progress = clamp(nameEruption.t / timing.exit, 0, 1);
+                nameEruption.opacity = 1 - progress;
+                nameEruption.y = nameEruption.targetY - progress * canvasRect.height * 0.18;
+                nameEruption.scale = 1 - progress * 0.15;
                 if (progress >= 1) {
-                    heroToken.active = false;
-                    heroToken.phase = 'idle';
+                    nameEruption.active = false;
+                    nameEruption.phase = 'idle';
                     return true;
                 }
             }
@@ -4593,6 +4718,22 @@ const initLottery = () => {
                 g.rotation += g.rotSpeed * dt;
                 g.vx *= 0.985;
                 g.vy *= 0.985;
+            }
+
+            for (let i = redPackets.length - 1; i >= 0; i--) {
+                const rp = redPackets[i];
+                rp.t += dt;
+                if (rp.boostTime && rp.t <= rp.boostTime) {
+                    rp.vx += rp.ax * dt;
+                    rp.vy += rp.ay * dt;
+                }
+                if (rp.t >= rp.life) { redPackets.splice(i, 1); continue; }
+                rp.vy += 520 * dt;
+                rp.x += rp.vx * dt;
+                rp.y += rp.vy * dt;
+                rp.rotation += rp.rotSpeed * dt;
+                rp.vx *= 0.985;
+                rp.vy *= 0.985;
             }
 
             for (let i = sparkles.length - 1; i >= 0; i--) {
@@ -4750,6 +4891,34 @@ const initLottery = () => {
             ctx.restore();
         };
 
+        const drawRedPacket = (rp) => {
+            const alpha = 1 - rp.t / rp.life;
+            ctx.save();
+            ctx.translate(rp.x, rp.y);
+            ctx.rotate(rp.rotation);
+            ctx.globalAlpha = alpha;
+            const w = rp.w;
+            const h = rp.h;
+            // 紅色圓角矩形
+            ctx.fillStyle = '#d42a2a';
+            roundRect(ctx, -w / 2, -h / 2, w, h, w * 0.18);
+            ctx.fill();
+            // 金色封口線
+            const sealY = -h * 0.12;
+            ctx.strokeStyle = '#f4c430';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-w * 0.38, sealY);
+            ctx.lineTo(w * 0.38, sealY);
+            ctx.stroke();
+            // 金色小圓點
+            ctx.fillStyle = '#ffd24d';
+            ctx.beginPath();
+            ctx.arc(0, sealY, w * 0.1, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+        };
+
         const drawSparkles = () => {
             for (const s of sparkles) {
                 const alpha = 1 - s.t / s.life;
@@ -4777,70 +4946,51 @@ const initLottery = () => {
             return size;
         };
 
-        const drawHeroToken = () => {
-            if (!heroToken.active || !ctx) return;
-            const displayName = heroToken.name || '???';
-            const floatOffset = Math.sin(heroToken.total * 2.2 + heroToken.floatPhase) * Math.min(12, heroToken.size * 0.08);
-            const baseX = heroToken.x;
-            const baseY = heroToken.y + floatOffset;
-            const tokenW = heroToken.size * 1.35;
-            const tokenH = heroToken.size * 0.9;
+        const drawNameEruption = () => {
+            if (!nameEruption.active || !ctx) return;
+            const displayName = nameEruption.name || '???';
 
             ctx.save();
-            ctx.translate(baseX, baseY);
-            ctx.rotate(heroToken.rotation);
-            ctx.scale(heroToken.scale, heroToken.scale);
-            ctx.globalAlpha = heroToken.opacity;
+            ctx.translate(nameEruption.x, nameEruption.y);
+            ctx.rotate(nameEruption.rotation * (1 - clamp(nameEruption.total * 2, 0, 1)));
+            ctx.scale(nameEruption.scale, nameEruption.scale);
+            ctx.globalAlpha = nameEruption.opacity;
 
-            if (heroToken.variant === 'coin') {
-                const grad = ctx.createRadialGradient(-tokenW * 0.2, -tokenH * 0.2, 0, 0, 0, tokenW * 0.7);
-                grad.addColorStop(0, '#fff5b5');
-                grad.addColorStop(0.45, '#ffd24d');
-                grad.addColorStop(1, '#b8860b');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, tokenW * 0.5, tokenH * 0.5, 0, 0, TAU);
-                ctx.fill();
-                ctx.strokeStyle = '#f7d56b';
-                ctx.lineWidth = 6;
-                ctx.stroke();
-                ctx.strokeStyle = 'rgba(160, 110, 0, 0.6)';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            } else {
-                const grad = ctx.createLinearGradient(0, -tokenH * 0.6, 0, tokenH * 0.6);
-                grad.addColorStop(0, '#fff1a8');
-                grad.addColorStop(0.45, '#ffd24d');
-                grad.addColorStop(1, '#b8860b');
-                ctx.fillStyle = grad;
-                roundRect(ctx, -tokenW / 2, -tokenH / 2, tokenW, tokenH, tokenH * 0.45);
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(160, 110, 0, 0.7)';
-                ctx.lineWidth = 5;
-                ctx.stroke();
+            // 金色放射光暈（脈動）
+            const glowPulse = 0.6 + Math.sin(nameEruption.total * 4) * 0.15;
+            const glowR = nameEruption.fontSize * 2.5 * glowPulse;
+            const glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
+            glowGrad.addColorStop(0, 'rgba(255, 215, 0, 0.45)');
+            glowGrad.addColorStop(0.4, 'rgba(255, 180, 0, 0.2)');
+            glowGrad.addColorStop(1, 'rgba(255, 180, 0, 0)');
+            ctx.fillStyle = glowGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, glowR, 0, TAU);
+            ctx.fill();
 
-                ctx.fillStyle = 'rgba(255, 248, 200, 0.9)';
-                ctx.beginPath();
-                ctx.ellipse(0, -tokenH * 0.15, tokenW * 0.28, tokenH * 0.18, 0, 0, TAU);
-                ctx.fill();
-            }
-
-            ctx.restore();
-
-            ctx.save();
-            ctx.translate(baseX, baseY);
-            ctx.scale(heroToken.scale, heroToken.scale);
-            ctx.globalAlpha = heroToken.opacity;
-            const scaleGuard = Math.max(0.8, heroToken.scale);
-            const maxTextWidth = (tokenW * 0.75) / scaleGuard;
-            const fontSize = getFittedFontSize(displayName, maxTextWidth, (tokenH * 0.35) / scaleGuard, 16);
-            ctx.font = `700 ${fontSize}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
+            // 文字：描邊 + 金色漸層填充 + 陰影
+            const fs = nameEruption.fontSize;
+            ctx.font = `700 ${fs}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#6b1f06';
-            ctx.shadowColor = 'rgba(255, 215, 120, 0.9)';
-            ctx.shadowBlur = 14;
+
+            // 深色描邊
+            ctx.strokeStyle = '#4a1800';
+            ctx.lineWidth = Math.max(4, fs * 0.08);
+            ctx.lineJoin = 'round';
+            ctx.strokeText(displayName, 0, 0);
+
+            // 金色漸層填充
+            const textGrad = ctx.createLinearGradient(0, -fs * 0.5, 0, fs * 0.5);
+            textGrad.addColorStop(0, '#fff5b5');
+            textGrad.addColorStop(0.3, '#ffd24d');
+            textGrad.addColorStop(0.7, '#ffb800');
+            textGrad.addColorStop(1, '#e8a000');
+            ctx.fillStyle = textGrad;
+            ctx.shadowColor = 'rgba(255, 200, 60, 0.9)';
+            ctx.shadowBlur = 18;
             ctx.fillText(displayName, 0, 0);
+
             ctx.restore();
         };
 
@@ -4853,43 +5003,36 @@ const initLottery = () => {
             coins.forEach(drawCoin);
             ingots.forEach(drawIngot);
             gourds.forEach(drawGourd);
-            drawHeroToken();
+            redPackets.forEach(drawRedPacket);
+            drawNameEruption();
             drawSparkles();
         };
 
         const update = (dt) => {
-            const timing = getTiming();
             phaseTime += dt;
+            openProgress = 1; // 始終打開
 
-            if (phase === 'opening') {
-                openProgress = clamp(phaseTime / timing.open, 0, 1);
+            if (phase === 'idle') {
+                spawnIdleStream(dt);
+            } else if (phase === 'erupting') {
                 spawnStream(dt);
-                if (!burstDone && openProgress > 0.35) {
-                    spawnBurst();
-                    sfx.playCoinDrop();
-                    burstDone = true;
-                }
-                if (phaseTime >= timing.open) {
-                    phase = 'hero';
-                    phaseTime = 0;
-                    spawnHeroToken();
-                }
-            } else if (phase === 'hero') {
-                openProgress = 1;
-                spawnStream(dt);
-                const done = updateHero(dt, timing);
+                updateNameEruption(dt);
+                if (nameEruption.phase === 'displaying') phase = 'displaying';
+            } else if (phase === 'displaying') {
+                spawnIdleStream(dt);
+                updateNameEruption(dt);
+                if (nameEruption.phase === 'exiting') phase = 'exiting';
+            } else if (phase === 'exiting') {
+                spawnIdleStream(dt);
+                const done = updateNameEruption(dt);
                 if (done) {
                     if (revealResolve) {
                         revealResolve();
                         revealResolve = null;
                     }
-                    phase = 'hold';
+                    phase = 'idle';
                     phaseTime = 0;
                 }
-            } else if (phase === 'idle') {
-                openProgress = 0;
-            } else if (phase === 'hold') {
-                openProgress = 1;
             }
 
             updateParticles(dt);
@@ -4913,9 +5056,10 @@ const initLottery = () => {
             ingots.length = 0;
             gourds.length = 0;
             sparkles.length = 0;
+            redPackets.length = 0;
             spawnTimer = 0;
-            heroToken.active = false;
-            heroToken.phase = 'idle';
+            nameEruption.active = false;
+            nameEruption.phase = 'idle';
             if (revealResolve) {
                 revealResolve();
                 revealResolve = null;
@@ -4929,26 +5073,14 @@ const initLottery = () => {
             running = true;
             phase = 'idle';
             phaseTime = 0;
-            openProgress = 0;
-            burstDone = false;
+            openProgress = 1; // 始終打開
             spawnTimer = 0;
-            heroToken.active = false;
-            heroToken.phase = 'idle';
+            idleSpawnTimer = 0;
+            nameEruption.active = false;
+            nameEruption.phase = 'idle';
             winner = null;
             last = performance.now();
             rafId = requestAnimationFrame(tick);
-        };
-
-        const startOpening = () => {
-            if (!running) return;
-            phase = 'opening';
-            phaseTime = 0;
-            openProgress = 0;
-            burstDone = false;
-            spawnTimer = 0;
-            heroToken.active = false;
-            heroToken.phase = 'idle';
-            sfx.playChestOpen();
         };
 
         const setWinner = (name) => {
@@ -4956,7 +5088,12 @@ const initLottery = () => {
                 showChest();
             }
             winner = name || '???';
-            startOpening();
+            phase = 'erupting';
+            phaseTime = 0;
+            spawnTimer = 0;
+            spawnNameEruption();
+            spawnNameBurst();
+            sfx.playChestOpen();
         };
 
         const waitForReveal = () => new Promise((resolve) => {
@@ -4966,16 +5103,11 @@ const initLottery = () => {
         const prepareNext = () => {
             phase = 'idle';
             phaseTime = 0;
-            openProgress = 0;
-            burstDone = false;
+            openProgress = 1; // 保持打開
             winner = null;
-            coins.length = 0;
-            ingots.length = 0;
-            gourds.length = 0;
-            sparkles.length = 0;
-            spawnTimer = 0;
-            heroToken.active = false;
-            heroToken.phase = 'idle';
+            nameEruption.active = false;
+            nameEruption.phase = 'idle';
+            // 不清空粒子，讓現有粒子自然消散
         };
 
         const stop = () => {
@@ -7359,6 +7491,7 @@ const initLottery = () => {
         const driver = getAnimationDriver(style);
         const isLotto = isLottoStyle(style);
         let ballRumbleSound = null;
+        let safetyTimer = null;
 
         try {
             startDrawAudio();
@@ -7418,6 +7551,24 @@ const initLottery = () => {
             const holdMs = (state.currentPrize?.lottoHoldSeconds ?? 5) * 1000;
             const clock = createDrawClock(Math.max(3000, holdMs));
 
+            // 75 秒安全計時器：動畫開始後若超時仍未結束，強制收尾
+            safetyTimer = setTimeout(() => {
+                console.warn('[lottery] 75s safety timeout — forcing end');
+                safetyTimer = null;
+                state.isDrawing = false;
+                stopDrawAudio();
+                stopDrawingHeartbeat();
+                ballRumbleSound?.stop();
+
+                if (state.winners?.length > 0) {
+                    stopAllAnimations();
+                    render();
+                    resultMode.show();
+                } else {
+                    location.reload();
+                }
+            }, 75000);
+
             await driver.revealWinners(winners, {
                 appendWinner: appendWinnerForRun,
                 isRunStale,
@@ -7432,6 +7583,10 @@ const initLottery = () => {
             }
             return null;
         } finally {
+            if (safetyTimer) {
+                clearTimeout(safetyTimer);
+                safetyTimer = null;
+            }
             ballRumbleSound?.stop();
 
             // 不論 runId 是否過期，都需要清理狀態和檢查結果模式
