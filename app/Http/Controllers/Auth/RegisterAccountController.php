@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use App\Notifications\WelcomeSetPasswordNotification;
 use App\Rules\Recaptcha;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -61,7 +62,9 @@ class RegisterAccountController extends Controller
             Log::warning('試用派發失敗', ['org' => $organization->id, 'error' => $e->getMessage()]);
         }
 
-        Password::sendResetLink(['email' => $user->email]);
+        $user->notify(new WelcomeSetPasswordNotification(
+            Password::createToken($user)
+        ));
 
         return redirect()
             ->route('register-account')
