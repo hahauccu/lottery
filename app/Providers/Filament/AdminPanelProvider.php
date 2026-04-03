@@ -53,13 +53,15 @@ class AdminPanelProvider extends PanelProvider
                     <script>
                         function _rcFindLW() {
                             var el = document.querySelector("[wire\\\\:id]");
-                            return el && el.__livewire ? el.__livewire : null;
+                            if (!el) return null;
+                            var id = el.getAttribute("wire:id");
+                            return id && typeof Livewire !== "undefined" ? Livewire.find(id) : null;
                         }
                         function _rcOnLoad() {
                             grecaptcha.render("recaptcha-box", {
                                 sitekey: "' . config('recaptcha.site_key') . '",
-                                callback: function(t) { var c = _rcFindLW(); if (c) c.set("recaptchaToken", t); },
-                                "expired-callback": function() { var c = _rcFindLW(); if (c) c.set("recaptchaToken", null); }
+                                callback: function(t) { var c = _rcFindLW(); if (c) c.$set("recaptchaToken", t); },
+                                "expired-callback": function() { var c = _rcFindLW(); if (c) c.$set("recaptchaToken", null); }
                             });
                         }
                         document.addEventListener("livewire:init", function() {
