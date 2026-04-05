@@ -68,6 +68,8 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect('/admin');
+        session()->forget('filament.admin.tenant');
+
+        return redirect("/admin/{$organization->slug}");
     }
 }
