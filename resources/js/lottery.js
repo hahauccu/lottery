@@ -7376,10 +7376,12 @@ const initLottery = () => {
             prepareToDraw: () => {
                 battleTop.ensureReady();
                 const baseHold = state.currentPrize?.lottoHoldSeconds ?? 5;
+                const isOneByOne = state.currentPrize?.drawMode === 'one_by_one';
                 // wave pool 只包含 eligibleNames（未得獎者），winners 已離場，不計入
                 const eligibleForWave = state.eligibleNames?.length ?? 0;
-                // 波浪模式下，每個 wave top 需要約 1-2 秒入場+淘汰，額外給 wavePool 中每人 1.5 秒
-                const waveExtra = eligibleForWave > 12 ? (eligibleForWave - 12) * 1.5 : 0;
+                // 逐一抽出時應盡量貼近設定秒數，避免可抽人數一多每抽都被拉長。
+                // 額外延長只保留給一次全抽，因為那時需要在同一輪展示更多補位陀螺。
+                const waveExtra = !isOneByOne && eligibleForWave > 12 ? (eligibleForWave - 12) * 1.5 : 0;
                 battleTop.setHoldSeconds(baseHold + waveExtra);
             },
             revealWinners: async (winners, runtime = {}) => {
