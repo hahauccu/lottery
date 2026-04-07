@@ -25,6 +25,10 @@ class EmployeeResource extends Resource
 
     protected static ?string $navigationGroup = '員工管理';
 
+    protected static ?string $modelLabel = '員工';
+
+    protected static ?string $pluralModelLabel = '員工';
+
     protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Form $form): Form

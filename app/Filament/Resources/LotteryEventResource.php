@@ -31,6 +31,10 @@ class LotteryEventResource extends Resource
 
     protected static ?string $navigationGroup = '抽獎管理';
 
+    protected static ?string $modelLabel = '抽獎活動';
+
+    protected static ?string $pluralModelLabel = '抽獎活動';
+
     protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Form $form): Form

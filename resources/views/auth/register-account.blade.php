@@ -25,7 +25,7 @@
 
         <!-- Organization Name -->
         <div class="mt-4">
-            <x-input-label for="organization_name" :value="__('Organization Name (Optional)')" />
+            <x-input-label for="organization_name" :value="__('組織名稱（選填）')" />
             <x-text-input id="organization_name" class="block mt-1 w-full" type="text" name="organization_name" :value="old('organization_name')" autocomplete="organization" />
             <x-input-error :messages="$errors->get('organization_name')" class="mt-2" />
         </div>
