@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">抽獎系統首頁分享圖</title>
+  <desc id="desc">企業活動抽獎系統首頁預覽圖。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#09090f"/>
+      <stop offset="52%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="20%" cy="15%" r="45%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="84%" cy="24%" r="38%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glowA)"/>
+  <rect width="1200" height="630" fill="url(#glowB)"/>
+  <g fill="none" stroke="rgba(255,255,255,0.08)">
+    <path d="M120 114h960"/>
+    <path d="M120 186h960"/>
+    <path d="M120 258h960"/>
+    <path d="M120 330h960"/>
+    <path d="M120 402h960"/>
+    <path d="M120 474h960"/>
+    <path d="M180 90v450"/>
+    <path d="M360 90v450"/>
+    <path d="M540 90v450"/>
+    <path d="M720 90v450"/>
+    <path d="M900 90v450"/>
+  </g>
+  <g>
+    <rect x="86" y="86" width="1028" height="458" rx="32" fill="rgba(15,23,42,0.64)" stroke="rgba(255,255,255,0.12)"/>
+    <text x="130" y="170" fill="#fcd34d" font-size="28" font-family="'Noto Sans TC', sans-serif" letter-spacing="6">LOTTERY SYSTEM</text>
+    <text x="130" y="262" fill="#ffffff" font-size="66" font-weight="800" font-family="'Noto Sans TC', sans-serif">尾牙抽獎｜即時切換｜QRCode 領獎</text>
+    <text x="130" y="332" fill="rgba(255,255,255,0.82)" font-size="31" font-family="'Noto Sans TC', sans-serif">企業活動抽獎、互動彈幕、抽獎分析與領獎管理，一站搞定。</text>
+  </g>
+  <g>
+    <circle cx="912" cy="292" r="94" fill="#f59e0b" fill-opacity="0.18" stroke="#fbbf24" stroke-opacity="0.55"/>
+    <circle cx="912" cy="292" r="64" fill="#f59e0b"/>
+    <circle cx="886" cy="266" r="18" fill="#ffffff" fill-opacity="0.36"/>
+    <text x="912" y="304" text-anchor="middle" fill="#ffffff" font-size="34" font-weight="700" font-family="'Noto Sans TC', sans-serif">抽</text>
+    <circle cx="1038" cy="238" r="48" fill="#38bdf8" fill-opacity="0.22" stroke="#38bdf8" stroke-opacity="0.48"/>
+    <circle cx="1038" cy="238" r="32" fill="#60a5fa"/>
+    <circle cx="1024" cy="224" r="10" fill="#ffffff" fill-opacity="0.3"/>
+    <circle cx="1002" cy="368" r="38" fill="#f472b6" fill-opacity="0.2" stroke="#f472b6" stroke-opacity="0.5"/>
+    <circle cx="1002" cy="368" r="24" fill="#fb7185"/>
+    <circle cx="992" cy="358" r="8" fill="#ffffff" fill-opacity="0.28"/>
+  </g>
+</svg>

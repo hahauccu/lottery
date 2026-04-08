@@ -14,7 +14,7 @@
     <meta property="og:title" content="尾牙抽獎｜抽獎系統推薦｜即時切換、彈幕互動、QRCode 領獎">
     <meta property="og:description" content="專為企業活動打造的尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
     <meta property="og:url" content="{{ url('/') }}">
-    <meta property="og:image" content="{{ url('/images/og-home.jpg') }}">
+    <meta property="og:image" content="{{ url('/images/og-home.svg') }}">
     <meta property="og:site_name" content="抽獎系統">
     <meta property="og:locale" content="zh_TW">
 
@@ -22,7 +22,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="尾牙抽獎｜抽獎系統推薦｜即時切換、彈幕互動、QRCode 領獎">
     <meta name="twitter:description" content="專為企業活動打造的尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選。">
-    <meta name="twitter:image" content="{{ url('/images/og-home.jpg') }}">
+    <meta name="twitter:image" content="{{ url('/images/og-home.svg') }}">
 
     {{-- Organization JSON-LD --}}
     <script type="application/ld+json">
@@ -31,7 +31,7 @@
         "@@type": "Organization",
         "name": "抽獎系統",
         "url": "{{ url('/') }}",
-        "logo": "{{ url('/images/og-home.jpg') }}"
+        "logo": "{{ url('/images/og-home.svg') }}"
     }
     </script>
 

@@ -13,11 +13,23 @@
     <meta property="og:title" content="{{ $seoTitle ?? '範例抽獎' }}">
     <meta property="og:description" content="{{ $seoDescription ?? '' }}">
     <meta property="og:url" content="{{ $seoCanonical ?? url('/demo/lottery') }}">
+    <meta property="og:image" content="{{ $seoImage ?? url('/images/og-demo.svg') }}">
     <meta property="og:site_name" content="抽獎系統">
     <meta property="og:locale" content="zh_TW">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $seoTitle ?? '範例抽獎' }}">
     <meta name="twitter:description" content="{{ $seoDescription ?? '' }}">
+    <meta name="twitter:image" content="{{ $seoImage ?? url('/images/og-demo.svg') }}">
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "WebPage",
+        "name": {!! json_encode($seoTitle ?? '範例抽獎', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!},
+        "description": {!! json_encode($seoDescription ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!},
+        "url": {!! json_encode($seoCanonical ?? url('/demo/lottery'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!},
+        "image": {!! json_encode($seoImage ?? url('/images/og-demo.svg'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+    }
+    </script>
     @endif
     <title>{{ $title ?? ($currentPrize?->name ?? $event->name) }} - 抽獎</title>
     <script>

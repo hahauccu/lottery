@@ -10,11 +10,43 @@
     <meta property="og:title" content="抽獎動畫 Demo｜7 種風格免費體驗">
     <meta property="og:description" content="免費試玩 7 種線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
     <meta property="og:url" content="{{ url('/demo/lottery') }}">
+    <meta property="og:image" content="{{ url('/images/og-demo.svg') }}">
     <meta property="og:site_name" content="抽獎系統">
     <meta property="og:locale" content="zh_TW">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="抽獎動畫 Demo｜7 種風格免費體驗">
     <meta name="twitter:description" content="免費試玩 7 種線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
+    <meta name="twitter:image" content="{{ url('/images/og-demo.svg') }}">
+
+    @php
+        $demoItemList = collect($styles)
+            ->values()
+            ->map(function ($style, $index) {
+                return [
+                    '@type' => 'ListItem',
+                    'position' => $index + 1,
+                    'url' => url('/demo/lottery/'.$style['slug']),
+                    'name' => $style['label'],
+                    'description' => $style['desc'],
+                ];
+            })
+            ->all();
+    @endphp
+
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "CollectionPage",
+        "name": "抽獎動畫 Demo｜7 種風格免費體驗",
+        "description": "免費試玩 7 種線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。",
+        "url": "{{ url('/demo/lottery') }}",
+        "image": "{{ url('/images/og-demo.svg') }}",
+        "mainEntity": {
+            "@@type": "ItemList",
+            "itemListElement": {!! json_encode($demoItemList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+        }
+    }
+    </script>
 
     @vite(['resources/css/app.css'])
 

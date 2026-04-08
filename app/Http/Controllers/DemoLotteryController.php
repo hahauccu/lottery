@@ -42,11 +42,10 @@ class DemoLotteryController extends Controller
         '盧廣仲',
     ];
 
-
     private function resolveStyle(string $slug): string
     {
         $style = AnimationStyles::slugToKey()[$slug] ?? null;
-        if (!$style) {
+        if (! $style) {
             abort(404);
         }
 
@@ -62,7 +61,7 @@ class DemoLotteryController extends Controller
     {
         $key = $this->sessionKey($style);
         $data = session($key);
-        if (!$data) {
+        if (! $data) {
             $data = [
                 'animation_style' => $style,
                 'prize_id' => 1,
@@ -149,6 +148,10 @@ class DemoLotteryController extends Controller
         $currentPrize = (object) ['name' => '範例抽獎'];
         $allStyles = array_column(AnimationStyles::all(), null, 'key');
         $label = $allStyles[$style]['label'] ?? '範例抽獎';
+        $previewImage = public_path("images/previews/{$style}.svg");
+        $seoImage = file_exists($previewImage)
+            ? url("/images/previews/{$style}.svg")
+            : url('/images/og-demo.svg');
 
         return view('lottery.show', [
             'payload' => $payload,
@@ -164,6 +167,7 @@ class DemoLotteryController extends Controller
             'seoTitle' => "{$label} — 線上抽獎動畫 Demo｜即時體驗",
             'seoDescription' => "免費試玩「{$label}」抽獎動畫，即時體驗企業尾牙、活動抽獎的趣味與互動效果。",
             'seoCanonical' => url("/demo/lottery/{$slug}"),
+            'seoImage' => $seoImage,
         ]);
     }
 
@@ -185,7 +189,7 @@ class DemoLotteryController extends Controller
             ->values()
             ->all();
 
-        $isCustom = !empty($names);
+        $isCustom = ! empty($names);
         if (empty($names)) {
             $names = self::DEMO_NAMES;
         }
@@ -227,7 +231,7 @@ class DemoLotteryController extends Controller
 
         $drawCount = min($data['draw_count'] ?? 5, count($eligible));
         $keys = array_rand($eligible, $drawCount);
-        if (!is_array($keys)) {
+        if (! is_array($keys)) {
             $keys = [$keys];
         }
 
