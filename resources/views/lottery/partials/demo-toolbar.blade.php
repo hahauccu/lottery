@@ -1,4 +1,11 @@
-<div x-data="demoToolbar" class="fixed left-4 top-4 z-50" style="font-family: system-ui, -apple-system, sans-serif;">
+<div
+    x-data="demoToolbar"
+    id="demo-toolbar-root"
+    data-current-style="{{ $demoCurrentStyle['key'] ?? 'lotto_air' }}"
+    data-current-slug="{{ $demoSlug ?? 'lotto-air' }}"
+    class="fixed left-4 top-4 z-50"
+    style="font-family: system-ui, -apple-system, sans-serif;"
+>
     {{-- 齒輪按鈕 --}}
     <button @@click="open = !open"
         class="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/80 backdrop-blur-sm transition hover:bg-black/80 hover:text-white"
@@ -51,44 +58,39 @@
 
 <script>
     document.addEventListener('alpine:init', () => {
+        const toolbarRoot = document.getElementById('demo-toolbar-root');
+
         Alpine.data('demoToolbar', () => ({
             open: false,
             loading: false,
-            currentStyle: window.LotteryConfig?.current_prize?.animation_style ?? 'lotto_air',
+            currentStyle: toolbarRoot?.dataset.currentStyle ?? 'lotto_air',
+            currentSlug: toolbarRoot?.dataset.currentSlug ?? 'lotto-air',
             styles: [
-                { key: 'lotto_air', label: '樂透氣流機' },
-                { key: 'red_packet', label: '紅包雨' },
-                { key: 'scratch_card', label: '刮刮樂' },
-                { key: 'treasure_chest', label: '寶箱' },
-                { key: 'big_treasure_chest', label: '大寶箱' },
-                { key: 'marble_race', label: '圓球賽跑' },
-                { key: 'battle_top', label: '戰鬥陀螺' },
+                { key: 'lotto_air', slug: 'lotto-air', label: '樂透氣流機' },
+                { key: 'red_packet', slug: 'red-packet', label: '紅包雨' },
+                { key: 'scratch_card', slug: 'scratch-card', label: '刮刮樂' },
+                { key: 'treasure_chest', slug: 'treasure-chest', label: '寶箱' },
+                { key: 'big_treasure_chest', slug: 'big-treasure-chest', label: '大寶箱' },
+                { key: 'marble_race', slug: 'marble-race', label: '圓球賽跑' },
+                { key: 'battle_top', slug: 'battle-top', label: '戰鬥陀螺' },
             ],
 
-            async switchStyle(style) {
-                if (this.currentStyle === style || this.loading) return;
+            async switchStyle(styleKey) {
+                if (this.currentStyle === styleKey || this.loading) return;
                 this.loading = true;
                 try {
-                    const res = await fetch('/demo/lottery/style', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
-                                ?? window.LotteryConfig?.csrfToken ?? '',
-                        },
-                        body: JSON.stringify({ style }),
-                    });
-                    if (!res.ok) return;
-                    const payload = await res.json();
-                    this.currentStyle = style;
-                    if (window.__lotteryApplyPayload) {
-                        window.__lotteryApplyPayload(payload);
+                    const target = this.styles.find((item) => item.key === styleKey);
+                    if (!target) return;
+
+                    this.currentStyle = styleKey;
+                    if (target.slug !== this.currentSlug) {
+                        window.location.href = `/demo/lottery/${target.slug}`;
                     }
                 } catch (e) {
                     console.error('[demo-toolbar] switchStyle error', e);
                 } finally {
-                    this.loading = false;
                     this.open = false;
+                    this.loading = false;
                 }
             },
 
@@ -96,7 +98,7 @@
                 if (this.loading) return;
                 this.loading = true;
                 try {
-                    const res = await fetch('/demo/lottery/reset', {
+                    const res = await fetch(`/demo/lottery/${this.currentSlug}/reset`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

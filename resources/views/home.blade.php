@@ -24,6 +24,21 @@
     <meta name="twitter:description" content="專為企業活動打造的尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選。">
     <meta name="twitter:image" content="{{ url('/images/og-home.svg') }}">
 
+    @php
+        $demoItemList = collect($animationStyles)
+            ->values()
+            ->map(function ($style, $index) {
+                return [
+                    '@type' => 'ListItem',
+                    'position' => $index + 1,
+                    'url' => url('/demo/lottery/'.$style['slug']),
+                    'name' => $style['label'],
+                    'description' => $style['desc'],
+                ];
+            })
+            ->all();
+    @endphp
+
     {{-- Organization JSON-LD --}}
     <script type="application/ld+json">
     {
@@ -42,6 +57,15 @@
         "@@type": "WebSite",
         "name": "抽獎系統",
         "url": "{{ url('/') }}"
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "ItemList",
+        "name": "抽獎動畫 Demo 風格總覽",
+        "itemListElement": {!! json_encode($demoItemList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
     }
     </script>
 
@@ -102,9 +126,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
-    <script>
-        window.__animationStyles__ = @json($animationStyles);
-    </script>
+    <script id="animation-styles-data" type="application/json">{!! json_encode($animationStyles, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
 
     @vite(['resources/css/app.css', 'resources/js/home.js'])
 
@@ -190,6 +212,24 @@
             opacity: 0;
             animation: particleFloat 8s ease-in-out infinite;
         }
+        .hero-particle:nth-child(1) { left: 8%; top: 22%; animation-delay: 0s; animation-duration: 6.4s; width: 2px; height: 2px; }
+        .hero-particle:nth-child(2) { left: 14%; top: 68%; animation-delay: 0.45s; animation-duration: 8.2s; width: 3px; height: 3px; }
+        .hero-particle:nth-child(3) { left: 21%; top: 35%; animation-delay: 0.9s; animation-duration: 7.1s; width: 4px; height: 4px; }
+        .hero-particle:nth-child(4) { left: 27%; top: 82%; animation-delay: 1.35s; animation-duration: 9.4s; width: 2px; height: 2px; }
+        .hero-particle:nth-child(5) { left: 33%; top: 28%; animation-delay: 1.8s; animation-duration: 7.8s; width: 5px; height: 5px; }
+        .hero-particle:nth-child(6) { left: 39%; top: 58%; animation-delay: 2.25s; animation-duration: 6.9s; width: 3px; height: 3px; }
+        .hero-particle:nth-child(7) { left: 46%; top: 18%; animation-delay: 2.7s; animation-duration: 8.8s; width: 4px; height: 4px; }
+        .hero-particle:nth-child(8) { left: 52%; top: 74%; animation-delay: 3.15s; animation-duration: 7.3s; width: 2px; height: 2px; }
+        .hero-particle:nth-child(9) { left: 58%; top: 41%; animation-delay: 3.6s; animation-duration: 9.1s; width: 5px; height: 5px; }
+        .hero-particle:nth-child(10) { left: 63%; top: 24%; animation-delay: 4.05s; animation-duration: 6.6s; width: 3px; height: 3px; }
+        .hero-particle:nth-child(11) { left: 69%; top: 63%; animation-delay: 4.5s; animation-duration: 8.5s; width: 4px; height: 4px; }
+        .hero-particle:nth-child(12) { left: 74%; top: 33%; animation-delay: 4.95s; animation-duration: 7.6s; width: 2px; height: 2px; }
+        .hero-particle:nth-child(13) { left: 79%; top: 84%; animation-delay: 5.4s; animation-duration: 9.7s; width: 4px; height: 4px; }
+        .hero-particle:nth-child(14) { left: 84%; top: 46%; animation-delay: 5.85s; animation-duration: 7.2s; width: 3px; height: 3px; }
+        .hero-particle:nth-child(15) { left: 88%; top: 19%; animation-delay: 6.3s; animation-duration: 8.1s; width: 5px; height: 5px; }
+        .hero-particle:nth-child(16) { left: 91%; top: 57%; animation-delay: 6.75s; animation-duration: 6.8s; width: 2px; height: 2px; }
+        .hero-particle:nth-child(17) { left: 76%; top: 71%; animation-delay: 7.2s; animation-duration: 8.9s; width: 3px; height: 3px; }
+        .hero-particle:nth-child(18) { left: 17%; top: 88%; animation-delay: 7.65s; animation-duration: 7.4s; width: 4px; height: 4px; }
         @keyframes particleFloat {
             0% { opacity: 0; transform: translateY(0) scale(0.5); }
             20% { opacity: 0.7; }
@@ -375,7 +415,7 @@
             padding: 5rem 1.5rem;
         }
         .preview-inner {
-            max-width: 60rem;
+            max-width: 68rem;
             margin: 0 auto;
         }
         .preview-tabs {
@@ -408,8 +448,8 @@
         }
         .preview-window {
             position: relative;
-            aspect-ratio: 16 / 9;
-            max-width: 48rem;
+            aspect-ratio: 16 / 10;
+            max-width: 60rem;
             margin: 0 auto 1.5rem;
             border-radius: 16px;
             overflow: hidden;
@@ -435,6 +475,59 @@
             transition: opacity 0.3s;
         }
 
+        .demo-hub-section {
+            padding: 4.5rem 1.5rem;
+        }
+        .demo-hub-inner {
+            max-width: 72rem;
+            margin: 0 auto;
+        }
+        .demo-hub-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .demo-hub-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            padding: 1.4rem;
+            border-radius: 18px;
+            border: 1px solid var(--c-border);
+            background: linear-gradient(180deg, rgba(18, 18, 26, 0.95) 0%, rgba(10, 10, 15, 0.9) 100%);
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .demo-hub-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(245, 158, 11, 0.28);
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+        }
+        .demo-hub-card__eyebrow {
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            color: var(--c-gold-light);
+            text-transform: uppercase;
+        }
+        .demo-hub-card h3 {
+            margin: 0;
+            font-size: 1.15rem;
+        }
+        .demo-hub-card p {
+            margin: 0;
+            color: var(--c-text-dim);
+            line-height: 1.7;
+            font-size: 0.94rem;
+        }
+        .demo-hub-card__cta {
+            margin-top: auto;
+            color: var(--c-gold-light);
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
         /* ── Report section ── */
         .report-section {
             padding: 5rem 1.5rem;
@@ -452,6 +545,10 @@
                 grid-template-columns: 1fr;
                 gap: 2rem;
                 text-align: center;
+            }
+
+            .demo-hub-grid {
+                grid-template-columns: 1fr;
             }
         }
         .report-text h2 {
@@ -603,6 +700,9 @@
             .feature-card { padding: 1.5rem; }
             .preview-tabs { gap: 0.35rem; }
             .preview-tab { padding: 0.45rem 0.9rem; font-size: 0.82rem; }
+            .preview-window {
+                aspect-ratio: 4 / 3;
+            }
         }
     </style>
 </head>
@@ -613,14 +713,7 @@
     <section class="hero">
         <div class="hero-particles" aria-hidden="true">
             @for ($i = 0; $i < 18; $i++)
-                <span class="hero-particle" style="
-                    left: {{ rand(5, 95) }}%;
-                    top: {{ rand(20, 95) }}%;
-                    animation-delay: {{ $i * 0.45 }}s;
-                    animation-duration: {{ rand(60, 100) / 10 }}s;
-                    width: {{ rand(2, 5) }}px;
-                    height: {{ rand(2, 5) }}px;
-                "></span>
+                <span class="hero-particle"></span>
             @endfor
         </div>
 
@@ -746,6 +839,27 @@
             </div>
 
             <div class="preview-desc" data-reveal data-reveal-delay="260" x-text="current.desc"></div>
+        </div>
+    </section>
+
+    <section class="demo-hub-section" id="demo-links">
+        <div class="demo-hub-inner">
+            <div class="section-header" data-reveal>
+                <div class="section-divider"></div>
+                <h2>首頁同步收錄 <span class="accent">抽獎動畫 Demo</span> 連結</h2>
+                <p>直接試玩各種尾牙抽獎範例、線上抽獎風格與互動動畫，讓首頁與每個 demo 頁形成更完整的 SEO 內鏈。</p>
+            </div>
+
+            <div class="demo-hub-grid">
+                @foreach ($animationStyles as $style)
+                    <a href="{{ url('/demo/lottery/'.$style['slug']) }}" class="demo-hub-card" data-reveal>
+                        <div class="demo-hub-card__eyebrow">抽獎動畫 Demo</div>
+                        <h3>{{ $style['label'] }}</h3>
+                        <p>{{ $style['desc'] }}</p>
+                        <span class="demo-hub-card__cta">試玩 {{ $style['label'] }} 抽獎動畫</span>
+                    </a>
+                @endforeach
+            </div>
         </div>
     </section>
 

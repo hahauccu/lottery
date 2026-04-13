@@ -13,41 +13,56 @@ const initLottery = () => {
         history.replaceState({}, '', u.toString());
     }
 
-    const config = window.LotteryConfig;
+    const isEmbeddedPreview = new URL(window.location.href).searchParams.get('embedded') === '1';
+
+    const configEl = document.getElementById('lottery-config-data');
+    let config = null;
+
+    if (configEl) {
+        try {
+            config = JSON.parse(configEl.textContent || 'null');
+        } catch (error) {
+            console.error('[lottery] failed to parse config', error);
+        }
+    }
+
+    window.LotteryConfig = config;
 
     if (!config) {
         window.__lotteryInitialized = false;
         return;
     }
 
-    // --- Tab 唯一性管理 ---
-    const tabStorageKey = `lottery_active_tab_${config.brandCode}`;
-    const tabId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    localStorage.setItem(tabStorageKey, tabId);
+    if (!isEmbeddedPreview) {
+        // --- Tab 唯一性管理 ---
+        const tabStorageKey = `lottery_active_tab_${config.brandCode}`;
+        const tabId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        localStorage.setItem(tabStorageKey, tabId);
 
-    const showTabInvalidatedOverlay = () => {
-        clearInterval(window.__lotteryReadyTimer);
-        clearInterval(window.__lotteryPollTimer);
-        stopDrawingHeartbeat();
+        const showTabInvalidatedOverlay = () => {
+            clearInterval(window.__lotteryReadyTimer);
+            clearInterval(window.__lotteryPollTimer);
+            stopDrawingHeartbeat();
 
-        const overlay = document.createElement('div');
-        overlay.id = 'tab-invalidated-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
-        overlay.innerHTML = `
-            <div style="text-align:center;color:#fff;padding:2rem;">
-                <p style="font-size:1.5rem;font-weight:bold;margin-bottom:0.75rem;">此分頁已失效</p>
-                <p style="color:#9ca3af;margin-bottom:1.5rem;">已在其他分頁開啟前台抽獎，此分頁停止運作。</p>
-                <button onclick="location.reload()" style="padding:0.5rem 1.5rem;background:#f59e0b;color:#000;border-radius:0.5rem;font-weight:600;cursor:pointer;border:none;">重新載入</button>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-    };
+            const overlay = document.createElement('div');
+            overlay.id = 'tab-invalidated-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
+            overlay.innerHTML = `
+                <div style="text-align:center;color:#fff;padding:2rem;">
+                    <p style="font-size:1.5rem;font-weight:bold;margin-bottom:0.75rem;">此分頁已失效</p>
+                    <p style="color:#9ca3af;margin-bottom:1.5rem;">已在其他分頁開啟前台抽獎，此分頁停止運作。</p>
+                    <button onclick="location.reload()" style="padding:0.5rem 1.5rem;background:#f59e0b;color:#000;border-radius:0.5rem;font-weight:600;cursor:pointer;border:none;">重新載入</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        };
 
-    window.addEventListener('storage', (event) => {
-        if (event.key === tabStorageKey && event.newValue && event.newValue !== tabId) {
-            showTabInvalidatedOverlay();
-        }
-    });
+        window.addEventListener('storage', (event) => {
+            if (event.key === tabStorageKey && event.newValue && event.newValue !== tabId) {
+                showTabInvalidatedOverlay();
+            }
+        });
+    }
 
     const rootEl = document.getElementById('lottery-root');
     const statusEl = document.getElementById('lottery-status');

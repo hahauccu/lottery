@@ -136,9 +136,11 @@ class DemoLotteryController extends Controller
 
     public function showStyle(Request $request, string $slug)
     {
+        $isEmbeddedPreview = $request->boolean('embedded');
         $style = $this->resolveStyle($slug);
         $data = $this->ensureSession($style);
         $payload = $this->buildPayload($data, $slug);
+        $styles = AnimationStyles::all();
 
         if ($request->has('payload') || $request->expectsJson()) {
             return response()->json($payload);
@@ -146,12 +148,42 @@ class DemoLotteryController extends Controller
 
         $event = (object) ['name' => '範例抽獎'];
         $currentPrize = (object) ['name' => '範例抽獎'];
-        $allStyles = array_column(AnimationStyles::all(), null, 'key');
-        $label = $allStyles[$style]['label'] ?? '範例抽獎';
+        $allStyles = array_column($styles, null, 'key');
+        $currentStyle = $allStyles[$style] ?? [
+            'key' => $style,
+            'slug' => $slug,
+            'label' => '範例抽獎',
+            'desc' => '免費體驗抽獎動畫風格。',
+        ];
+        $label = $currentStyle['label'];
         $previewImage = public_path("images/previews/{$style}.svg");
         $seoImage = file_exists($previewImage)
             ? url("/images/previews/{$style}.svg")
             : url('/images/og-demo.svg');
+        $relatedStyles = collect($styles)
+            ->reject(fn (array $item) => $item['key'] === $style)
+            ->values()
+            ->all();
+        $breadcrumbItems = [
+            [
+                '@type' => 'ListItem',
+                'position' => 1,
+                'name' => '首頁',
+                'item' => url('/'),
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 2,
+                'name' => '抽獎動畫 Demo',
+                'item' => url('/demo/lottery'),
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 3,
+                'name' => $label,
+                'item' => url("/demo/lottery/{$slug}"),
+            ],
+        ];
 
         return view('lottery.show', [
             'payload' => $payload,
@@ -160,14 +192,18 @@ class DemoLotteryController extends Controller
             'currentWinners' => collect(),
             'bgUrl' => null,
             'isDemo' => true,
+            'isEmbeddedPreview' => $isEmbeddedPreview,
             'demoSlug' => $slug,
             'demoStyleLabel' => $label,
-            'demoSetupMode' => true,
+            'demoSetupMode' => ! $isEmbeddedPreview,
             'title' => "{$label} — 線上抽獎動畫 Demo",
             'seoTitle' => "{$label} — 線上抽獎動畫 Demo｜即時體驗",
             'seoDescription' => "免費試玩「{$label}」抽獎動畫，即時體驗企業尾牙、活動抽獎的趣味與互動效果。",
             'seoCanonical' => url("/demo/lottery/{$slug}"),
             'seoImage' => $seoImage,
+            'demoCurrentStyle' => $currentStyle,
+            'demoRelatedStyles' => $relatedStyles,
+            'demoBreadcrumbItems' => $breadcrumbItems,
         ]);
     }
 

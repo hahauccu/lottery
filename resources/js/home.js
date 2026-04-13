@@ -2,6 +2,23 @@ import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
 
+function readAnimationStyles() {
+    const el = document.getElementById('animation-styles-data');
+
+    if (!el) {
+        return [];
+    }
+
+    try {
+        return JSON.parse(el.textContent || '[]');
+    } catch (error) {
+        console.error('[home] failed to parse animation styles', error);
+        return [];
+    }
+}
+
+const animationStyles = readAnimationStyles();
+
 /* ── Scroll Reveal (IntersectionObserver) ── */
 function initScrollReveal() {
     const els = document.querySelectorAll('[data-reveal]');
@@ -26,7 +43,7 @@ function initScrollReveal() {
 /* ── Animation Preview Carousel ── */
 Alpine.data('animationPreview', () => ({
     // 從後端注入的 PHP 資料讀取，每項加上 iframeSrc: null（懶載入）
-    items: (window.__animationStyles__ || []).map((s) => ({ ...s, iframeSrc: null })),
+    items: animationStyles.map((s) => ({ ...s, iframeSrc: null })),
     active: 0,
     paused: false,
     timer: null,
@@ -38,7 +55,7 @@ Alpine.data('animationPreview', () => ({
 
     loadIframe(i) {
         if (!this.items[i].iframeSrc) {
-            this.items[i].iframeSrc = '/demo/lottery/' + this.items[i].slug;
+            this.items[i].iframeSrc = '/demo/lottery/' + this.items[i].slug + '?embedded=1';
         }
     },
 
@@ -79,6 +96,9 @@ Alpine.data('animationPreview', () => ({
     },
 
     init() {
+        if (this.items.length) {
+            this.loadIframe(this.active);
+        }
         this.restartTimer();
     },
 

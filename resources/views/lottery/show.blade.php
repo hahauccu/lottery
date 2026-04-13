@@ -30,11 +30,18 @@
         "image": {!! json_encode($seoImage ?? url('/images/og-demo.svg'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
     }
     </script>
+    @isset($demoBreadcrumbItems)
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "BreadcrumbList",
+        "itemListElement": {!! json_encode($demoBreadcrumbItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+    }
+    </script>
+    @endisset
     @endif
     <title>{{ $title ?? ($currentPrize?->name ?? $event->name) }} - 抽獎</title>
-    <script>
-        window.LotteryConfig = {!! json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!};
-    </script>
+    <script id="lottery-config-data" type="application/json">{!! json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/lottery.js'])
 
@@ -141,15 +148,145 @@
                 font-size: 2rem;
             }
         }
+
+        .demo-seo-links {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            z-index: 45;
+            width: min(25rem, calc(100vw - 2rem));
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 1rem;
+            background: rgba(3, 7, 18, 0.78);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        .demo-seo-links__crumbs,
+        .demo-seo-links__nav,
+        .demo-seo-links__related {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .demo-seo-links__title {
+            margin: 0.75rem 0 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .demo-seo-links__desc {
+            margin: 0 0 0.75rem;
+            font-size: 0.84rem;
+            line-height: 1.6;
+            color: rgba(226, 232, 240, 0.7);
+        }
+
+        .demo-seo-links a {
+            display: inline-flex;
+            align-items: center;
+            min-height: 2rem;
+            padding: 0.42rem 0.72rem;
+            border-radius: 999px;
+            text-decoration: none;
+            color: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.04);
+            font-size: 0.78rem;
+            transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+        }
+
+        .demo-seo-links a:hover {
+            border-color: rgba(245, 158, 11, 0.35);
+            color: #fde68a;
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        @media (max-width: 768px) {
+            .demo-seo-links {
+                left: 0.75rem;
+                right: 0.75rem;
+                bottom: 0.75rem;
+                width: auto;
+                max-height: 42vh;
+                overflow-y: auto;
+            }
+        }
+
+        body.is-embedded-preview #lottery-stage {
+            gap: 0.85rem;
+            padding: 0.75rem 1rem 1rem;
+            justify-content: flex-start;
+        }
+
+        body.is-embedded-preview #event-name {
+            margin-top: 0.15rem;
+            font-size: clamp(1.4rem, 3.4vw, 2.4rem);
+            line-height: 1.1;
+        }
+
+        body.is-embedded-preview #winners-container {
+            width: min(100%, 50rem);
+        }
+
+        body.is-embedded-preview #winners-container > div:first-child {
+            display: none;
+        }
+
+        body.is-embedded-preview #winner-list {
+            margin-top: 0;
+            max-height: 28vh;
+            gap: 0.65rem;
+        }
+
+        body.is-embedded-preview #winner-list li {
+            border-radius: 1rem;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.82rem;
+        }
+
+        body.is-embedded-preview #prizes-preview-mode .relative,
+        body.is-embedded-preview #result-mode .relative {
+            transform: scale(0.88);
+            transform-origin: center center;
+        }
     </style>
 </head>
-<body class="h-[100svh] overflow-hidden bg-black text-white">
-    @if (!empty($isDemo))
+<body class="h-[100svh] overflow-hidden bg-black text-white {{ !empty($isEmbeddedPreview) ? 'is-embedded-preview' : '' }}">
+    @if (!empty($isDemo) && empty($isEmbeddedPreview))
         @if (!empty($demoSetupMode))
             @include('lottery.partials.demo-style-toolbar')
         @else
             @include('lottery.partials.demo-toolbar')
         @endif
+    @endif
+    @if (!empty($isDemo) && empty($isEmbeddedPreview))
+        <aside class="demo-seo-links">
+            <div class="demo-seo-links__crumbs">
+                <a href="{{ url('/') }}">首頁</a>
+                <a href="{{ url('/demo/lottery') }}">抽獎動畫 Demo</a>
+                <a href="{{ url('/demo/lottery/'.$demoCurrentStyle['slug']) }}">{{ $demoCurrentStyle['label'] }}</a>
+            </div>
+
+            <p class="demo-seo-links__title">{{ $demoCurrentStyle['label'] }} 抽獎風格</p>
+            <p class="demo-seo-links__desc">{{ $demoCurrentStyle['desc'] }} 適合尾牙抽獎、春酒活動與各式互動抽獎情境。</p>
+
+            <div class="demo-seo-links__nav">
+                <a href="{{ url('/') }}">回首頁看功能介紹</a>
+                <a href="{{ url('/demo/lottery') }}">查看全部 Demo 風格</a>
+            </div>
+
+            <p class="demo-seo-links__title">你也可以試試其他抽獎動畫</p>
+            <div class="demo-seo-links__related">
+                @foreach ($demoRelatedStyles as $relatedStyle)
+                    <a href="{{ url('/demo/lottery/'.$relatedStyle['slug']) }}">試玩 {{ $relatedStyle['label'] }} Demo</a>
+                @endforeach
+            </div>
+        </aside>
     @endif
         <div
             id="lottery-root"
