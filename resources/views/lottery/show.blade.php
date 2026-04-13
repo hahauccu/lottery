@@ -257,10 +257,10 @@
     </style>
 </head>
 <body class="h-[100svh] overflow-hidden bg-black text-white {{ !empty($isEmbeddedPreview) ? 'is-embedded-preview' : '' }}">
-    @if (!empty($isDemo) && empty($isEmbeddedPreview))
+    @if (!empty($isDemo))
         @if (!empty($demoSetupMode))
             @include('lottery.partials.demo-style-toolbar')
-        @else
+        @elseif (empty($isEmbeddedPreview))
             @include('lottery.partials.demo-toolbar')
         @endif
     @endif

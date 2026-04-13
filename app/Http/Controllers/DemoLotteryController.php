@@ -195,7 +195,7 @@ class DemoLotteryController extends Controller
             'isEmbeddedPreview' => $isEmbeddedPreview,
             'demoSlug' => $slug,
             'demoStyleLabel' => $label,
-            'demoSetupMode' => ! $isEmbeddedPreview,
+            'demoSetupMode' => true,
             'title' => "{$label} — 線上抽獎動畫 Demo",
             'seoTitle' => "{$label} — 線上抽獎動畫 Demo｜即時體驗",
             'seoDescription' => "免費試玩「{$label}」抽獎動畫，即時體驗企業尾牙、活動抽獎的趣味與互動效果。",
