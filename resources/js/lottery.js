@@ -5310,11 +5310,88 @@ const initLottery = () => {
             return true;
         };
 
+        const getRankingPanelSizing = (maxShow = 10) => {
+            const { W, H } = mrState;
+            if (W < 720) {
+                return null;
+            }
+
+            const maxAvailableHeight = H - 32;
+            let headerH = 48;
+            let pad = 16;
+            let rowH = 40;
+            let panelW = W >= 1180 ? 260 : W >= 900 ? 232 : 204;
+            let scale = 1;
+
+            if (headerH + maxShow * rowH + pad > maxAvailableHeight) {
+                rowH = (maxAvailableHeight - headerH - pad) / maxShow;
+                if (rowH < 30) {
+                    scale = Math.max(0.5, rowH / 30);
+                    rowH = 30 * scale;
+                    panelW *= scale;
+                    headerH = 48 * Math.min(1, scale * 1.2);
+                    pad = 16 * scale;
+                }
+            }
+
+            const sideMargin = W >= 1180 ? Math.max(20, W * 0.05) : 16;
+
+            return {
+                headerH,
+                pad,
+                rowH,
+                panelW,
+                scale,
+                sideMargin,
+            };
+        };
+
+        const getLiveRankingPanelLayout = () => {
+            if (mrState.finishShowcaseActive || !['countdown', 'racing', 'finished'].includes(mrState.phase)) {
+                return null;
+            }
+
+            const finished = mrState.rankings.slice();
+            const racing = mrState.marbles
+                .filter((m) => !m.finished)
+                .sort((a, b) => b.y - a.y);
+            const liveRank = [...finished, ...racing];
+            const winCount = mrState.totalWinners || 1;
+
+            let maxShow = Math.max(10, winCount + 1);
+            maxShow = Math.min(maxShow, liveRank.length);
+            if (maxShow === 0) maxShow = 1;
+
+            const sizing = getRankingPanelSizing(maxShow);
+            if (!sizing) {
+                return null;
+            }
+
+            return {
+                liveRank,
+                winCount,
+                maxShow,
+                panelH: sizing.headerH + maxShow * sizing.rowH + sizing.pad,
+                px: mrState.W - sizing.panelW - sizing.sideMargin,
+                py: 16,
+                ...sizing,
+            };
+        };
+
         // ─── 賽道生成 ───
         const generateTrack = () => {
-            const { W, H } = mrState;
-            const trackW = Math.min(420, W * 0.75);
-            const cx = W * 0.5;
+            const { W } = mrState;
+            const rankingPanel = getRankingPanelSizing();
+            const leftPad = 32;
+            const rightPad = 32;
+            const rankingGap = rankingPanel ? 24 : 0;
+            const usableLeft = leftPad;
+            const usableRight = rankingPanel
+                ? Math.max(leftPad + 260, W - (rankingPanel.panelW + rankingPanel.sideMargin + rankingGap))
+                : W - rightPad;
+            const usableWidth = Math.max(220, usableRight - usableLeft);
+            const trackW = Math.max(Math.min(260, usableWidth), Math.min(420, usableWidth * 0.72));
+            const cx = usableLeft + usableWidth / 2;
             mrState.trackLeft = cx - trackW / 2;
             mrState.trackRight = cx + trackW / 2;
             mrState.trackTop = TRACK.gateY;
@@ -5743,43 +5820,21 @@ const initLottery = () => {
             });
 
             // ─── 即時排名面板（右側，動態支援多人）───
-            if (!mrState.finishShowcaseActive && (mrState.phase === 'countdown' || mrState.phase === 'racing' || mrState.phase === 'finished')) {
-                const finished = mrState.rankings.slice();
-                const racing = mrState.marbles
-                    .filter((m) => !m.finished)
-                    .sort((a, b) => b.y - a.y);
-                const liveRank = [...finished, ...racing];
-                const winCount = mrState.totalWinners || 1;
-
-                // 決定要顯示幾筆：至少顯示「所有中獎者 + 1 個落榜者」，且最少顯示 10 筆，最多不超過總參與人數
-                let maxShow = Math.max(10, winCount + 1);
-                maxShow = Math.min(maxShow, liveRank.length);
-                if (maxShow === 0) maxShow = 1;
-
-                // 根據畫面高度動態縮放
-                const maxAvailableHeight = H - 32; // 上下 padding 16
-                let headerH = 48;
-                let pad = 16;
-                let rowH = 40;
-                let panelW = 260;
-                let scale = 1.0;
-
-                // 如果裝不下，就要縮小 rowH
-                if (headerH + maxShow * rowH + pad > maxAvailableHeight) {
-                    rowH = (maxAvailableHeight - headerH - pad) / maxShow;
-                    // 如果 rowH 太小，整體 UI 也等比縮小
-                    if (rowH < 30) {
-                        scale = Math.max(0.5, rowH / 30);
-                        rowH = 30 * scale;
-                        panelW = 260 * scale;
-                        headerH = 48 * Math.min(1, scale * 1.2);
-                        pad = 16 * scale;
-                    }
-                }
-
-                const panelH = headerH + maxShow * rowH + pad;
-                const px = W - panelW - Math.max(20, W * 0.05);
-                const py = 16;
+            const rankingPanel = getLiveRankingPanelLayout();
+            if (rankingPanel) {
+                const {
+                    liveRank,
+                    winCount,
+                    maxShow,
+                    headerH,
+                    pad,
+                    rowH,
+                    panelW,
+                    scale,
+                    panelH,
+                    px,
+                    py,
+                } = rankingPanel;
 
                 // 面板背景
                 ctx.save();
