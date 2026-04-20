@@ -65,6 +65,12 @@ class ManageClaims extends Page implements HasTable
                         ->body("正在發送 {$count} 封通知信")
                         ->send();
                 }),
+            Action::make('download_winners')
+                ->label('下載中獎清單')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->url(fn () => route('admin.lottery-winners.download', $this->record))
+                ->openUrlInNewTab(),
             Action::make('back')
                 ->label('返回活動')
                 ->color('gray')

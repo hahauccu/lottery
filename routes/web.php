@@ -4,6 +4,7 @@ use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\DemoLotteryController;
 use App\Http\Controllers\LotteryAnalysisController;
 use App\Http\Controllers\LotteryFrontendController;
+use App\Http\Controllers\LotteryWinnerExportController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Support\AnimationStyles;
@@ -69,6 +70,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/analysis-runs/{analysisRun}/download', [LotteryAnalysisController::class, 'download'])
         ->name('admin.lottery-analysis.download');
+    Route::get('/lottery-events/{lotteryEvent}/winners/download', [LotteryWinnerExportController::class, 'download'])
+        ->name('admin.lottery-winners.download');
     Route::post('/api/claims/verify', [ClaimController::class, 'apiVerify'])
         ->name('api.claims.verify');
 
