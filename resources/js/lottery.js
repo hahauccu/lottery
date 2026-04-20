@@ -1573,9 +1573,12 @@ const initLottery = () => {
             const drumX = rect.width * 0.42;
             const drumY = rect.height * 0.5;
             airState.drum = { x: drumX, y: drumY, r: baseR };
+            // 手機瘦長畫布上，rect.height*0.12 會讓 chute 離 drum 太遠，導致 intake 落在
+            // confine() 約束圈外、grabbed 球無法抵達。用 drumY-baseR*0.75 當下限錨定 drum。
+            const chuteY = Math.max(rect.height * 0.12, drumY - baseR * 0.75);
             airState.chute = {
                 x: drumX + baseR * 0.62,
-                y: rect.height * 0.12,
+                y: chuteY,
                 w: baseR * 0.44,
                 h: baseR * 0.3,
                 active: false,
@@ -1823,6 +1826,8 @@ const initLottery = () => {
                     if (ball.forceOutAt && performance.now() > ball.forceOutAt) {
                         ball.x = airState.chute.x;
                         ball.y = airState.chute.y + airState.chute.h * 0.55;
+                        ball.vx = 0;
+                        ball.vy = 0;
                     }
                     const inChute = (
                         ball.x > airState.chute.x - airState.chute.w * 0.46
@@ -1980,17 +1985,22 @@ const initLottery = () => {
             ctx.lineWidth = 10;
             ctx.stroke();
             const c = airState.chute;
+            const pipeX = c.x - c.w * 0.6;
+            const pipeY = c.y + c.h * 0.18;
+            const pipeW = c.w * 0.55;
+            const pipeH = c.h * 0.62;
+            const pipeCornerR = Math.min(18, pipeW * 0.3, pipeH * 0.3);
             ctx.save();
             ctx.globalAlpha = 0.92;
             ctx.strokeStyle = 'rgba(255,255,255,0.16)';
             ctx.lineWidth = 2;
-            rr(c.x - c.w * 0.6, c.y + c.h * 0.18, c.w * 0.55, c.h * 0.62, 18);
+            rr(pipeX, pipeY, pipeW, pipeH, pipeCornerR);
             ctx.stroke();
-            const pipe = ctx.createLinearGradient(c.x - c.w * 0.6, 0, c.x, 0);
+            const pipe = ctx.createLinearGradient(pipeX, 0, c.x, 0);
             pipe.addColorStop(0, 'rgba(255,255,255,0.04)');
             pipe.addColorStop(1, 'rgba(255,220,120,0.06)');
             ctx.fillStyle = pipe;
-            rr(c.x - c.w * 0.6, c.y + c.h * 0.18, c.w * 0.55, c.h * 0.62, 18);
+            rr(pipeX, pipeY, pipeW, pipeH, pipeCornerR);
             ctx.fill();
             ctx.globalAlpha = 0.95;
             ctx.fillStyle = 'rgba(255,220,120,0.10)';
