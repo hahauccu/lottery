@@ -48,6 +48,66 @@
     }
     </script>
 
+    @php
+        $landingBreadcrumb = [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => [
+                ['@type' => 'ListItem', 'position' => 1, 'name' => '首頁', 'item' => url('/')],
+                ['@type' => 'ListItem', 'position' => 2, 'name' => '抽獎動畫 Demo', 'item' => url('/demo/lottery')],
+            ],
+        ];
+
+        $landingFaqs = [
+            ['q' => '這 7 種抽獎動畫有什麼不同？', 'a' => '每種動畫在視覺、節奏與互動方式上各有重點，如樂透氣流機走經典搖獎感、紅包雨強調喜氣互動、戰鬥陀螺則偏重激烈對決的臨場感。'],
+            ['q' => '這些 Demo 可以在手機上執行嗎？', 'a' => '可以，所有 Demo 都針對桌機與手機調整過，在 390×844 手機直式畫面也能流暢運作。'],
+            ['q' => '可以自己輸入名單試玩嗎？', 'a' => '可以，Demo 頁面提供自訂名單、抽獎人數與抽獎模式，僅保存在你的瀏覽器 session 中，不會寫入實際資料庫。'],
+            ['q' => '正式活動要用哪一種動畫？', 'a' => '後台新增獎項時可為每個獎項獨立指定動畫風格，活動中也能依節奏切換不同獎項搭配不同動畫。'],
+            ['q' => 'Demo 有提供彈幕或領獎 QRCode 嗎？', 'a' => '彈幕與 QRCode 兌獎屬於正式活動功能，Demo 主要展示動畫視覺，可到首頁或後台申請試用實際完整功能。'],
+        ];
+
+        $landingFaqSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => collect($landingFaqs)->map(fn ($f) => [
+                '@type' => 'Question',
+                'name' => $f['q'],
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
+            ])->all(),
+        ];
+
+        $landingCompare = [
+            ['label' => '樂透氣流機', 'slug' => 'lotto-air', 'scene' => '尾牙 / 春酒 / 大型抽獎', 'feature' => '經典搖獎感、氣勢十足', 'people' => '50 ~ 500 人'],
+            ['label' => '紅包雨', 'slug' => 'red-packet', 'scene' => '年節 / 春酒 / 喜慶活動', 'feature' => '紅包雨特效、點擊互動', 'people' => '30 ~ 300 人'],
+            ['label' => '刮刮樂', 'slug' => 'scratch-card', 'scene' => '攤位活動 / 小型聚會', 'feature' => '刮開塗層揭曉名單', 'people' => '10 ~ 150 人'],
+            ['label' => '寶箱', 'slug' => 'treasure-chest', 'scene' => '獎勵揭曉 / 答謝晚宴', 'feature' => '多寶箱依序開啟', 'people' => '20 ~ 200 人'],
+            ['label' => '大寶箱', 'slug' => 'big-treasure-chest', 'scene' => '最終大獎揭曉', 'feature' => '巨型寶箱儀式感', 'people' => '全場適用'],
+            ['label' => '圓球賽跑', 'slug' => 'marble-race', 'scene' => '品牌發表會 / 遊戲化活動', 'feature' => '多球競速賽道', 'people' => '20 ~ 150 人'],
+            ['label' => '戰鬥陀螺', 'slug' => 'battle-top', 'scene' => '年輕化品牌 / 潮流活動', 'feature' => '陀螺激烈對決、戲劇張力', 'people' => '20 ~ 200 人'],
+        ];
+
+        $landingScenes = [
+            ['scene' => '企業尾牙', 'pick' => '樂透氣流機、紅包雨、大寶箱', 'why' => '氣勢足、互動高，能撐滿整場多獎項流程。'],
+            ['scene' => '春酒 / 年會', 'pick' => '紅包雨、樂透氣流機', 'why' => '喜氣風格強，搭配主持節奏效果最佳。'],
+            ['scene' => '品牌發表 / 新品活動', 'pick' => '圓球賽跑、戰鬥陀螺', 'why' => '動態十足、富科技感，呼應品牌調性。'],
+            ['scene' => '小型聚會 / 答謝宴', 'pick' => '刮刮樂、寶箱', 'why' => '輕快互動，適合 50 人內的親密場合。'],
+            ['scene' => '直播 / 線上活動', 'pick' => '紅包雨、刮刮樂', 'why' => '視覺直觀，遠端觀眾也能快速理解抽獎過程。'],
+        ];
+    @endphp
+
+    <script type="application/ld+json">
+    {!! json_encode($landingBreadcrumb, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+    </script>
+    <script type="application/ld+json">
+    {!! json_encode($landingFaqSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+    </script>
+
+    {{-- Favicon --}}
+    <link rel="icon" type="image/svg+xml" href="{{ url('/images/og-home.svg') }}">
+    <link rel="icon" href="{{ url('/favicon.ico') }}" sizes="any">
+    <link rel="apple-touch-icon" href="{{ url('/images/og-home.svg') }}">
+    <meta name="theme-color" content="#050508">
+
     @vite(['resources/css/app.css'])
 
     <style>
@@ -239,6 +299,134 @@
         .style-card:nth-child(6) { --card-accent: rgba(34, 197, 94, 0.12); }
         .style-card:nth-child(7) { --card-accent: rgba(236, 72, 153, 0.12); }
 
+        /* ── 比較區塊 ── */
+        .landing-section {
+            margin-top: 4.5rem;
+        }
+        .landing-section__title {
+            font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            background: linear-gradient(135deg, #fff 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.75rem;
+        }
+        .landing-section__lead {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.96rem;
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+        .compare-table-wrap {
+            overflow-x: auto;
+            border-radius: 1rem;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(0, 0, 0, 0.25);
+        }
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 680px;
+        }
+        .compare-table th,
+        .compare-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            font-size: 0.92rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .compare-table th {
+            color: var(--gold-light);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            background: rgba(245, 166, 35, 0.06);
+        }
+        .compare-table td a {
+            color: #fff;
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 1px dashed rgba(245, 166, 35, 0.35);
+        }
+        .compare-table td a:hover {
+            color: var(--gold-light);
+        }
+        .scene-list {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 0.75rem;
+            list-style: none;
+        }
+        @media (min-width: 720px) {
+            .scene-list { grid-template-columns: repeat(2, 1fr); }
+        }
+        .scene-list li {
+            padding: 1rem 1.1rem;
+            border-radius: 0.9rem;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.02);
+        }
+        .scene-list b {
+            display: block;
+            color: #fff;
+            margin-bottom: 0.25rem;
+        }
+        .scene-list span {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--gold-light);
+            margin-bottom: 0.25rem;
+        }
+        .scene-list p {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.6;
+            margin: 0;
+        }
+        .landing-faq {
+            display: grid;
+            gap: 0.6rem;
+        }
+        .landing-faq details {
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 0.9rem;
+            padding: 0.9rem 1.1rem;
+            background: rgba(0,0,0,0.25);
+            transition: border-color 0.2s ease;
+        }
+        .landing-faq details[open] {
+            border-color: rgba(245, 166, 35, 0.3);
+        }
+        .landing-faq summary {
+            cursor: pointer;
+            list-style: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .landing-faq summary::-webkit-details-marker { display: none; }
+        .landing-faq summary::after {
+            content: '+';
+            color: var(--gold-light);
+            font-size: 1.2rem;
+            font-weight: 700;
+            transition: transform 0.2s ease;
+        }
+        .landing-faq details[open] summary::after {
+            content: '−';
+        }
+        .landing-faq p {
+            margin: 0.75rem 0 0;
+            color: rgba(255,255,255,0.65);
+            line-height: 1.7;
+            font-size: 0.9rem;
+        }
+
         .landing-footer {
             text-align: center;
             margin-top: 4rem;
@@ -296,7 +484,60 @@
             @endforeach
         </div>
 
-        <footer class="landing-footer anim-fade-up" style="animation-delay: 0.8s;">
+        <section class="landing-section anim-fade-up" style="animation-delay: 0.9s;">
+            <h2 class="landing-section__title">7 種抽獎動畫怎麼選？</h2>
+            <p class="landing-section__lead">每種風格針對不同活動規模與情境設計，參考下表挑選最適合你場合的抽獎動畫。</p>
+            <div class="compare-table-wrap">
+                <table class="compare-table">
+                    <thead>
+                        <tr>
+                            <th>動畫風格</th>
+                            <th>適合活動</th>
+                            <th>特色</th>
+                            <th>建議人數</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($landingCompare as $row)
+                            <tr>
+                                <td><a href="{{ url('/demo/lottery/'.$row['slug']) }}">{{ $row['label'] }}</a></td>
+                                <td>{{ $row['scene'] }}</td>
+                                <td>{{ $row['feature'] }}</td>
+                                <td>{{ $row['people'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="landing-section anim-fade-up" style="animation-delay: 1.0s;">
+            <h2 class="landing-section__title">情境對照：哪個場合該用哪種？</h2>
+            <p class="landing-section__lead">以常見企業活動情境為切入點，直接告訴你選哪幾種風格最對味。</p>
+            <ul class="scene-list">
+                @foreach ($landingScenes as $s)
+                    <li>
+                        <b>{{ $s['scene'] }}</b>
+                        <span>{{ $s['pick'] }}</span>
+                        <p>{{ $s['why'] }}</p>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+
+        <section class="landing-section anim-fade-up" style="animation-delay: 1.1s;">
+            <h2 class="landing-section__title">常見問題</h2>
+            <div class="landing-faq">
+                @foreach ($landingFaqs as $faq)
+                    <details>
+                        <summary>{{ $faq['q'] }}</summary>
+                        <p>{{ $faq['a'] }}</p>
+                    </details>
+                @endforeach
+            </div>
+        </section>
+
+        <footer class="landing-footer anim-fade-up" style="animation-delay: 1.2s;">
             <a href="{{ url('/') }}">← 返回首頁</a>
         </footer>
     </div>

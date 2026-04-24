@@ -37,6 +37,104 @@
                 ];
             })
             ->all();
+
+        $faqs = [
+            ['q' => '這套系統適合尾牙抽獎嗎？', 'a' => '非常適合，專為企業尾牙抽獎與大型活動設計，具備即時切換與多種抽獎效果。'],
+            ['q' => '線上抽獎可以即時切換獎項嗎？', 'a' => '可以，後台操作後前台可快速同步更新，活動流程不中斷。'],
+            ['q' => '可以分析抽獎結果嗎？', 'a' => '可以，系統支援抽獎報表與中獎機率模擬分析，方便管理層參考。'],
+            ['q' => '是否支援互動功能？', 'a' => '支援，提供即時彈幕讓員工參與，提升活動氣氛。'],
+            ['q' => '中獎後怎麼快速領獎？', 'a' => '可使用 QRCode 掃描進行兌獎驗證，流程更快更準確。'],
+            ['q' => '系統費用如何計算？', 'a' => '提供彈性方案，實際價格會依企業規模與功能需求討論，歡迎直接聯繫我們取得報價。'],
+            ['q' => '可以支援多少人同時抽獎？', 'a' => '系統已驗證可穩定支援數百人規模的現場抽獎，若需更大規模可再評估擴充方式。'],
+            ['q' => '可以匯入哪些格式的員工名單？', 'a' => '支援 Excel（.xlsx）與 CSV 等常見格式，欄位包含姓名、Email、分組資訊等。'],
+            ['q' => '可以匯出中獎名單嗎？', 'a' => '後台提供一鍵下載中獎清單，便於回報或對帳。'],
+            ['q' => '可以重新抽獎或補抽嗎？', 'a' => '後台支援重抽、補抽與重置流程，主辦單位可依現場需求彈性處理。'],
+            ['q' => '可以同時進行多場活動嗎？', 'a' => '支援多組織與多活動並行，不同活動之間的抽獎與名單互相獨立。'],
+            ['q' => '可以客製品牌 Logo 與背景嗎？', 'a' => '後台可上傳活動背景與品牌資料，讓抽獎頁面呈現企業風格。'],
+            ['q' => '支援哪些瀏覽器與裝置？', 'a' => '建議使用最新版 Chrome、Edge、Safari，桌機、平板與手機皆可流暢運作。'],
+            ['q' => '彈幕功能如何啟用？', 'a' => '後台開啟彈幕開關後，員工可透過領獎頁送出訊息，即時顯示於主投影畫面。'],
+            ['q' => '中獎紀錄會保存與備份嗎？', 'a' => '所有抽獎結果皆儲存於資料庫，可由管理者匯出或定期備份保留。'],
+        ];
+
+        $faqMainEntity = collect($faqs)->map(fn ($faq) => [
+            '@type' => 'Question',
+            'name' => $faq['q'],
+            'acceptedAnswer' => [
+                '@type' => 'Answer',
+                'text' => $faq['a'],
+            ],
+        ])->all();
+
+        $suitableScenes = [
+            ['icon' => '🎉', 'title' => '企業尾牙', 'desc' => '年終大型抽獎、多獎項、多場次，主持流程不中斷。'],
+            ['icon' => '🍾', 'title' => '春酒 / 年會', 'desc' => '員工聚會暖場、即時切換抽獎節奏更靈活。'],
+            ['icon' => '🚀', 'title' => '品牌發表會', 'desc' => '產品發表搭配互動抽獎，提升參與感與停留時間。'],
+            ['icon' => '🤝', 'title' => '客戶答謝宴', 'desc' => '名單可分群、資料可匯入匯出，現場更顯專業。'],
+            ['icon' => '🎥', 'title' => '直播 / 線上活動', 'desc' => '雲端即時抽獎、遠端觀眾也能參與互動彈幕。'],
+            ['icon' => '🏢', 'title' => '社團 / 同學會', 'desc' => '小型聚會也能快速建立活動，簡單上手。'],
+        ];
+
+        $setupSteps = [
+            ['title' => '建立活動與匯入名單', 'desc' => '在後台建立抽獎活動，匯入員工或參與者名單（Excel、CSV），可分群管理。'],
+            ['title' => '設定獎項與抽獎規則', 'desc' => '新增獎項、設定中獎人數、抽獎模式（一次抽完或逐一抽出）與資格條件。'],
+            ['title' => '開放前台抽獎與兌獎', 'desc' => '大屏投影執行抽獎、即時切換獎項；中獎者可透過 QRCode 完成兌獎驗證。'],
+        ];
+
+        $howToSetup = [
+            '@context' => 'https://schema.org',
+            '@type' => 'HowTo',
+            'name' => '如何設定並執行一場線上抽獎',
+            'description' => '從建立活動到中獎兌獎的完整流程。',
+            'step' => [
+                ['@type' => 'HowToStep', 'position' => 1, 'name' => '建立抽獎活動', 'text' => '在後台建立活動並設定名稱、時間與品牌代碼。'],
+                ['@type' => 'HowToStep', 'position' => 2, 'name' => '匯入參與者名單', 'text' => '支援 Excel、CSV 匯入名單，可依部門或群組分組管理。'],
+                ['@type' => 'HowToStep', 'position' => 3, 'name' => '設定獎項與規則', 'text' => '新增獎項、設定中獎人數與抽獎模式，並選擇動畫風格。'],
+                ['@type' => 'HowToStep', 'position' => 4, 'name' => '開放前台抽獎', 'text' => '以投影或大屏執行抽獎，主持人可即時切換獎項。'],
+                ['@type' => 'HowToStep', 'position' => 5, 'name' => '通知與兌獎', 'text' => '中獎者收到通知並以 QRCode 完成兌獎驗證與領獎。'],
+            ],
+        ];
+
+        $howToClaim = [
+            '@context' => 'https://schema.org',
+            '@type' => 'HowTo',
+            'name' => '如何透過 QRCode 完成中獎兌獎',
+            'description' => '中獎者從收到通知到領獎的步驟。',
+            'step' => [
+                ['@type' => 'HowToStep', 'position' => 1, 'name' => '收到中獎通知', 'text' => '中獎者於活動現場或 Email 收到中獎結果與 QRCode 連結。'],
+                ['@type' => 'HowToStep', 'position' => 2, 'name' => '掃描 QRCode', 'text' => '使用手機掃描連結，進入活動中獎名單頁面。'],
+                ['@type' => 'HowToStep', 'position' => 3, 'name' => '以公司 Email 驗證身份', 'text' => '輸入公司 Email 以確認中獎者身份，避免冒領。'],
+                ['@type' => 'HowToStep', 'position' => 4, 'name' => '現場領取獎品', 'text' => '工作人員核對後發放獎品，系統自動標記為已領獎。'],
+            ],
+        ];
+
+        $softwareApplication = [
+            '@context' => 'https://schema.org',
+            '@type' => 'SoftwareApplication',
+            'name' => '抽獎系統',
+            'applicationCategory' => 'BusinessApplication',
+            'operatingSystem' => 'Web',
+            'url' => url('/'),
+            'image' => url('/images/og-home.svg'),
+            'description' => '專為企業尾牙、春酒與品牌活動打造的線上抽獎平台，支援即時切換獎項、員工分群、彈幕互動、QRCode 兌獎與多種抽獎動畫。',
+            'featureList' => [
+                '即時切換獎項',
+                '員工名單分群管理',
+                '即時彈幕互動',
+                'QRCode 中獎兌獎',
+                '抽獎分析報表',
+                '7 種抽獎動畫風格',
+                '多組織與多活動並行',
+                '後台下載中獎清單',
+            ],
+            'offers' => [
+                '@type' => 'Offer',
+                'availability' => 'https://schema.org/InStock',
+                'priceSpecification' => [
+                    '@type' => 'PriceSpecification',
+                    'description' => '提供彈性方案，請聯繫洽談報價',
+                ],
+            ],
+        ];
     @endphp
 
     {{-- Organization JSON-LD --}}
@@ -69,57 +167,33 @@
     }
     </script>
 
-    {{-- FAQ JSON-LD --}}
-    @verbatim
+    {{-- SoftwareApplication JSON-LD --}}
     <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-            {
-                "@type": "Question",
-                "name": "這套系統適合尾牙抽獎嗎？",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "非常適合，專為企業尾牙抽獎與大型活動設計，具備即時切換與多種抽獎效果。"
-                }
-            },
-            {
-                "@type": "Question",
-                "name": "線上抽獎可以即時切換獎項嗎？",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "可以，後台操作後前台可快速同步更新，活動流程不中斷。"
-                }
-            },
-            {
-                "@type": "Question",
-                "name": "可以分析抽獎結果嗎？",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "可以，系統支援抽獎報表與中獎機率模擬分析，方便管理層參考。"
-                }
-            },
-            {
-                "@type": "Question",
-                "name": "是否支援互動功能？",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "支援，提供即時彈幕讓員工參與，提升活動氣氛。"
-                }
-            },
-            {
-                "@type": "Question",
-                "name": "中獎後怎麼快速領獎？",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "可使用 QRCode 掃描進行兌獎驗證，流程更快更準確。"
-                }
-            }
-        ]
-    }
+    {!! json_encode($softwareApplication, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
     </script>
-    @endverbatim
+
+    {{-- HowTo JSON-LD × 2 --}}
+    <script type="application/ld+json">
+    {!! json_encode($howToSetup, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+    </script>
+    <script type="application/ld+json">
+    {!! json_encode($howToClaim, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+    </script>
+
+    {{-- FAQ JSON-LD --}}
+    <script type="application/ld+json">
+    {!! json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => $faqMainEntity,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+    </script>
+
+    {{-- Favicon --}}
+    <link rel="icon" type="image/svg+xml" href="{{ url('/images/og-home.svg') }}">
+    <link rel="icon" href="{{ url('/favicon.ico') }}" sizes="any">
+    <link rel="apple-touch-icon" href="{{ url('/images/og-home.svg') }}">
+    <meta name="theme-color" content="#0a0a0f">
 
     {{-- Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -528,6 +602,88 @@
             font-weight: 700;
         }
 
+        /* ── Scenes grid ── */
+        .scene-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+        }
+        @media (max-width: 768px) {
+            .scene-grid { grid-template-columns: 1fr; }
+        }
+        .scene-card {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: 14px;
+            padding: 1.5rem 1.35rem;
+            transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+        }
+        .scene-card:hover {
+            background: var(--c-bg-card-hover);
+            border-color: rgba(245, 158, 11, 0.25);
+            transform: translateY(-3px);
+        }
+        .scene-icon {
+            font-size: 1.85rem;
+            line-height: 1;
+            margin-bottom: 0.85rem;
+        }
+        .scene-card h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem;
+        }
+        .scene-card p {
+            font-size: 0.9rem;
+            color: var(--c-text-dim);
+            line-height: 1.65;
+            margin: 0;
+        }
+
+        /* ── Steps grid ── */
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            counter-reset: stepnum;
+        }
+        @media (max-width: 768px) {
+            .steps-grid { grid-template-columns: 1fr; }
+        }
+        .step-card {
+            position: relative;
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: 16px;
+            padding: 2rem 1.75rem 1.75rem;
+        }
+        .step-card::before {
+            counter-increment: stepnum;
+            content: counter(stepnum, decimal-leading-zero);
+            position: absolute;
+            top: 1.2rem;
+            right: 1.4rem;
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--c-gold-light), var(--c-red));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0.7;
+            letter-spacing: 0.02em;
+        }
+        .step-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0 0 0.6rem;
+        }
+        .step-card p {
+            color: var(--c-text-dim);
+            font-size: 0.93rem;
+            line-height: 1.7;
+            margin: 0;
+        }
+
         /* ── Report section ── */
         .report-section {
             padding: 5rem 1.5rem;
@@ -637,7 +793,7 @@
             padding: 0 0;
         }
         .faq-answer.open {
-            max-height: 10rem;
+            max-height: 24rem;
             padding: 0 0 1.25rem;
         }
         .faq-answer p {
@@ -806,6 +962,47 @@
     </section>
 
     {{-- ════════════════════════════════════════════
+         2.5 適合哪些活動
+    ════════════════════════════════════════════ --}}
+    <section class="section" id="scenes">
+        <div class="section-header" data-reveal>
+            <div class="section-divider"></div>
+            <h2>適合<span class="accent">哪些活動</span>使用</h2>
+            <p>從企業尾牙、春酒到直播抽獎，都能在 10 分鐘內完成活動設定與上線。</p>
+        </div>
+
+        <div class="scene-grid">
+            @foreach ($suitableScenes as $i => $scene)
+                <div class="scene-card" data-reveal data-reveal-delay="{{ $i * 60 }}">
+                    <div class="scene-icon" aria-hidden="true">{{ $scene['icon'] }}</div>
+                    <h3>{{ $scene['title'] }}</h3>
+                    <p>{{ $scene['desc'] }}</p>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    {{-- ════════════════════════════════════════════
+         2.7 3 步驟完成一場抽獎
+    ════════════════════════════════════════════ --}}
+    <section class="section" id="setup-steps">
+        <div class="section-header" data-reveal>
+            <div class="section-divider"></div>
+            <h2>3 步驟<span class="accent">完成一場抽獎</span></h2>
+            <p>從建立活動到中獎兌獎，照著做就能快速上手。</p>
+        </div>
+
+        <div class="steps-grid">
+            @foreach ($setupSteps as $i => $step)
+                <div class="step-card" data-reveal data-reveal-delay="{{ $i * 80 }}">
+                    <h3>{{ $step['title'] }}</h3>
+                    <p>{{ $step['desc'] }}</p>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    {{-- ════════════════════════════════════════════
          3. ANIMATION PREVIEW
     ════════════════════════════════════════════ --}}
     <section class="preview-section" id="preview">
@@ -897,16 +1094,6 @@
                 <div class="section-divider"></div>
                 <h2>常見問題</h2>
             </div>
-
-            @php
-                $faqs = [
-                    ['q' => '這套系統適合尾牙抽獎嗎？', 'a' => '非常適合，專為企業尾牙抽獎與大型活動設計，具備即時切換與多種抽獎效果。'],
-                    ['q' => '線上抽獎可以即時切換獎項嗎？', 'a' => '可以，後台操作後前台可快速同步更新，活動流程不中斷。'],
-                    ['q' => '可以分析抽獎結果嗎？', 'a' => '可以，系統支援抽獎報表與中獎機率模擬分析，方便管理層參考。'],
-                    ['q' => '是否支援互動功能？', 'a' => '支援，提供即時彈幕讓員工參與，提升活動氣氛。'],
-                    ['q' => '中獎後怎麼快速領獎？', 'a' => '可使用 QRCode 掃描進行兌獎驗證，流程更快更準確。'],
-                ];
-            @endphp
 
             @foreach ($faqs as $i => $faq)
                 <div class="faq-item" data-reveal data-reveal-delay="{{ $i * 60 }}">

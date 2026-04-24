@@ -39,8 +39,54 @@
     }
     </script>
     @endisset
+    @if(isset($demoCurrentStyle))
+    @php
+        $styleProduct = [
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => $demoCurrentStyle['label'].' 抽獎動畫',
+            'description' => $demoCurrentStyle['longDesc'] ?? $demoCurrentStyle['desc'] ?? '',
+            'image' => $seoImage ?? url('/images/og-demo.svg'),
+            'category' => '抽獎動畫',
+            'url' => $seoCanonical ?? url('/demo/lottery/'.($demoCurrentStyle['slug'] ?? '')),
+            'brand' => [
+                '@type' => 'Organization',
+                'name' => '抽獎系統',
+                'url' => url('/'),
+            ],
+        ];
+        $styleFaqs = $demoCurrentStyle['faqs'] ?? [];
+        $styleFaqSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => collect($styleFaqs)->map(fn ($f) => [
+                '@type' => 'Question',
+                'name' => $f['q'] ?? '',
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a'] ?? ''],
+            ])->all(),
+        ];
+    @endphp
+    <script type="application/ld+json">
+    {!! json_encode($styleProduct, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+    </script>
+    @if(!empty($styleFaqs))
+    <script type="application/ld+json">
+    {!! json_encode($styleFaqSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+    </script>
+    @endif
+    @endif
     @endif
     <title>{{ $title ?? ($currentPrize?->name ?? $event->name) }} - 抽獎</title>
+
+    {{-- Favicon --}}
+    <link rel="icon" type="image/svg+xml" href="{{ url('/images/og-home.svg') }}">
+    <link rel="icon" href="{{ url('/favicon.ico') }}" sizes="any">
+    <link rel="apple-touch-icon" href="{{ url('/images/og-home.svg') }}">
+    <meta name="theme-color" content="#030712">
+    @if(!empty($isDemo))
+    <meta name="robots" content="index,follow,max-image-preview:large">
+    @endif
+
     <script id="lottery-config-data" type="application/json">{!! json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/lottery.js'])
@@ -254,9 +300,109 @@
             transform: scale(0.88);
             transform-origin: center center;
         }
+
+        /* ── Demo AEO article（副文本區塊，只在 demo 且非 embedded 顯示）── */
+        .demo-aeo-article {
+            position: relative;
+            z-index: 1;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 4.5rem;
+            max-width: 60rem;
+            color: rgba(226, 232, 240, 0.88);
+            font-size: 1rem;
+            line-height: 1.8;
+            background: linear-gradient(180deg, rgba(3, 7, 18, 0.0) 0%, rgba(3, 7, 18, 0.6) 40%, rgba(3, 7, 18, 0.95) 100%);
+        }
+        .demo-aeo-article h2 {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-weight: 800;
+            color: #fff;
+            margin: 0 0 0.75rem;
+            letter-spacing: 0.02em;
+        }
+        .demo-aeo-article .demo-aeo-eyebrow {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            color: #fde68a;
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            margin-bottom: 1rem;
+        }
+        .demo-aeo-article p {
+            margin: 0 0 1.25rem;
+            color: rgba(226, 232, 240, 0.8);
+        }
+        .demo-aeo-article h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 2.25rem 0 0.75rem;
+        }
+        .demo-aeo-article ul {
+            margin: 0 0 1.5rem;
+            padding-left: 1.1rem;
+        }
+        .demo-aeo-article ul li {
+            margin-bottom: 0.4rem;
+            color: rgba(226, 232, 240, 0.82);
+        }
+        .demo-aeo-article details {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
+            padding: 0.85rem 1.1rem;
+            margin-bottom: 0.55rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .demo-aeo-article details[open] {
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        .demo-aeo-article summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #fff;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .demo-aeo-article summary::-webkit-details-marker { display: none; }
+        .demo-aeo-article summary::after {
+            content: '+';
+            color: #fde68a;
+            font-weight: 700;
+        }
+        .demo-aeo-article details[open] summary::after {
+            content: '−';
+        }
+        .demo-aeo-article .aeo-related-links a {
+            display: inline-block;
+            margin: 0.25rem 0.35rem 0 0;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+        }
+        .demo-aeo-article .aeo-related-links a:hover {
+            border-color: rgba(245, 158, 11, 0.35);
+            color: #fde68a;
+            background: rgba(245, 158, 11, 0.08);
+        }
+        @media (max-width: 640px) {
+            .demo-aeo-article { padding: 2rem 1rem 4rem; }
+        }
     </style>
 </head>
-<body class="h-[100svh] overflow-hidden bg-black text-white {{ !empty($isEmbeddedPreview) ? 'is-embedded-preview' : '' }}">
+@php
+    $demoScrollable = !empty($isDemo) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null);
+@endphp
+<body class="{{ $demoScrollable ? 'min-h-[100svh] overflow-x-hidden' : 'h-[100svh] overflow-hidden' }} bg-black text-white {{ !empty($isEmbeddedPreview) ? 'is-embedded-preview' : '' }}">
     @if (!empty($isDemo))
         @if (!empty($demoSetupMode))
             @include('lottery.partials.demo-style-toolbar')
@@ -372,6 +518,51 @@
         </div>
 
     </div>
+
+    @if (!empty($isDemo) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null))
+        <article class="demo-aeo-article">
+            <div class="demo-aeo-eyebrow">抽獎動畫 Demo</div>
+            <h2>{{ $demoCurrentStyle['label'] }}：{{ $demoCurrentStyle['bestFitFor'] ?? '' }}</h2>
+            <p>{{ $demoCurrentStyle['longDesc'] }}</p>
+
+            @if (!empty($demoCurrentStyle['useCases'] ?? []))
+                <h3>適合活動類型</h3>
+                <ul>
+                    @foreach ($demoCurrentStyle['useCases'] as $useCase)
+                        <li>{{ $useCase }}</li>
+                    @endforeach
+                </ul>
+            @endif
+
+            @if (!empty($demoCurrentStyle['features'] ?? []))
+                <h3>功能亮點</h3>
+                <ul>
+                    @foreach ($demoCurrentStyle['features'] as $feature)
+                        <li>{{ $feature }}</li>
+                    @endforeach
+                </ul>
+            @endif
+
+            @if (!empty($demoCurrentStyle['faqs'] ?? []))
+                <h3>{{ $demoCurrentStyle['label'] }} 常見問題</h3>
+                @foreach ($demoCurrentStyle['faqs'] as $faq)
+                    <details>
+                        <summary>{{ $faq['q'] }}</summary>
+                        <p>{{ $faq['a'] }}</p>
+                    </details>
+                @endforeach
+            @endif
+
+            @if (!empty($demoRelatedStyles ?? []))
+                <h3>其他抽獎動畫風格</h3>
+                <p class="aeo-related-links">
+                    @foreach ($demoRelatedStyles as $related)
+                        <a href="{{ url('/demo/lottery/'.$related['slug']) }}">{{ $related['label'] }}</a>
+                    @endforeach
+                </p>
+            @endif
+        </article>
+    @endif
 
     {{-- 彈幕容器 --}}
     <div id="danmaku-container" class="hidden fixed inset-0 pointer-events-none z-50 overflow-hidden"></div>

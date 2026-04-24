@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="{{ route('lottery.winners', ['brandCode' => $event->brand_code]) }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url('/images/og-home.svg') }}">
+    <link rel="icon" href="{{ url('/favicon.ico') }}" sizes="any">
+    <meta name="theme-color" content="#0a0a0f">
     <title>{{ $event->name }} - 中獎清單</title>
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/danmaku.js'])
 </head>
