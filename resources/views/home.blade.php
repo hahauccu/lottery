@@ -500,6 +500,7 @@
             margin-bottom: 2rem;
         }
         .preview-tab {
+            display: inline-block;
             padding: 0.55rem 1.25rem;
             border-radius: 100px;
             font-size: 0.88rem;
@@ -510,6 +511,7 @@
             cursor: pointer;
             transition: all 0.25s;
             font-family: inherit;
+            text-decoration: none;
         }
         .preview-tab:hover {
             border-color: rgba(245, 158, 11, 0.3);
@@ -547,59 +549,6 @@
             line-height: 1.6;
             min-height: 3.2rem;
             transition: opacity 0.3s;
-        }
-
-        .demo-hub-section {
-            padding: 4.5rem 1.5rem;
-        }
-        .demo-hub-inner {
-            max-width: 72rem;
-            margin: 0 auto;
-        }
-        .demo-hub-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-        .demo-hub-card {
-            display: flex;
-            flex-direction: column;
-            gap: 0.9rem;
-            padding: 1.4rem;
-            border-radius: 18px;
-            border: 1px solid var(--c-border);
-            background: linear-gradient(180deg, rgba(18, 18, 26, 0.95) 0%, rgba(10, 10, 15, 0.9) 100%);
-            text-decoration: none;
-            color: inherit;
-            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-        }
-        .demo-hub-card:hover {
-            transform: translateY(-4px);
-            border-color: rgba(245, 158, 11, 0.28);
-            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
-        }
-        .demo-hub-card__eyebrow {
-            font-size: 0.75rem;
-            letter-spacing: 0.12em;
-            color: var(--c-gold-light);
-            text-transform: uppercase;
-        }
-        .demo-hub-card h3 {
-            margin: 0;
-            font-size: 1.15rem;
-        }
-        .demo-hub-card p {
-            margin: 0;
-            color: var(--c-text-dim);
-            line-height: 1.7;
-            font-size: 0.94rem;
-        }
-        .demo-hub-card__cta {
-            margin-top: auto;
-            color: var(--c-gold-light);
-            font-size: 0.9rem;
-            font-weight: 700;
         }
 
         /* ── Scenes grid ── */
@@ -701,10 +650,6 @@
                 grid-template-columns: 1fr;
                 gap: 2rem;
                 text-align: center;
-            }
-
-            .demo-hub-grid {
-                grid-template-columns: 1fr;
             }
         }
         .report-text h2 {
@@ -1019,10 +964,11 @@
 
             <div class="preview-tabs" data-reveal data-reveal-delay="100">
                 <template x-for="(item, i) in items" :key="item.key">
-                    <button class="preview-tab"
-                            :class="{ 'active': active === i }"
-                            @click="switchTo(i)"
-                            x-text="item.label"></button>
+                    <a class="preview-tab"
+                       :href="'/demo/lottery/' + item.slug"
+                       :class="{ 'active': active === i }"
+                       @click.prevent="switchTo(i)"
+                       x-text="item.label"></a>
                 </template>
             </div>
 
@@ -1036,27 +982,6 @@
             </div>
 
             <div class="preview-desc" data-reveal data-reveal-delay="260" x-text="current.desc"></div>
-        </div>
-    </section>
-
-    <section class="demo-hub-section" id="demo-links">
-        <div class="demo-hub-inner">
-            <div class="section-header" data-reveal>
-                <div class="section-divider"></div>
-                <h2>首頁同步收錄 <span class="accent">抽獎動畫 Demo</span> 連結</h2>
-                <p>直接試玩各種尾牙抽獎範例、線上抽獎風格與互動動畫，讓首頁與每個 demo 頁形成更完整的 SEO 內鏈。</p>
-            </div>
-
-            <div class="demo-hub-grid">
-                @foreach ($animationStyles as $style)
-                    <a href="{{ url('/demo/lottery/'.$style['slug']) }}" class="demo-hub-card" data-reveal>
-                        <div class="demo-hub-card__eyebrow">抽獎動畫 Demo</div>
-                        <h3>{{ $style['label'] }}</h3>
-                        <p>{{ $style['desc'] }}</p>
-                        <span class="demo-hub-card__cta">試玩 {{ $style['label'] }} 抽獎動畫</span>
-                    </a>
-                @endforeach
-            </div>
         </div>
     </section>
 
