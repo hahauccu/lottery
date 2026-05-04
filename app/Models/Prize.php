@@ -68,4 +68,9 @@ class Prize extends Model
     {
         return $this->hasMany(PrizeWinner::class);
     }
+
+    public function audioSettings(): HasMany
+    {
+        return $this->hasMany(PrizeAudioSetting::class);
+    }
 }

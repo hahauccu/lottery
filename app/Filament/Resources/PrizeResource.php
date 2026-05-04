@@ -9,6 +9,7 @@ use App\Models\EmployeeGroup;
 use App\Models\LotteryEvent;
 use App\Models\Prize;
 use App\Services\SystemGroupService;
+use App\Support\PrizeAudio;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Livewire as LivewireComponent;
@@ -138,21 +139,9 @@ class PrizeResource extends Resource
                             ->image()
                             ->imagePreviewHeight('120')
                             ->maxSize(4096),
-                        FileUpload::make('music_path')
-                            ->label('抽獎音樂')
-                            ->disk('public')
-                            ->directory(function (?Prize $record) {
-                                $slug = Filament::getTenant()?->slug
-                                    ?? $record?->lotteryEvent?->organization?->slug;
-
-                                return $slug
-                                    ? 'lottery/'.$slug.'/prizes/music'
-                                    : 'lottery/pending/prizes/music';
-                            })
-                            ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'])
-                            ->maxSize(10240),
                     ])
                     ->columns(2),
+                self::audioSettingsSection(),
                 Section::make('抽獎範圍')
                     ->description('包含為聯集，排除優先。未選任何包含群組或員工時，可抽人數為 0。')
                     ->schema([
@@ -319,5 +308,50 @@ class PrizeResource extends Resource
             'create' => Pages\CreatePrize::route('/create'),
             'edit' => Pages\EditPrize::route('/{record}/edit'),
         ];
+    }
+
+    private static function audioSettingsSection(): Section
+    {
+        return Section::make('音效管理')
+            ->description('每個音效可選擇使用預設、上傳自訂音檔，或單獨關閉。總開關「開啟音效」關閉時，以下設定都不會播放。')
+            ->schema(self::audioSettingsFields())
+            ->columns(2)
+            ->collapsible()
+            ->collapsed();
+    }
+
+    private static function audioSettingsFields(): array
+    {
+        $fields = [];
+
+        foreach (PrizeAudio::sounds() as $sound) {
+            $key = $sound['key'];
+            $modeField = PrizeAudio::modeField($key);
+
+            $fields[] = Select::make($modeField)
+                ->label($sound['label'])
+                ->helperText($sound['helper'])
+                ->options(PrizeAudio::modeOptions())
+                ->default(PrizeAudio::MODE_DEFAULT)
+                ->live();
+
+            $fields[] = FileUpload::make(PrizeAudio::pathField($key))
+                ->label($sound['label'].'音檔')
+                ->disk('public')
+                ->directory(function (?Prize $record) {
+                    $slug = Filament::getTenant()?->slug
+                        ?? $record?->lotteryEvent?->organization?->slug;
+
+                    return $slug
+                        ? 'lottery/'.$slug.'/prizes/audio'
+                        : 'lottery/pending/prizes/audio';
+                })
+                ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'])
+                ->maxSize(10240)
+                ->visible(fn (Get $get) => $get($modeField) === PrizeAudio::MODE_CUSTOM)
+                ->required(fn (Get $get) => $get($modeField) === PrizeAudio::MODE_CUSTOM);
+        }
+
+        return $fields;
     }
 }

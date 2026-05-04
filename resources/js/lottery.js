@@ -609,13 +609,63 @@ const initLottery = () => {
 
     let drawAudio = null;
     let drawAudioUrl = null;
+    const customAudio = new Map();
     let lottoTimerId = null;
     let lottoTimerStart = 0;
     let lottoTimerLabel = '';
 
+    const isAudioEnabled = () => state.currentPrize?.audio?.enabled ?? state.currentPrize?.soundEnabled ?? true;
+    const soundSetting = (key) => state.currentPrize?.audio?.sounds?.[key] ?? null;
+    const shouldPlayDefaultSound = (key) => {
+        if (!isAudioEnabled()) return false;
+
+        const sound = soundSetting(key);
+        if (!sound) return true;
+
+        return (sound.mode ?? 'default') === 'default';
+    };
+
+    const customSoundUrl = (key) => {
+        if (!isAudioEnabled()) return null;
+
+        const sound = soundSetting(key);
+        if ((sound?.mode ?? 'default') !== 'custom') return null;
+
+        return sound?.url ?? null;
+    };
+
+    const playCustomSound = (key, options = {}) => {
+        const url = customSoundUrl(key);
+        if (!url) return null;
+
+        let audio = customAudio.get(key);
+        if (!audio || audio.src !== url) {
+            if (audio) {
+                audio.pause();
+            }
+
+            audio = new Audio(url);
+            audio.preload = 'auto';
+            customAudio.set(key, audio);
+        }
+
+        audio.loop = options.loop ?? soundSetting(key)?.loop ?? false;
+        audio.currentTime = 0;
+        audio.play().catch(() => { });
+
+        return {
+            stop: () => {
+                audio.pause();
+                audio.currentTime = 0;
+            },
+        };
+    };
+
     const startDrawAudio = () => {
-        if (!(state.currentPrize?.soundEnabled ?? true)) return;
-        const url = state.currentPrize?.musicUrl;
+        if (!isAudioEnabled()) return;
+
+        const url = customSoundUrl('draw_bgm')
+            ?? (shouldPlayDefaultSound('draw_bgm') ? state.currentPrize?.musicUrl : null);
         if (!url) return;
 
         if (!drawAudio || drawAudioUrl !== url) {
@@ -647,23 +697,38 @@ const initLottery = () => {
         const noopLooped = () => ({ stop: noop });
 
         // 檢查音效是否啟用（讀取獎項設定）
-        const isEnabled = () => state.currentPrize?.soundEnabled ?? true;
+        const isEnabled = isAudioEnabled;
+
+        const playManagedSound = (key, playDefault) => {
+            if (playCustomSound(key)) return;
+            if (!shouldPlayDefaultSound(key)) return;
+
+            playDefault();
+        };
+
+        const playManagedLoop = (key, playDefault) => {
+            const custom = playCustomSound(key, { loop: true });
+            if (custom) return custom;
+            if (!shouldPlayDefaultSound(key)) return noopLooped();
+
+            return playDefault();
+        };
 
         if (!AudioContextRef) {
             return {
                 isEnabled,
-                playChestOpen: noop,
-                playBallPick: noop,
-                playMachineStop: noop,
+                playChestOpen: () => playCustomSound('chest_open') ?? undefined,
+                playBallPick: () => playCustomSound('ball_pick') ?? undefined,
+                playMachineStop: () => playCustomSound('machine_stop') ?? undefined,
                 playScratch: noopLooped,
-                playReveal: noop,
+                playReveal: () => playCustomSound('reveal') ?? undefined,
                 playSlotTick: noop,
-                playCoinDrop: noop,
-                playVictory: noop,
-                playPaperTear: noop,
-                playBallRumble: noopLooped,
-                playButtonClick: noop,
-                playError: noop,
+                playCoinDrop: () => playCustomSound('coin_drop') ?? undefined,
+                playVictory: () => playCustomSound('victory') ?? undefined,
+                playPaperTear: () => playCustomSound('paper_tear') ?? undefined,
+                playBallRumble: () => playCustomSound('ball_rumble', { loop: true }) ?? noopLooped(),
+                playButtonClick: () => playCustomSound('button_click') ?? undefined,
+                playError: () => playCustomSound('error') ?? undefined,
                 playWhoosh: noop,
                 playDrumRoll: noopLooped,
             };
@@ -1296,18 +1361,18 @@ const initLottery = () => {
 
         return {
             isEnabled,
-            playChestOpen,
-            playBallPick,
-            playMachineStop,
+            playChestOpen: () => playManagedSound('chest_open', playChestOpen),
+            playBallPick: () => playManagedSound('ball_pick', playBallPick),
+            playMachineStop: () => playManagedSound('machine_stop', playMachineStop),
             playScratch,
-            playReveal,
+            playReveal: () => playManagedSound('reveal', playReveal),
             playSlotTick,
-            playCoinDrop,
-            playVictory,
-            playPaperTear,
-            playBallRumble,
-            playButtonClick,
-            playError,
+            playCoinDrop: () => playManagedSound('coin_drop', playCoinDrop),
+            playVictory: () => playManagedSound('victory', playVictory),
+            playPaperTear: () => playManagedSound('paper_tear', playPaperTear),
+            playBallRumble: () => playManagedLoop('ball_rumble', playBallRumble),
+            playButtonClick: () => playManagedSound('button_click', playButtonClick),
+            playError: () => playManagedSound('error', playError),
             playWhoosh,
             playDrumRoll,
         };
@@ -7921,6 +7986,7 @@ const initLottery = () => {
                 animationStyle: payload.current_prize.animation_style ?? state.currentPrize?.animationStyle,
                 lottoHoldSeconds: payload.current_prize.lotto_hold_seconds ?? 5,
                 soundEnabled: payload.current_prize.sound_enabled ?? true,
+                audio: payload.current_prize.audio ?? state.currentPrize?.audio ?? null,
                 winnersCount: payload.current_prize.winners_count ?? 0,
             }
             : null;
@@ -7961,7 +8027,7 @@ const initLottery = () => {
         }
 
         // 音效關閉時，立即停止 BGM
-        if (nextPrize && !(nextPrize.soundEnabled ?? true)) {
+        if (nextPrize && !((nextPrize.audio?.enabled ?? nextPrize.soundEnabled) ?? true)) {
             stopDrawAudio();
         }
 

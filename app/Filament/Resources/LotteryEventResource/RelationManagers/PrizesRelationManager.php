@@ -11,6 +11,7 @@ use App\Models\PrizeRule;
 use App\Services\EligibleEmployeesService;
 use App\Services\SystemGroupService;
 use App\Support\LotteryBroadcaster;
+use App\Support\PrizeAudio;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Livewire as LivewireComponent;
@@ -209,25 +210,13 @@ class PrizesRelationManager extends RelationManager
                             ->image()
                             ->imagePreviewHeight('120')
                             ->maxSize(4096),
-                        FileUpload::make('music_path')
-                            ->label('抽獎音樂')
-                            ->disk('public')
-                            ->directory(function () {
-                                $slug = Filament::getTenant()?->slug
-                                    ?? $this->getOwnerRecord()?->organization?->slug;
-
-                                return $slug
-                                    ? 'lottery/'.$slug.'/prizes/music'
-                                    : 'lottery/pending/prizes/music';
-                            })
-                            ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'])
-                            ->maxSize(10240),
                         Toggle::make('sound_enabled')
                             ->label('開啟音效')
                             ->helperText('開啟後抽獎過程會播放音效')
                             ->default(true),
                     ])
                     ->columns(2),
+                $this->audioSettingsSection(),
                 Section::make('抽獎範圍')
                     ->description('包含為聯集，排除優先。未選任何包含群組或員工時，可抽人數為 0。')
                     ->schema([
@@ -461,6 +450,7 @@ class PrizesRelationManager extends RelationManager
                     ->using(function (array $data): Prize {
                         $record = $this->getRelationship()->create($this->stripRuleFields($data));
                         $this->syncRules($record, $data);
+                        PrizeAudio::syncSettings($record, $data);
 
                         return $record;
                     }),
@@ -699,11 +689,12 @@ class PrizesRelationManager extends RelationManager
                     ->label('編輯抽獎項目')
                     ->modalHeading('編輯抽獎項目')
                     ->mutateRecordDataUsing(function (array $data, Prize $record): array {
-                        return array_merge($data, $this->ruleStateFromRecord($record));
+                        return array_merge($data, $this->ruleStateFromRecord($record), PrizeAudio::formStateFromPrize($record));
                     })
                     ->using(function (Prize $record, array $data): Prize {
                         $record->update($this->stripRuleFields($data));
                         $this->syncRules($record, $data);
+                        PrizeAudio::syncSettings($record, $data);
 
                         return $record;
                     })
@@ -769,14 +760,59 @@ class PrizesRelationManager extends RelationManager
         return $max + 1;
     }
 
+    private function audioSettingsSection(): Section
+    {
+        return Section::make('音效管理')
+            ->description('每個音效可選擇使用預設、上傳自訂音檔，或單獨關閉。總開關「開啟音效」關閉時，以下設定都不會播放。')
+            ->schema($this->audioSettingsFields())
+            ->columns(2)
+            ->collapsible()
+            ->collapsed();
+    }
+
+    private function audioSettingsFields(): array
+    {
+        $fields = [];
+
+        foreach (PrizeAudio::sounds() as $sound) {
+            $key = $sound['key'];
+            $modeField = PrizeAudio::modeField($key);
+
+            $fields[] = Select::make($modeField)
+                ->label($sound['label'])
+                ->helperText($sound['helper'])
+                ->options(PrizeAudio::modeOptions())
+                ->default(PrizeAudio::MODE_DEFAULT)
+                ->live();
+
+            $fields[] = FileUpload::make(PrizeAudio::pathField($key))
+                ->label($sound['label'].'音檔')
+                ->disk('public')
+                ->directory(function () {
+                    $slug = Filament::getTenant()?->slug
+                        ?? $this->getOwnerRecord()?->organization?->slug;
+
+                    return $slug
+                        ? 'lottery/'.$slug.'/prizes/audio'
+                        : 'lottery/pending/prizes/audio';
+                })
+                ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'])
+                ->maxSize(10240)
+                ->visible(fn (Get $get) => $get($modeField) === PrizeAudio::MODE_CUSTOM)
+                ->required(fn (Get $get) => $get($modeField) === PrizeAudio::MODE_CUSTOM);
+        }
+
+        return $fields;
+    }
+
     private function stripRuleFields(array $data): array
     {
-        return Arr::except($data, [
+        return PrizeAudio::stripFormFields(Arr::except($data, [
             'include_employee_ids',
             'include_group_ids',
             'exclude_employee_ids',
             'exclude_group_ids',
-        ]);
+        ]));
     }
 
     private function ruleStateFromRecord(Prize $record): array

@@ -4,15 +4,22 @@ namespace App\Filament\Resources\PrizeResource\Pages;
 
 use App\Filament\Resources\PrizeResource;
 use App\Models\PrizeRule;
+use App\Support\PrizeAudio;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreatePrize extends CreateRecord
 {
     protected static string $resource = PrizeResource::class;
 
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        return PrizeAudio::stripFormFields($data);
+    }
+
     protected function afterCreate(): void
     {
         $this->syncRules();
+        PrizeAudio::syncSettings($this->record, $this->form->getState());
     }
 
     private function syncRules(): void

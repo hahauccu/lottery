@@ -5,6 +5,7 @@ namespace App\Events;
 use App\Models\LotteryEvent;
 use App\Services\EligibleEmployeesService;
 use App\Support\DataMasker;
+use App\Support\PrizeAudio;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -19,7 +20,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
 
     public function __construct(public LotteryEvent $event)
     {
-        $this->event->loadMissing(['currentPrize.winners.employee', 'prizes']);
+        $this->event->loadMissing(['currentPrize.winners.employee', 'currentPrize.audioSettings', 'prizes']);
     }
 
     public function broadcastOn(): Channel
@@ -87,6 +88,7 @@ class LotteryEventUpdated implements ShouldBroadcastNow
                     'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
                     'sound_enabled' => $currentPrize->sound_enabled,
                     'music_url' => $musicUrl,
+                    'audio' => PrizeAudio::payloadForPrize($currentPrize, $musicUrl),
                     'winners_count' => $currentPrize->winners_count,
                     'is_completed' => $isCompleted,
                     'is_exhausted' => ! $isCompleted && empty($eligibleNames),

@@ -12,6 +12,7 @@ use App\Services\LotteryDrawService;
 use App\Support\AccessCodeGenerator;
 use App\Support\DataMasker;
 use App\Support\LotteryBroadcaster;
+use App\Support\PrizeAudio;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -28,7 +29,7 @@ class LotteryFrontendController extends Controller
     {
         $event = LotteryEvent::query()
             ->where('brand_code', $brandCode)
-            ->with(['currentPrize.winners.employee'])
+            ->with(['currentPrize.winners.employee', 'currentPrize.audioSettings'])
             ->firstOrFail();
 
         $currentPrize = $event->currentPrize;
@@ -82,6 +83,7 @@ class LotteryFrontendController extends Controller
                 'lottoHoldSeconds' => $currentPrize->lotto_hold_seconds,
                 'soundEnabled' => $currentPrize->sound_enabled,
                 'musicUrl' => $musicUrl,
+                'audio' => PrizeAudio::payloadForPrize($currentPrize, $musicUrl),
                 'winnersCount' => $currentPrize->winners_count,
                 'isCompleted' => $drawnCount >= $currentPrize->winners_count,
                 'isExhausted' => $isExhausted,
@@ -140,6 +142,7 @@ class LotteryFrontendController extends Controller
                     'lotto_hold_seconds' => $currentPrize->lotto_hold_seconds,
                     'sound_enabled' => $currentPrize->sound_enabled,
                     'music_url' => $musicUrl,
+                    'audio' => PrizeAudio::payloadForPrize($currentPrize, $musicUrl),
                     'winners_count' => $currentPrize->winners_count,
                     'is_completed' => $drawnCount >= $currentPrize->winners_count,
                     'is_exhausted' => $isExhausted,

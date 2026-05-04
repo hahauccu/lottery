@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PrizeResource\Pages;
 
 use App\Filament\Resources\PrizeResource;
 use App\Models\PrizeRule;
+use App\Support\PrizeAudio;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
@@ -41,12 +42,18 @@ class EditPrize extends EditRecord
             ->pluck('ref_id')
             ->all();
 
-        return $data;
+        return array_merge($data, PrizeAudio::formStateFromPrize($this->record));
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return PrizeAudio::stripFormFields($data);
     }
 
     protected function afterSave(): void
     {
         $this->syncRules();
+        PrizeAudio::syncSettings($this->record, $this->form->getState());
     }
 
     private function syncRules(): void
