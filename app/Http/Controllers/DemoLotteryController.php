@@ -86,7 +86,7 @@ class DemoLotteryController extends Controller
         $template = filled($data['template_token'] ?? null)
             ? [
                 'token' => $data['template_token'],
-                'title' => $data['template_title'] ?? '抽什麼卡片',
+                'title' => $data['template_title'] ?? '今天抽什麼卡片',
                 'url' => route('demo.lottery.templates.show', ['template' => $data['template_token']]),
                 'reportUrl' => route('demo.lottery.templates.report', ['template' => $data['template_token']]),
             ]

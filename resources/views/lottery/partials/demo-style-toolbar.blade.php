@@ -18,7 +18,7 @@
                 </a>
                 <a href="{{ route('demo.lottery.templates.index') }}"
                     class="ml-3 inline-block mb-4 text-xs text-white/40 hover:text-amber-400 transition">
-                    逛抽什麼區
+                    逛今天抽什麼區
                 </a>
                 <h2 class="text-3xl font-bold text-white tracking-wide">{{ $demoStyleLabel }}</h2>
                 <p class="mt-2 text-sm text-white/50">選擇一種方式開始體驗抽獎</p>
@@ -99,6 +99,20 @@
                         </div>
                     </div>
 
+                    <div class="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                        <label class="flex cursor-pointer items-center gap-3 text-sm font-medium text-white/75">
+                            <input type="checkbox" x-model="publishOnStart"
+                                class="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-500 focus:ring-amber-500">
+                            <span>發佈到今天抽什麼區</span>
+                        </label>
+                        <div x-show="publishOnStart" x-transition class="mt-3">
+                            <label class="mb-1.5 block text-sm font-medium text-white/70">卡片標題</label>
+                            <input x-model="publishOnStartTitle" maxlength="60" placeholder="例如：信義午餐吃什麼"
+                                class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-amber-500/50 transition">
+                            <p x-show="publishOnStartMessage" x-text="publishOnStartMessage" class="mt-2 text-xs text-amber-300"></p>
+                        </div>
+                    </div>
+
                     {{-- 開始按鈕 --}}
                     <button @@click="startCustom()" :disabled="loading"
                         class="mt-2 w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3.5 text-sm font-bold text-black tracking-wide transition hover:from-amber-400 hover:to-amber-500 disabled:opacity-50">
@@ -154,7 +168,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7" />
                     </svg>
-                    逛抽什麼區
+                    逛今天抽什麼區
                 </a>
 
                 <div class="my-2 border-t border-white/10"></div>
@@ -164,7 +178,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
-                    發佈到抽什麼區
+                    發佈到今天抽什麼區
                 </button>
 
                 <button x-show="template"
@@ -191,13 +205,13 @@
         </div>
     </div>
 
-    {{-- ===== C) 發佈抽什麼卡片 ===== --}}
+    {{-- ===== C) 發佈今天抽什麼卡片 ===== --}}
     <div x-show="showPublishForm" x-transition.opacity
         class="pointer-events-auto fixed inset-0 z-70 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
         <div @@click.outside="showPublishForm = false" class="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl">
             <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
-                    <h3 class="text-xl font-bold text-white">發佈到抽什麼區</h3>
+                    <h3 class="text-xl font-bold text-white">發佈到今天抽什麼區</h3>
                     <p class="mt-1 text-sm leading-relaxed text-white/45">把目前的選項與抽獎設定變成公開卡片，其他人可以套用後自己抽。</p>
                 </div>
                 <button @@click="showPublishForm = false" class="text-2xl leading-none text-white/45 hover:text-white">×</button>
@@ -250,7 +264,7 @@
             <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
                     <h3 class="text-xl font-bold text-white">回報抽到了什麼</h3>
-                    <p class="mt-1 text-sm leading-relaxed text-white/45">這筆成果會顯示在原本的抽什麼卡片下方。</p>
+                    <p class="mt-1 text-sm leading-relaxed text-white/45">這筆成果會顯示在原本的今天抽什麼卡片下方。</p>
                 </div>
                 <button @@click="showReportForm = false" class="text-2xl leading-none text-white/45 hover:text-white">×</button>
             </div>
@@ -294,6 +308,9 @@
             drawMode: 'all_at_once',
             slug: @js($demoSlug),
             template: window.LotteryConfig?.demoTemplate ?? null,
+            publishOnStart: false,
+            publishOnStartTitle: '',
+            publishOnStartMessage: '',
             publishTitle: '',
             publishCategory: 'lunch',
             publishDescription: '',
@@ -336,7 +353,13 @@
 
             async startCustom() {
                 if (this.loading) return;
+                if (this.publishOnStart && !this.publishOnStartTitle.trim()) {
+                    this.publishOnStartMessage = '請先填卡片標題';
+                    return;
+                }
+
                 this.loading = true;
+                this.publishOnStartMessage = '';
                 try {
                     const res = await fetch(`/demo/lottery/${this.slug}/configure`, {
                         method: 'POST',
@@ -352,7 +375,17 @@
                     });
                     if (!res.ok) return;
                     const payload = await res.json();
-                    this.template = payload.demoTemplate ?? null;
+
+                    if (this.publishOnStart) {
+                        const data = await this.publishCurrentTemplate({
+                            title: this.publishOnStartTitle,
+                            category: 'other',
+                            description: '',
+                        });
+                        this.publishOnStartMessage = data.message || '已發佈到今天抽什麼區';
+                    }
+
+                    this.template = payload.demoTemplate ?? this.template;
                     this.setupVisible = false;
                     this.showCustomForm = false;
                     if (window.__lotteryApplyPayload) {
@@ -360,6 +393,7 @@
                     }
                 } catch (e) {
                     console.error('[demo-style-toolbar] startCustom error', e);
+                    this.publishOnStartMessage = e?.message || '建立抽獎失敗，請稍後再試';
                 } finally {
                     this.loading = false;
                 }
@@ -391,7 +425,7 @@
             },
 
             openPublishModal() {
-                this.publishTitle = this.publishTitle || `${@js($demoStyleLabel)} 抽什麼`;
+                this.publishTitle = this.publishTitle || `${@js($demoStyleLabel)} 今天抽什麼`;
                 this.publishMessage = '';
                 this.publishedUrl = '';
                 this.showPublishForm = true;
@@ -408,28 +442,11 @@
                 this.loading = true;
                 this.publishMessage = '';
                 try {
-                    const res = await fetch(`/demo/lottery/${this.slug}/templates`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': this._csrfToken(),
-                        },
-                        body: JSON.stringify({
-                            title: this.publishTitle,
-                            category: this.publishCategory,
-                            description: this.publishDescription,
-                            names: this.names,
-                            draw_count: this.drawCount,
-                            draw_mode: this.drawMode,
-                            is_public: true,
-                        }),
+                    const data = await this.publishCurrentTemplate({
+                        title: this.publishTitle,
+                        category: this.publishCategory,
+                        description: this.publishDescription,
                     });
-                    const data = await res.json();
-                    if (!res.ok) {
-                        this.publishMessage = data.message || '發佈失敗，請稍後再試';
-                        return;
-                    }
                     this.publishedUrl = data.url;
                     this.publishMessage = data.message || '已發佈';
                 } catch (e) {
@@ -438,6 +455,34 @@
                 } finally {
                     this.loading = false;
                 }
+            },
+
+            async publishCurrentTemplate({ title, category, description }) {
+                const res = await fetch(`/demo/lottery/${this.slug}/templates`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this._csrfToken(),
+                    },
+                    body: JSON.stringify({
+                        title,
+                        category,
+                        description,
+                        names: this.names,
+                        draw_count: this.drawCount,
+                        draw_mode: this.drawMode,
+                        is_public: true,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.message || '發佈失敗，請稍後再試');
+                }
+                this.publishedUrl = data.url;
+                this.template = data.template ?? this.template;
+
+                return data;
             },
 
             copyPublishedUrl() {

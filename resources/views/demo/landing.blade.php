@@ -464,7 +464,7 @@
             <h1 class="landing-title">線上抽獎 Demo</h1>
             <p class="landing-subtitle">選擇一種抽獎動畫風格，開始體驗互動抽獎與線上抽獎流程</p>
             <p style="margin-top:1.25rem;">
-                <a href="{{ route('demo.lottery.templates.index') }}" style="color:var(--gold-light);font-size:0.95rem;text-decoration:none;border-bottom:1px dashed rgba(245,166,35,.45);">逛抽什麼區：午餐、飲料、聚餐抽籤範本</a>
+                <a href="{{ route('demo.lottery.templates.index') }}" style="color:var(--gold-light);font-size:0.95rem;text-decoration:none;border-bottom:1px dashed rgba(245,166,35,.45);">逛今天抽什麼區：午餐、飲料、聚餐抽籤範本</a>
             </p>
         </header>
 
@@ -544,7 +544,7 @@
         <footer class="landing-footer anim-fade-up" style="animation-delay: 1.2s;">
             <a href="{{ url('/') }}">← 返回首頁</a>
             <span style="color:rgba(255,255,255,.18);margin:0 .75rem;">/</span>
-            <a href="{{ route('demo.lottery.templates.index') }}">抽什麼區</a>
+            <a href="{{ route('demo.lottery.templates.index') }}">今天抽什麼區</a>
         </footer>
     </div>
 </body>

@@ -41,7 +41,7 @@
 <body>
     <main class="wrap">
         <div class="top">
-            <a href="{{ route('demo.lottery.templates.index') }}">← 回抽什麼區</a>
+            <a href="{{ route('demo.lottery.templates.index') }}">← 回今天抽什麼區</a>
             <a href="{{ url('/demo/lottery') }}">查看全部抽獎動畫</a>
         </div>
 
@@ -52,7 +52,7 @@
                 <span class="pill">{{ $template->draw_mode === 'one_by_one' ? '逐一抽出' : '一次全抽' }}</span>
             </div>
             <h1>{{ $template->title }}</h1>
-            <p class="desc">{{ $template->description ?: '這是一張大家分享的抽什麼卡片，可直接套用，也可以改成自己的選項後再抽。' }}</p>
+            <p class="desc">{{ $template->description ?: '這是一張大家分享的今天抽什麼卡片，可直接套用，也可以改成自己的選項後再抽。' }}</p>
             <div class="stats">
                 <span>{{ $template->optionsCount() }} 個選項</span>
                 <span>每次抽 {{ $template->draw_count }} 個</span>

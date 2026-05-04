@@ -85,9 +85,15 @@ class DemoLotteryTemplateController extends Controller
         ]);
 
         return response()->json([
-            'message' => '已發佈到抽什麼區',
+            'message' => '已發佈到今天抽什麼區',
             'url' => route('demo.lottery.templates.show', $template),
             'templatesUrl' => route('demo.lottery.templates.index'),
+            'template' => [
+                'token' => $template->token,
+                'title' => $template->title,
+                'url' => route('demo.lottery.templates.show', $template),
+                'reportUrl' => route('demo.lottery.templates.report', $template),
+            ],
         ]);
     }
 
