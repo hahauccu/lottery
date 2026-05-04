@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {{-- SEO --}}
-    <title>尾牙抽獎｜抽獎系統推薦｜即時切換、彈幕互動、QRCode 領獎</title>
-    <meta name="description" content="專為企業活動打造的尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
+    <title>抽獎｜線上抽獎｜尾牙抽獎系統推薦｜QRCode 領獎</title>
+    <meta name="description" content="專為企業活動打造的抽獎、尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
+    <meta name="keywords" content="抽獎,線上抽獎,尾牙抽獎,抽獎系統推薦,企業抽獎系統,抽獎平台,QRCode 領獎,彈幕互動,抽獎動畫">
     <link rel="canonical" href="{{ url('/') }}">
 
     {{-- OG --}}
     <meta property="og:type" content="website">
-    <meta property="og:title" content="尾牙抽獎｜抽獎系統推薦｜即時切換、彈幕互動、QRCode 領獎">
-    <meta property="og:description" content="專為企業活動打造的尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
+    <meta property="og:title" content="抽獎｜線上抽獎｜尾牙抽獎系統推薦｜QRCode 領獎">
+    <meta property="og:description" content="專為企業活動打造的抽獎、尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
     <meta property="og:url" content="{{ url('/') }}">
     <meta property="og:image" content="{{ url('/images/og-home.svg') }}">
     <meta property="og:site_name" content="抽獎系統">
@@ -20,8 +21,8 @@
 
     {{-- Twitter Card --}}
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="尾牙抽獎｜抽獎系統推薦｜即時切換、彈幕互動、QRCode 領獎">
-    <meta name="twitter:description" content="專為企業活動打造的尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選。">
+    <meta name="twitter:title" content="抽獎｜線上抽獎｜尾牙抽獎系統推薦｜QRCode 領獎">
+    <meta name="twitter:description" content="專為企業活動打造的抽獎、尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選。">
     <meta name="twitter:image" content="{{ url('/images/og-home.svg') }}">
 
     @php
@@ -64,6 +65,12 @@
                 'text' => $faq['a'],
             ],
         ])->all();
+
+        $faqSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => $faqMainEntity,
+        ];
 
         $suitableScenes = [
             ['icon' => '🎉', 'title' => '企業尾牙', 'desc' => '年終大型抽獎、多獎項、多場次，主持流程不中斷。'],
@@ -182,11 +189,7 @@
 
     {{-- FAQ JSON-LD --}}
     <script type="application/ld+json">
-    {!! json_encode([
-        '@context' => 'https://schema.org',
-        '@type' => 'FAQPage',
-        'mainEntity' => $faqMainEntity,
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
+    {!! json_encode($faqSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
     </script>
 
     {{-- Favicon --}}

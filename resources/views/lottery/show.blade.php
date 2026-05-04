@@ -8,6 +8,9 @@
     @endunless
     @if($isDemo ?? false)
     <meta name="description" content="{{ $seoDescription ?? '' }}">
+    @isset($seoKeywords)
+    <meta name="keywords" content="{{ $seoKeywords }}">
+    @endisset
     <link rel="canonical" href="{{ $seoCanonical ?? url('/demo/lottery') }}">
     <meta property="og:type" content="website">
     <meta property="og:title" content="{{ $seoTitle ?? '範例抽獎' }}">

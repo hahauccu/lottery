@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>抽獎動畫 Demo｜7 種風格免費體驗</title>
-    <meta name="description" content="免費試玩 7 種線上抽獎動畫風格：樂透氣流機、紅包雨、刮刮樂、寶箱、大寶箱、圓球賽跑、戰鬥陀螺。即時體驗企業尾牙抽獎的趣味互動效果。">
+    <title>線上抽獎 Demo｜7 種抽獎動畫免費體驗</title>
+    <meta name="description" content="免費試玩 7 種抽獎與線上抽獎動畫風格：樂透氣流機、紅包雨、刮刮樂、寶箱、大寶箱、圓球賽跑、戰鬥陀螺。即時體驗企業尾牙抽獎的趣味互動效果。">
+    <meta name="keywords" content="抽獎,線上抽獎,抽獎動畫 Demo,線上抽獎 Demo,尾牙抽獎,樂透氣流機,紅包雨,刮刮樂,寶箱抽獎,戰鬥陀螺抽獎">
     <link rel="canonical" href="{{ url('/demo/lottery') }}">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="抽獎動畫 Demo｜7 種風格免費體驗">
-    <meta property="og:description" content="免費試玩 7 種線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
+    <meta property="og:title" content="線上抽獎 Demo｜7 種抽獎動畫免費體驗">
+    <meta property="og:description" content="免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
     <meta property="og:url" content="{{ url('/demo/lottery') }}">
     <meta property="og:image" content="{{ url('/images/og-demo.svg') }}">
     <meta property="og:site_name" content="抽獎系統">
     <meta property="og:locale" content="zh_TW">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="抽獎動畫 Demo｜7 種風格免費體驗">
-    <meta name="twitter:description" content="免費試玩 7 種線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
+    <meta name="twitter:title" content="線上抽獎 Demo｜7 種抽獎動畫免費體驗">
+    <meta name="twitter:description" content="免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
     <meta name="twitter:image" content="{{ url('/images/og-demo.svg') }}">
 
     @php
@@ -37,8 +38,8 @@
     {
         "@@context": "https://schema.org",
         "@@type": "CollectionPage",
-        "name": "抽獎動畫 Demo｜7 種風格免費體驗",
-        "description": "免費試玩 7 種線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。",
+        "name": "線上抽獎 Demo｜7 種抽獎動畫免費體驗",
+        "description": "免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。",
         "url": "{{ url('/demo/lottery') }}",
         "image": "{{ url('/images/og-demo.svg') }}",
         "mainEntity": {
@@ -460,8 +461,8 @@
     <div class="landing-container">
         <header class="landing-header anim-fade-up" style="animation-delay: 0.1s;">
             <div class="landing-badge">DEMO 體驗</div>
-            <h1 class="landing-title">抽獎動畫 Demo</h1>
-            <p class="landing-subtitle">選擇一種動畫風格，開始體驗互動抽獎</p>
+            <h1 class="landing-title">線上抽獎 Demo</h1>
+            <p class="landing-subtitle">選擇一種抽獎動畫風格，開始體驗互動抽獎與線上抽獎流程</p>
         </header>
 
         <div class="styles-grid">
