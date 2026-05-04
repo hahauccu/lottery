@@ -246,12 +246,14 @@
                     <span x-text="publishedUrl"></span>
                 </div>
                 <div class="flex gap-3">
-                    <button @@click="publishTemplate()" :disabled="loading"
+                    <button x-show="!publishedUrl" @@click="publishTemplate()" :disabled="loading"
                         class="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-3 text-sm font-bold text-black disabled:opacity-50">
                         <span x-text="loading ? '發佈中...' : '發佈卡片'"></span>
                     </button>
                     <button x-show="publishedUrl" @@click="copyPublishedUrl()"
                         class="rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 hover:bg-white/10">複製</button>
+                    <a x-show="publishedUrl" :href="publishedUrl" target="_blank"
+                        class="rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 hover:bg-white/10">查看</a>
                 </div>
             </div>
         </div>
@@ -382,7 +384,13 @@
                             category: 'other',
                             description: '',
                         });
+                        this.publishTitle = this.publishOnStartTitle;
+                        this.publishCategory = 'other';
+                        this.publishDescription = '';
                         this.publishOnStartMessage = data.message || '已發佈到今天抽什麼區';
+                        this.publishMessage = this.publishOnStartMessage;
+                        this.publishedUrl = data.url;
+                        this.showPublishForm = true;
                     }
 
                     this.template = payload.demoTemplate ?? this.template;
