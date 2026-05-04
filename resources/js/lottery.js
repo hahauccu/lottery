@@ -90,18 +90,34 @@ const initLottery = () => {
     const prizesPreviewPageInfoEl = document.getElementById('prizes-preview-page-info');
     const testModeWatermarkEl = document.getElementById('test-mode-watermark');
 
+    const initialPrize = config.currentPrize ?? (config.current_prize
+        ? {
+            id: config.current_prize.id,
+            name: config.current_prize.name,
+            drawMode: config.current_prize.draw_mode,
+            animationStyle: config.current_prize.animation_style,
+            lottoHoldSeconds: config.current_prize.lotto_hold_seconds,
+            soundEnabled: config.current_prize.sound_enabled ?? true,
+            musicUrl: config.current_prize.music_url ?? null,
+            audio: config.current_prize.audio ?? null,
+            winnersCount: config.current_prize.winners_count ?? 0,
+            isCompleted: config.current_prize.is_completed ?? false,
+            isExhausted: config.current_prize.is_exhausted ?? false,
+        }
+        : null);
+
     let state = {
-        isOpen: config.isOpen,
-        isTestMode: config.isTestMode ?? false,
-        currentPrize: config.currentPrize,
+        isOpen: config.isOpen ?? config.event?.is_lottery_open ?? false,
+        isTestMode: config.isTestMode ?? config.event?.is_test_mode ?? false,
+        currentPrize: initialPrize,
         winners: config.winners ?? [],
-        eligibleNames: config.eligibleNames ?? [],
+        eligibleNames: config.eligibleNames ?? config.eligible_names ?? [],
         isDrawing: false,
         isSwitching: false,
         isResultMode: false,
         isPrizesPreviewMode: false,
-        showPrizesPreview: config.showPrizesPreview ?? false,
-        allPrizes: config.allPrizes ?? [],
+        showPrizesPreview: config.showPrizesPreview ?? config.event?.show_prizes_preview ?? false,
+        allPrizes: config.allPrizes ?? config.all_prizes ?? [],
         needsAnimationReset: false,
     };
 
@@ -8135,6 +8151,11 @@ const initLottery = () => {
 
     // 暴露給外部（demo 工具面板使用）
     window.__lotteryApplyPayload = applyLotteryPayload;
+    window.__lotteryGetState = () => ({
+        currentPrize: state.currentPrize,
+        winners: state.winners ?? [],
+        eligibleNames: state.eligibleNames ?? [],
+    });
 
     const pollUrl = (() => {
         const u = new URL(window.location.href);

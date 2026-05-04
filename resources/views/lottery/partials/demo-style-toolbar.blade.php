@@ -16,6 +16,10 @@
                     class="inline-block mb-4 text-xs text-white/40 hover:text-amber-400 transition">
                     ← 返回選擇風格
                 </a>
+                <a href="{{ route('demo.lottery.templates.index') }}"
+                    class="ml-3 inline-block mb-4 text-xs text-white/40 hover:text-amber-400 transition">
+                    逛抽什麼區
+                </a>
                 <h2 class="text-3xl font-bold text-white tracking-wide">{{ $demoStyleLabel }}</h2>
                 <p class="mt-2 text-sm text-white/50">選擇一種方式開始體驗抽獎</p>
             </div>
@@ -145,6 +149,33 @@
                     重新設定
                 </button>
 
+                <a href="{{ route('demo.lottery.templates.index') }}"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-white/70 hover:bg-white/10 hover:text-white transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7" />
+                    </svg>
+                    逛抽什麼區
+                </a>
+
+                <div class="my-2 border-t border-white/10"></div>
+
+                <button @@click="openPublishModal()"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-amber-200 hover:bg-amber-500/10 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    發佈到抽什麼區
+                </button>
+
+                <button x-show="template"
+                    @@click="openReportModal()"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-emerald-200 hover:bg-emerald-500/10 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    回報抽到了什麼
+                </button>
+
                 <div class="my-2 border-t border-white/10"></div>
 
                 {{-- 重置抽獎 --}}
@@ -159,19 +190,119 @@
             </div>
         </div>
     </div>
+
+    {{-- ===== C) 發佈抽什麼卡片 ===== --}}
+    <div x-show="showPublishForm" x-transition.opacity
+        class="pointer-events-auto fixed inset-0 z-70 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+        <div @@click.outside="showPublishForm = false" class="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl">
+            <div class="mb-5 flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-white">發佈到抽什麼區</h3>
+                    <p class="mt-1 text-sm leading-relaxed text-white/45">把目前的選項與抽獎設定變成公開卡片，其他人可以套用後自己抽。</p>
+                </div>
+                <button @@click="showPublishForm = false" class="text-2xl leading-none text-white/45 hover:text-white">×</button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="mb-1.5 block text-sm font-medium text-white/70">卡片標題</label>
+                    <input x-model="publishTitle" maxlength="60" placeholder="例如：信義午餐吃什麼"
+                        class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-amber-500/50">
+                </div>
+                <div>
+                    <label class="mb-1.5 block text-sm font-medium text-white/70">分類</label>
+                    <select x-model="publishCategory"
+                        class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-amber-500/50">
+                        <option value="lunch">午餐吃什麼</option>
+                        <option value="drinks">飲料喝什麼</option>
+                        <option value="party">聚餐去哪裡</option>
+                        <option value="company">公司活動</option>
+                        <option value="lottery">尾牙抽獎</option>
+                        <option value="daily">日常選擇</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-1.5 block text-sm font-medium text-white/70">簡短描述，可留空</label>
+                    <input x-model="publishDescription" maxlength="160" placeholder="例如：給信義區上班族抽午餐用"
+                        class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-amber-500/50">
+                </div>
+                <p x-show="publishMessage" x-text="publishMessage" class="text-sm text-amber-300"></p>
+                <div x-show="publishedUrl" class="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60 break-all">
+                    <span x-text="publishedUrl"></span>
+                </div>
+                <div class="flex gap-3">
+                    <button @@click="publishTemplate()" :disabled="loading"
+                        class="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-3 text-sm font-bold text-black disabled:opacity-50">
+                        <span x-text="loading ? '發佈中...' : '發佈卡片'"></span>
+                    </button>
+                    <button x-show="publishedUrl" @@click="copyPublishedUrl()"
+                        class="rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 hover:bg-white/10">複製</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ===== D) 回報抽獎成果 ===== --}}
+    <div x-show="showReportForm" x-transition.opacity
+        class="pointer-events-auto fixed inset-0 z-70 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+        <div @@click.outside="showReportForm = false" class="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl">
+            <div class="mb-5 flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-white">回報抽到了什麼</h3>
+                    <p class="mt-1 text-sm leading-relaxed text-white/45">這筆成果會顯示在原本的抽什麼卡片下方。</p>
+                </div>
+                <button @@click="showReportForm = false" class="text-2xl leading-none text-white/45 hover:text-white">×</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="mb-1.5 block text-sm font-medium text-white/70">抽到了什麼</label>
+                    <input x-model="reportResult" maxlength="120" placeholder="例如：韓式料理、Switch 2、王小明"
+                        class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500/50">
+                </div>
+                <div>
+                    <label class="mb-1.5 block text-sm font-medium text-white/70">暱稱，可留空</label>
+                    <input x-model="reportAuthor" maxlength="40" placeholder="例如：信義上班族"
+                        class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500/50">
+                </div>
+                <div>
+                    <label class="mb-1.5 block text-sm font-medium text-white/70">一句心得，可留空</label>
+                    <input x-model="reportComment" maxlength="120" placeholder="例如：今天真的吃這間"
+                        class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500/50">
+                </div>
+                <p x-show="reportMessage" x-text="reportMessage" class="text-sm text-emerald-300"></p>
+                <button @@click="submitReport()" :disabled="loading"
+                    class="w-full rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-sm font-bold text-black disabled:opacity-50">
+                    <span x-text="loading ? '送出中...' : '送出成果'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('demoStyleToolbar', () => ({
-            setupVisible: true,
+            setupVisible: !(window.LotteryConfig?.demoTemplate),
             showCustomForm: false,
             gearOpen: false,
+            showPublishForm: false,
+            showReportForm: false,
             loading: false,
             names: '',
             drawCount: 5,
             drawMode: 'all_at_once',
             slug: @js($demoSlug),
+            template: window.LotteryConfig?.demoTemplate ?? null,
+            publishTitle: '',
+            publishCategory: 'lunch',
+            publishDescription: '',
+            publishMessage: '',
+            publishedUrl: '',
+            reportResult: '',
+            reportAuthor: '',
+            reportComment: '',
+            reportMessage: '',
 
             _csrfToken() {
                 return document.querySelector('meta[name="csrf-token"]')?.content
@@ -191,6 +322,7 @@
                     });
                     if (!res.ok) return;
                     const payload = await res.json();
+                    this.template = payload.demoTemplate ?? null;
                     this.setupVisible = false;
                     if (window.__lotteryApplyPayload) {
                         window.__lotteryApplyPayload(payload);
@@ -220,6 +352,7 @@
                     });
                     if (!res.ok) return;
                     const payload = await res.json();
+                    this.template = payload.demoTemplate ?? null;
                     this.setupVisible = false;
                     this.showCustomForm = false;
                     if (window.__lotteryApplyPayload) {
@@ -245,6 +378,7 @@
                     });
                     if (!res.ok) return;
                     const payload = await res.json();
+                    this.template = payload.demoTemplate ?? null;
                     if (window.__lotteryApplyPayload) {
                         window.__lotteryApplyPayload(payload);
                     }
@@ -253,6 +387,112 @@
                 } finally {
                     this.loading = false;
                     this.gearOpen = false;
+                }
+            },
+
+            openPublishModal() {
+                this.publishTitle = this.publishTitle || `${@js($demoStyleLabel)} 抽什麼`;
+                this.publishMessage = '';
+                this.publishedUrl = '';
+                this.showPublishForm = true;
+                this.gearOpen = false;
+            },
+
+            async publishTemplate() {
+                if (this.loading) return;
+                if (!this.publishTitle.trim()) {
+                    this.publishMessage = '請先填卡片標題';
+                    return;
+                }
+
+                this.loading = true;
+                this.publishMessage = '';
+                try {
+                    const res = await fetch(`/demo/lottery/${this.slug}/templates`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': this._csrfToken(),
+                        },
+                        body: JSON.stringify({
+                            title: this.publishTitle,
+                            category: this.publishCategory,
+                            description: this.publishDescription,
+                            names: this.names,
+                            draw_count: this.drawCount,
+                            draw_mode: this.drawMode,
+                            is_public: true,
+                        }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        this.publishMessage = data.message || '發佈失敗，請稍後再試';
+                        return;
+                    }
+                    this.publishedUrl = data.url;
+                    this.publishMessage = data.message || '已發佈';
+                } catch (e) {
+                    console.error('[demo-style-toolbar] publishTemplate error', e);
+                    this.publishMessage = '發佈失敗，請稍後再試';
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            copyPublishedUrl() {
+                if (!this.publishedUrl) return;
+                navigator.clipboard?.writeText(this.publishedUrl).then(() => {
+                    this.publishMessage = '已複製分享連結';
+                }).catch(() => {
+                    this.publishMessage = '請手動複製連結';
+                });
+            },
+
+            openReportModal() {
+                const state = window.__lotteryGetState?.();
+                const winners = state?.winners ?? [];
+                this.reportResult = winners.map((winner) => winner.employee_name).filter(Boolean).slice(-5).join('、');
+                this.reportMessage = '';
+                this.showReportForm = true;
+                this.gearOpen = false;
+            },
+
+            async submitReport() {
+                if (this.loading || !this.template?.reportUrl) return;
+                if (!this.reportResult.trim()) {
+                    this.reportMessage = '請填寫抽到了什麼';
+                    return;
+                }
+
+                this.loading = true;
+                this.reportMessage = '';
+                try {
+                    const res = await fetch(this.template.reportUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': this._csrfToken(),
+                        },
+                        body: JSON.stringify({
+                            result_text: this.reportResult,
+                            author_name: this.reportAuthor,
+                            comment: this.reportComment,
+                            is_public: true,
+                        }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        this.reportMessage = data.message || '送出失敗，請稍後再試';
+                        return;
+                    }
+                    this.reportMessage = data.message || '已送出抽獎成果';
+                } catch (e) {
+                    console.error('[demo-style-toolbar] submitReport error', e);
+                    this.reportMessage = '送出失敗，請稍後再試';
+                } finally {
+                    this.loading = false;
                 }
             },
 

@@ -28,6 +28,12 @@ class SitemapController extends Controller
                 'changefreq' => 'monthly',
                 'priority' => '0.8',
             ],
+            [
+                'loc' => url('/demo/lottery/templates'),
+                'lastmod' => $lastmod,
+                'changefreq' => 'weekly',
+                'priority' => '0.7',
+            ],
         ];
 
         foreach (AnimationStyles::all() as $style) {

@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 
 class DemoLotteryController extends Controller
 {
-    private const DEMO_NAMES = [
+    public const DEMO_NAMES = [
         '王大明',
         '陳小芳',
         '李美美',
@@ -83,6 +83,15 @@ class DemoLotteryController extends Controller
             ? count($data['winners']) + count($data['eligible_names'])
             : count(self::DEMO_NAMES);
 
+        $template = filled($data['template_token'] ?? null)
+            ? [
+                'token' => $data['template_token'],
+                'title' => $data['template_title'] ?? '抽什麼卡片',
+                'url' => route('demo.lottery.templates.show', ['template' => $data['template_token']]),
+                'reportUrl' => route('demo.lottery.templates.report', ['template' => $data['template_token']]),
+            ]
+            : null;
+
         return [
             'brandCode' => 'DEMO',
             'eventId' => 0,
@@ -124,6 +133,7 @@ class DemoLotteryController extends Controller
             'winnersUrl' => "/demo/lottery/{$slug}",
             'bgUrl' => null,
             'danmakuEnabled' => false,
+            'demoTemplate' => $template,
         ];
     }
 
@@ -246,6 +256,8 @@ class DemoLotteryController extends Controller
             'draw_count' => (int) $drawCount,
             'draw_mode' => $drawMode,
             'is_custom' => $isCustom,
+            'template_token' => null,
+            'template_title' => null,
         ];
         session([$key => $data]);
 
@@ -322,6 +334,8 @@ class DemoLotteryController extends Controller
             'draw_count' => $data['draw_count'] ?? 5,
             'draw_mode' => $data['draw_mode'] ?? 'all_at_once',
             'is_custom' => $data['is_custom'] ?? false,
+            'template_token' => $data['template_token'] ?? null,
+            'template_title' => $data['template_title'] ?? null,
         ];
         session([$key => $data]);
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\DemoLotteryController;
+use App\Http\Controllers\DemoLotteryTemplateController;
 use App\Http\Controllers\LotteryAnalysisController;
 use App\Http\Controllers\LotteryFrontendController;
 use App\Http\Controllers\LotteryWinnerExportController;
@@ -30,7 +31,12 @@ Route::get('/claim/{token}', [ClaimController::class, 'verify'])
 
 // Demo 抽獎（免登入）
 Route::get('/demo/lottery', [DemoLotteryController::class, 'landing'])->name('demo.lottery.landing');
+Route::get('/demo/lottery/templates', [DemoLotteryTemplateController::class, 'index'])->name('demo.lottery.templates.index');
+Route::get('/demo/lottery/templates/{template}', [DemoLotteryTemplateController::class, 'show'])->name('demo.lottery.templates.show');
+Route::post('/demo/lottery/templates/{template}/use', [DemoLotteryTemplateController::class, 'apply'])->middleware('throttle:30,1')->name('demo.lottery.templates.apply');
+Route::post('/demo/lottery/templates/{template}/reports', [DemoLotteryTemplateController::class, 'report'])->middleware('throttle:10,1')->name('demo.lottery.templates.report');
 Route::get('/demo/lottery/{slug}', [DemoLotteryController::class, 'showStyle'])->name('demo.lottery.style');
+Route::post('/demo/lottery/{slug}/templates', [DemoLotteryTemplateController::class, 'store'])->middleware('throttle:10,1')->name('demo.lottery.templates.store');
 Route::post('/demo/lottery/{slug}/configure', [DemoLotteryController::class, 'configure'])->name('demo.lottery.configure');
 Route::post('/demo/lottery/{slug}/draw', [DemoLotteryController::class, 'draw'])->name('demo.lottery.draw');
 Route::post('/demo/lottery/{slug}/reset', [DemoLotteryController::class, 'reset'])->name('demo.lottery.reset');
