@@ -109,11 +109,7 @@
     <link rel="apple-touch-icon" href="{{ url('/images/og-home.svg') }}">
     <meta name="theme-color" content="#050508">
 
-    @vite(['resources/css/app.css'])
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-
         :root {
             --gold: #f5a623;
             --gold-light: #ffd175;
@@ -123,7 +119,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Noto Sans TC', system-ui, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif;
             background: #050508;
             color: #fff;
             min-height: 100vh;
@@ -458,7 +454,7 @@
 <body>
     <div class="landing-bg"></div>
 
-    <div class="landing-container">
+    <main class="landing-container">
         <header class="landing-header anim-fade-up" style="animation-delay: 0.1s;">
             <div class="landing-badge">DEMO 體驗</div>
             <h1 class="landing-title">線上抽獎 Demo</h1>
@@ -546,6 +542,6 @@
             <span style="color:rgba(255,255,255,.18);margin:0 .75rem;">/</span>
             <a href="{{ route('demo.lottery.templates.index') }}">大家都抽什麼</a>
         </footer>
-    </div>
+    </main>
 </body>
 </html>

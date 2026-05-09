@@ -92,7 +92,11 @@
 
     <script id="lottery-config-data" type="application/json">{!! json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/lottery.js'])
+    @if (!empty($isDemo))
+        @vite(['resources/css/app.css', 'resources/js/demo-lottery.js', 'resources/js/lottery.js'])
+    @else
+        @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/lottery.js'])
+    @endif
 
     <style>
         #lottery-stage {
@@ -438,7 +442,7 @@
             </div>
         </aside>
     @endif
-        <div
+        <main
             id="lottery-root"
             class="lottery-bg relative min-h-[100svh] {{ $bgUrl ? 'has-image' : '' }}"
             @if ($bgUrl) style="--lottery-bg-url: url('{{ $bgUrl }}');" @endif
@@ -521,7 +525,7 @@
             </div>
         </div>
 
-    </div>
+    </main>
 
     @if (!empty($isDemo) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null))
         <article class="demo-aeo-article">
