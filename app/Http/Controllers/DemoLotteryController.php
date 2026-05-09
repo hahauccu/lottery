@@ -86,9 +86,10 @@ class DemoLotteryController extends Controller
         $template = filled($data['template_token'] ?? null)
             ? [
                 'token' => $data['template_token'],
-                'title' => $data['template_title'] ?? '今天抽什麼卡片',
+                'title' => $data['template_title'] ?? '大家都抽什麼卡片',
                 'url' => route('demo.lottery.templates.show', ['template' => $data['template_token']]),
                 'reportUrl' => route('demo.lottery.templates.report', ['template' => $data['template_token']]),
+                'source' => $data['template_source'] ?? 'applied',
             ]
             : null;
 
@@ -258,6 +259,7 @@ class DemoLotteryController extends Controller
             'is_custom' => $isCustom,
             'template_token' => null,
             'template_title' => null,
+            'template_source' => null,
         ];
         session([$key => $data]);
 
@@ -321,6 +323,7 @@ class DemoLotteryController extends Controller
         $key = $this->sessionKey($style);
         $data = $this->ensureSession($style);
         $newPrizeId = $data['prize_id'] + 1;
+        $clearTemplate = $request->boolean('clear_template');
 
         $eligibleNames = ($data['is_custom'] ?? false)
             ? array_merge($data['winners'] ? array_map(fn ($w) => $w['employee_name'], $data['winners']) : [], $data['eligible_names'])
@@ -334,8 +337,9 @@ class DemoLotteryController extends Controller
             'draw_count' => $data['draw_count'] ?? 5,
             'draw_mode' => $data['draw_mode'] ?? 'all_at_once',
             'is_custom' => $data['is_custom'] ?? false,
-            'template_token' => $data['template_token'] ?? null,
-            'template_title' => $data['template_title'] ?? null,
+            'template_token' => $clearTemplate ? null : ($data['template_token'] ?? null),
+            'template_title' => $clearTemplate ? null : ($data['template_title'] ?? null),
+            'template_source' => $clearTemplate ? null : ($data['template_source'] ?? null),
         ];
         session([$key => $data]);
 

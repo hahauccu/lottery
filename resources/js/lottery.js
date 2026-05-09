@@ -1423,6 +1423,39 @@ const initLottery = () => {
     const mapRange = (value, min, max) => min + (max - min) * ((value - 1) / 9);
     const TAU = Math.PI * 2;
 
+    const fittedCanvasFontSize = (context, text, maxWidth, maxSize, minSize = 12, fontFamily = 'ui-sans-serif, system-ui', weight = 700) => {
+        const content = String(text ?? '');
+        let size = maxSize;
+        while (size > minSize) {
+            context.font = `${weight} ${size}px ${fontFamily}`;
+            if (context.measureText(content).width <= maxWidth) break;
+            size -= 1;
+        }
+        return Math.max(minSize, size);
+    };
+
+    const splitCanvasTextLines = (context, text, maxWidth, maxLines = 2) => {
+        const chars = Array.from(String(text ?? ''));
+        if (!chars.length) return [''];
+        const lines = [];
+        let current = '';
+        for (const char of chars) {
+            const next = current + char;
+            if (current && context.measureText(next).width > maxWidth && lines.length < maxLines - 1) {
+                lines.push(current);
+                current = char;
+            } else {
+                current = next;
+            }
+        }
+        lines.push(current);
+        const lastIndex = lines.length - 1;
+        while (context.measureText(lines[lastIndex]).width > maxWidth && lines[lastIndex].length > 1) {
+            lines[lastIndex] = `${Array.from(lines[lastIndex]).slice(0, -2).join('')}…`;
+        }
+        return lines;
+    };
+
     const hash2 = (i, j) => {
         let value = (i * 374761393 + j * 668265263) | 0;
         value = (value ^ (value >> 13)) | 0;
@@ -2114,54 +2147,106 @@ const initLottery = () => {
         const drawBall = (ball, isLarge = false) => {
             const { ctx } = airState;
             ctx.save();
-            ctx.globalAlpha = 0.3;
-            ctx.fillStyle = 'black';
+
+            ctx.globalAlpha = isLarge ? 0.34 : 0.24;
+            ctx.fillStyle = 'rgba(0,0,0,0.82)';
             ctx.beginPath();
-            ctx.arc(ball.x + 6, ball.y + 9, ball.r * 1.02, 0, TAU);
+            ctx.ellipse(ball.x + ball.r * 0.18, ball.y + ball.r * 0.28, ball.r * 0.95, ball.r * 0.72, 0, 0, TAU);
             ctx.fill();
             ctx.globalAlpha = 1;
-            const g = ctx.createRadialGradient(ball.x - ball.r * 0.35, ball.y - ball.r * 0.35, ball.r * 0.25, ball.x, ball.y, ball.r * 1.15);
-            g.addColorStop(0, `hsla(${ball.hue} 95% 72% / 1)`);
-            g.addColorStop(1, `hsla(${(ball.hue + 25) % 360} 95% 46% / 1)`);
+
+            const outerGlow = ctx.createRadialGradient(ball.x, ball.y, ball.r * 0.35, ball.x, ball.y, ball.r * 1.45);
+            outerGlow.addColorStop(0, `hsla(${ball.hue} 95% 68% / ${isLarge ? 0.32 : 0.18})`);
+            outerGlow.addColorStop(1, `hsla(${ball.hue} 95% 55% / 0)`);
+            ctx.fillStyle = outerGlow;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.r * 1.42, 0, TAU);
+            ctx.fill();
+
+            const g = ctx.createRadialGradient(
+                ball.x - ball.r * 0.38,
+                ball.y - ball.r * 0.42,
+                ball.r * 0.08,
+                ball.x + ball.r * 0.12,
+                ball.y + ball.r * 0.18,
+                ball.r * 1.18
+            );
+            g.addColorStop(0, `hsla(${ball.hue} 100% 86% / 1)`);
+            g.addColorStop(0.38, `hsla(${ball.hue} 95% 63% / 1)`);
+            g.addColorStop(1, `hsla(${(ball.hue + 28) % 360} 92% 38% / 1)`);
             ctx.fillStyle = g;
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, ball.r, 0, TAU);
             ctx.fill();
-            ctx.globalAlpha = 0.26;
+
+            const rim = ctx.createLinearGradient(ball.x - ball.r, ball.y - ball.r, ball.x + ball.r, ball.y + ball.r);
+            rim.addColorStop(0, 'rgba(255,255,255,0.9)');
+            rim.addColorStop(0.45, `hsla(${ball.hue} 95% 72% / 0.68)`);
+            rim.addColorStop(1, 'rgba(0,0,0,0.34)');
+            ctx.strokeStyle = rim;
+            ctx.lineWidth = Math.max(1.4, ball.r * 0.08);
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.r - ctx.lineWidth * 0.35, 0, TAU);
+            ctx.stroke();
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.r * 0.96, 0, TAU);
+            ctx.clip();
+            ctx.globalAlpha = 0.18;
+            ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+            ctx.lineWidth = Math.max(1, ball.r * 0.06);
+            ctx.beginPath();
+            ctx.arc(ball.x - ball.r * 0.08, ball.y - ball.r * 0.15, ball.r * 0.88, -0.95, 0.55);
+            ctx.stroke();
+            ctx.globalAlpha = 0.12;
+            ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+            ctx.beginPath();
+            ctx.arc(ball.x + ball.r * 0.18, ball.y + ball.r * 0.22, ball.r * 0.78, 0.55, 2.3);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.globalAlpha = 0.34;
             ctx.fillStyle = 'white';
             ctx.beginPath();
-            ctx.arc(ball.x - ball.r * 0.32, ball.y - ball.r * 0.36, ball.r * 0.36, 0, TAU);
+            ctx.ellipse(ball.x - ball.r * 0.34, ball.y - ball.r * 0.4, ball.r * 0.32, ball.r * 0.22, -0.55, 0, TAU);
             ctx.fill();
             ctx.globalAlpha = 1;
+
+            const plateRadius = isLarge ? ball.r * 0.8 : ball.r * 0.64;
+            const plateGrad = ctx.createRadialGradient(ball.x - plateRadius * 0.24, ball.y - plateRadius * 0.28, 0, ball.x, ball.y, plateRadius);
+            plateGrad.addColorStop(0, 'rgba(255,255,255,0.98)');
+            plateGrad.addColorStop(0.72, 'rgba(255,255,255,0.92)');
+            plateGrad.addColorStop(1, 'rgba(224,232,240,0.9)');
+            ctx.fillStyle = plateGrad;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, plateRadius, 0, TAU);
+            ctx.fill();
+            ctx.strokeStyle = `hsla(${ball.hue} 85% 38% / 0.28)`;
+            ctx.lineWidth = Math.max(1, ball.r * 0.035);
+            ctx.stroke();
+
             // 大球顯示完整名字（可換行），小球顯示縮寫
             if (isLarge && ball.name) {
-                ctx.fillStyle = 'rgba(255,255,255,0.95)';
-                ctx.beginPath();
-                ctx.arc(ball.x, ball.y, ball.r * 0.72, 0, TAU);
-                ctx.fill();
-                ctx.fillStyle = 'rgba(0,0,0,0.88)';
-                const chars = Array.from(ball.name);
-                const fontSize = Math.floor(ball.r * 0.42);
-                ctx.font = `bold ${fontSize}px ui-sans-serif, system-ui`;
+                const textMaxWidth = plateRadius * 1.68;
+                let fontSize = fittedCanvasFontSize(ctx, ball.name, textMaxWidth, Math.floor(ball.r * 0.56), Math.floor(ball.r * 0.3));
+                ctx.font = `800 ${fontSize}px ui-sans-serif, system-ui`;
+                let lines = [ball.name];
+                if (ctx.measureText(ball.name).width > textMaxWidth) {
+                    fontSize = Math.floor(ball.r * 0.4);
+                    ctx.font = `800 ${fontSize}px ui-sans-serif, system-ui`;
+                    lines = splitCanvasTextLines(ctx, ball.name, textMaxWidth, 2);
+                }
+                ctx.fillStyle = 'rgba(15,23,42,0.9)';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                if (chars.length <= 3) {
-                    ctx.fillText(ball.name, ball.x, ball.y);
-                } else {
-                    // 超過 3 字換行
-                    const line1 = chars.slice(0, 3).join('');
-                    const line2 = chars.slice(3, 6).join('') + (chars.length > 6 ? '…' : '');
-                    const lineHeight = fontSize * 1.1;
-                    ctx.fillText(line1, ball.x, ball.y - lineHeight / 2);
-                    ctx.fillText(line2, ball.x, ball.y + lineHeight / 2);
-                }
+                const lineHeight = fontSize * 1.08;
+                const startY = ball.y - ((lines.length - 1) * lineHeight) / 2;
+                lines.forEach((line, index) => ctx.fillText(line, ball.x, startY + index * lineHeight));
             } else {
-                ctx.fillStyle = 'rgba(255,255,255,0.92)';
-                ctx.beginPath();
-                ctx.arc(ball.x, ball.y, ball.r * 0.58, 0, TAU);
-                ctx.fill();
-                ctx.fillStyle = 'rgba(0,0,0,0.82)';
-                ctx.font = `${Math.floor(ball.r * 0.85)}px ui-sans-serif, system-ui`;
+                const labelSize = fittedCanvasFontSize(ctx, ball.label, plateRadius * 1.48, Math.floor(ball.r * 0.96), Math.floor(ball.r * 0.5), 'ui-sans-serif, system-ui', 800);
+                ctx.fillStyle = 'rgba(15,23,42,0.86)';
+                ctx.font = `800 ${labelSize}px ui-sans-serif, system-ui`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(ball.label, ball.x, ball.y + 0.5);
@@ -2542,6 +2627,7 @@ const initLottery = () => {
                 }
             }
 
+            ctx.restore();
             ctx.restore();
         };
 
@@ -3169,6 +3255,20 @@ const initLottery = () => {
             maskCtx.fillStyle = silverGrad;
             maskCtx.fill();
 
+            // 銀膜顆粒與細刮痕，讓還沒刮開時就有真實刮刮層質感。
+            maskCtx.save();
+            maskCtx.globalAlpha = 0.18;
+            for (let i = 0; i < 90; i++) {
+                const dotX = rand(6, w - 6);
+                const dotY = rand(6, h - 6);
+                const dotSize = rand(0.6, 1.8);
+                maskCtx.fillStyle = rand(0, 1) > 0.5 ? 'rgba(255,255,255,0.9)' : 'rgba(80,88,100,0.8)';
+                maskCtx.beginPath();
+                maskCtx.arc(dotX, dotY, dotSize, 0, TAU);
+                maskCtx.fill();
+            }
+            maskCtx.restore();
+
             // 光澤線條
             maskCtx.save();
             maskCtx.globalAlpha = 0.25;
@@ -3184,13 +3284,28 @@ const initLottery = () => {
             }
             maskCtx.restore();
 
+            maskCtx.save();
+            maskCtx.globalAlpha = 0.16;
+            maskCtx.strokeStyle = 'rgba(255,255,255,0.95)';
+            maskCtx.lineWidth = 1;
+            for (let x = -w; x < w * 1.3; x += 18) {
+                maskCtx.beginPath();
+                maskCtx.moveTo(x, h + 8);
+                maskCtx.lineTo(x + w * 0.72, -8);
+                maskCtx.stroke();
+            }
+            maskCtx.restore();
+
             // 「刮開」文字
             const fontSize = Math.min(w * 0.15, 24);
             maskCtx.font = `bold ${fontSize}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
-            maskCtx.fillStyle = 'hsl(220, 10%, 45%)';
+            maskCtx.fillStyle = 'rgba(71, 85, 105, 0.88)';
             maskCtx.textAlign = 'center';
             maskCtx.textBaseline = 'middle';
+            maskCtx.shadowColor = 'rgba(255,255,255,0.6)';
+            maskCtx.shadowBlur = 4;
             maskCtx.fillText('刮開', w / 2, h / 2);
+            maskCtx.shadowBlur = 0;
         };
 
         // 在卡片遮罩上刮除
@@ -3277,6 +3392,37 @@ const initLottery = () => {
             roundRect(ctx, x, y, w, h, r);
             ctx.stroke();
 
+            // 票券齒孔與中獎區底板；名字會先畫在底層，被刮開一半就能看出可能是誰。
+            ctx.save();
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = 'rgba(120, 53, 15, 0.45)';
+            const notchCount = Math.max(5, Math.floor(w / 34));
+            for (let i = 0; i <= notchCount; i++) {
+                const notchX = x + (w * i) / notchCount;
+                ctx.beginPath();
+                ctx.arc(notchX, y, Math.min(5, h * 0.045), 0, TAU);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(notchX, y + h, Math.min(5, h * 0.045), 0, TAU);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            const panelX = x + w * 0.08;
+            const panelY = y + h * 0.28;
+            const panelW = w * 0.84;
+            const panelH = h * 0.5;
+            const panelGrad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
+            panelGrad.addColorStop(0, 'rgba(255, 248, 214, 0.82)');
+            panelGrad.addColorStop(0.58, 'rgba(255, 231, 150, 0.58)');
+            panelGrad.addColorStop(1, 'rgba(190, 111, 18, 0.24)');
+            ctx.fillStyle = panelGrad;
+            roundRect(ctx, panelX, panelY, panelW, panelH, r * 0.8);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(120, 53, 15, 0.24)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
             // 裝飾圖案
             ctx.save();
             ctx.globalAlpha = 0.12;
@@ -3293,15 +3439,41 @@ const initLottery = () => {
 
             // 中獎者名字
             if (winner && (cardPhase === 'scratching' || cardPhase === 'reveal')) {
-                const fontSize = Math.min(w * 0.5, h * 0.55, 80);
-                ctx.font = `bold ${fontSize}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
+                const displayName = String(winner);
+                const maxTextWidth = w * 0.8;
+                const maxTextHeight = h * 0.42;
+                let fontSize = fittedCanvasFontSize(
+                    ctx,
+                    displayName,
+                    maxTextWidth,
+                    Math.min(maxTextHeight, 96),
+                    Math.max(18, Math.min(w, h) * 0.13),
+                    '"Noto Sans TC", "Noto Sans SC", sans-serif',
+                    900
+                );
+                ctx.font = `900 ${fontSize}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
+                let lines = [displayName];
+                if (ctx.measureText(displayName).width > maxTextWidth) {
+                    fontSize = Math.min(h * 0.24, w * 0.18, 48);
+                    ctx.font = `900 ${fontSize}px "Noto Sans TC", "Noto Sans SC", sans-serif`;
+                    lines = splitCanvasTextLines(ctx, displayName, maxTextWidth, 2);
+                }
+
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.save();
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-                ctx.shadowBlur = 6;
+                ctx.shadowColor = 'rgba(255, 248, 205, 0.88)';
+                ctx.shadowBlur = 10;
+                ctx.lineWidth = Math.max(3, fontSize * 0.1);
+                ctx.strokeStyle = 'rgba(255, 248, 220, 0.82)';
                 ctx.fillStyle = 'hsl(25, 90%, 22%)';
-                ctx.fillText(winner, x + w / 2, y + h / 2);
+                const lineHeight = fontSize * 1.05;
+                const startY = y + h * 0.54 - ((lines.length - 1) * lineHeight) / 2;
+                lines.forEach((line, index) => {
+                    const lineY = startY + index * lineHeight;
+                    ctx.strokeText(line, x + w / 2, lineY);
+                    ctx.fillText(line, x + w / 2, lineY);
+                });
                 ctx.restore();
             }
 
@@ -3829,6 +4001,43 @@ const initLottery = () => {
             roundRect(ctx, -bodyW / 2, bodyY, bodyW, bodyH, 10);
             ctx.stroke();
 
+            // 金屬角鐵與鉚釘，讓小寶箱不再只是平面方塊。
+            ctx.save();
+            const cornerSize = Math.min(bodyW, bodyH) * 0.16;
+            const cornerGrad = ctx.createLinearGradient(-bodyW / 2, bodyY, -bodyW / 2 + cornerSize, bodyY + cornerSize);
+            cornerGrad.addColorStop(0, '#FFE58A');
+            cornerGrad.addColorStop(0.5, '#DAA520');
+            cornerGrad.addColorStop(1, '#8B6914');
+            ctx.fillStyle = cornerGrad;
+            [
+                [-bodyW / 2 + 4, bodyY + 4],
+                [bodyW / 2 - cornerSize - 4, bodyY + 4],
+                [-bodyW / 2 + 4, bodyY + bodyH - cornerSize - 4],
+                [bodyW / 2 - cornerSize - 4, bodyY + bodyH - cornerSize - 4],
+            ].forEach(([cornerX, cornerY]) => {
+                roundRect(ctx, cornerX, cornerY, cornerSize, cornerSize, 4);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(82, 53, 12, 0.55)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            const drawRivet = (rx, ry, radius = 3.2) => {
+                const rivet = ctx.createRadialGradient(rx - radius * 0.35, ry - radius * 0.35, 0, rx, ry, radius * 1.4);
+                rivet.addColorStop(0, '#FFF2A6');
+                rivet.addColorStop(0.55, '#D4A017');
+                rivet.addColorStop(1, '#6B4A0F');
+                ctx.fillStyle = rivet;
+                ctx.beginPath();
+                ctx.arc(rx, ry, radius, 0, TAU);
+                ctx.fill();
+            };
+            for (let i = 0; i < 5; i++) {
+                const rx = -bodyW / 2 + bodyW * (0.15 + i * 0.175);
+                drawRivet(rx, bodyY + bodyH * 0.42, Math.max(2.2, bodyW * 0.018));
+            }
+            ctx.restore();
+
             // 中間金屬條
             const bandGrad = ctx.createLinearGradient(0, bodyY + bodyH * 0.35, 0, bodyY + bodyH * 0.5);
             bandGrad.addColorStop(0, '#DAA520');
@@ -3847,6 +4056,16 @@ const initLottery = () => {
                 ctx.beginPath();
                 ctx.moveTo(lineX, bodyY + 8);
                 ctx.lineTo(lineX, bodyY + bodyH - 8);
+                ctx.stroke();
+            }
+            for (let i = 0; i < 5; i++) {
+                const grainY = bodyY + bodyH * (0.18 + i * 0.14);
+                const jitterA = Math.sin((chest.index + 1) * 13.7 + i * 5.1) * 4;
+                const jitterB = Math.sin((chest.index + 1) * 19.3 + i * 4.4) * 4;
+                const jitterC = Math.sin((chest.index + 1) * 23.9 + i * 6.2) * 3;
+                ctx.beginPath();
+                ctx.moveTo(-bodyW / 2 + 12, grainY);
+                ctx.bezierCurveTo(-bodyW * 0.22, grainY + jitterA, bodyW * 0.22, grainY + jitterB, bodyW / 2 - 12, grainY + jitterC);
                 ctx.stroke();
             }
             ctx.restore();
@@ -3892,6 +4111,19 @@ const initLottery = () => {
             ctx.lineTo(bodyW / 2, 0);
             ctx.stroke();
 
+            ctx.save();
+            ctx.globalAlpha = 0.45;
+            ctx.strokeStyle = 'rgba(255, 232, 150, 0.72)';
+            ctx.lineWidth = 1.5;
+            for (let i = 1; i < 4; i++) {
+                const lidLineX = -bodyW / 2 + (bodyW * i) / 4;
+                ctx.beginPath();
+                ctx.moveTo(lidLineX, -lidH * 0.86);
+                ctx.lineTo(lidLineX, -lidH * 0.1);
+                ctx.stroke();
+            }
+            ctx.restore();
+
             // 蓋子金屬條
             const lidBandGrad = ctx.createLinearGradient(0, -lidH * 0.6, 0, -lidH * 0.4);
             lidBandGrad.addColorStop(0, '#B8860B');
@@ -3929,6 +4161,19 @@ const initLottery = () => {
                 ctx.arc(0, bodyY + 4, 4, 0, TAU);
                 ctx.fill();
                 ctx.fillRect(-2, bodyY + 4, 4, 6);
+
+                const gemGrad = ctx.createRadialGradient(-2, bodyY - 3, 0, 0, bodyY - 1, 7);
+                gemGrad.addColorStop(0, '#FFF7ED');
+                gemGrad.addColorStop(0.35, '#FB7185');
+                gemGrad.addColorStop(1, '#9F1239');
+                ctx.fillStyle = gemGrad;
+                ctx.beginPath();
+                ctx.moveTo(0, bodyY - 10);
+                ctx.lineTo(7, bodyY - 2);
+                ctx.lineTo(0, bodyY + 6);
+                ctx.lineTo(-7, bodyY - 2);
+                ctx.closePath();
+                ctx.fill();
             }
 
             // 中獎者名字（打開後顯示）
@@ -4450,7 +4695,8 @@ const initLottery = () => {
             const erupt = clamp(total * 0.15, 0.4, 0.8);
             const display = clamp(total * 0.5, 1.0, 4.0);
             const exit = clamp(total * 0.1, 0.3, 0.6);
-            return { erupt, display, exit };
+            const open = clamp(total * 0.16, 0.45, 0.9);
+            return { open, erupt, display, exit };
         };
 
         const spawnBurst = () => {
@@ -4894,6 +5140,82 @@ const initLottery = () => {
             roundRect(ctx, w * 0.08, h * 0.25, w * 0.84, bodyH, 18);
             ctx.stroke();
 
+            ctx.save();
+            if (openProgress > 0.08) {
+                ctx.globalAlpha = clamp(openProgress * 1.2, 0, 1);
+                const liningGrad = ctx.createLinearGradient(0, h * 0.18, 0, h * 0.42);
+                liningGrad.addColorStop(0, '#7f1d1d');
+                liningGrad.addColorStop(1, '#260808');
+                ctx.fillStyle = liningGrad;
+                ctx.beginPath();
+                ctx.ellipse(w * 0.5, h * 0.32, w * 0.34, h * 0.09, 0, 0, TAU);
+                ctx.fill();
+
+                for (let i = 0; i < 11; i++) {
+                    const treasureX = w * (0.25 + i * 0.05);
+                    const treasureY = h * (0.35 + Math.sin(i * 1.7) * 0.025);
+                    const treasureR = w * (0.018 + (i % 3) * 0.004);
+                    const treasureGrad = ctx.createRadialGradient(treasureX - treasureR * 0.3, treasureY - treasureR * 0.4, 0, treasureX, treasureY, treasureR * 1.4);
+                    treasureGrad.addColorStop(0, '#fff7ad');
+                    treasureGrad.addColorStop(0.5, '#ffd24d');
+                    treasureGrad.addColorStop(1, '#9a6700');
+                    ctx.fillStyle = treasureGrad;
+                    ctx.beginPath();
+                    ctx.arc(treasureX, treasureY, treasureR, 0, TAU);
+                    ctx.fill();
+                }
+            }
+
+            // 厚金屬角鐵、鉚釘與木紋，壓軸寶箱要比一般寶箱更重、更華麗。
+            const capW = w * 0.12;
+            const capH = bodyH * 0.28;
+            const capGrad = ctx.createLinearGradient(0, h * 0.25, capW, h * 0.25 + capH);
+            capGrad.addColorStop(0, '#fff0a3');
+            capGrad.addColorStop(0.45, '#d4a017');
+            capGrad.addColorStop(1, '#6f4d0f');
+            ctx.fillStyle = capGrad;
+            [[w * 0.09, h * 0.28], [w * 0.79, h * 0.28], [w * 0.09, h * 0.25 + bodyH - capH - 8], [w * 0.79, h * 0.25 + bodyH - capH - 8]].forEach(([capX, capY]) => {
+                roundRect(ctx, capX, capY, capW, capH, 10);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(80, 52, 12, 0.55)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+
+            ctx.globalAlpha = 0.22;
+            ctx.strokeStyle = '#3b1607';
+            ctx.lineWidth = 2;
+            for (let i = 1; i < 5; i++) {
+                const grainX = w * 0.08 + (w * 0.84 * i) / 5;
+                ctx.beginPath();
+                ctx.moveTo(grainX, h * 0.29);
+                ctx.lineTo(grainX, h * 0.25 + bodyH - 8);
+                ctx.stroke();
+            }
+            for (let i = 0; i < 6; i++) {
+                const grainY = h * (0.34 + i * 0.055);
+                ctx.beginPath();
+                ctx.moveTo(w * 0.16, grainY);
+                ctx.bezierCurveTo(w * 0.34, grainY + Math.sin(i * 2.1) * 5, w * 0.62, grainY + Math.cos(i * 2.4) * 5, w * 0.84, grainY + Math.sin(i * 1.5) * 4);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+
+            for (let i = 0; i < 8; i++) {
+                const rivetX = w * (0.18 + i * 0.09);
+                const rivetY = h * 0.56;
+                const rivetR = Math.max(3, w * 0.012);
+                const rivet = ctx.createRadialGradient(rivetX - rivetR * 0.35, rivetY - rivetR * 0.35, 0, rivetX, rivetY, rivetR * 1.5);
+                rivet.addColorStop(0, '#fff6b8');
+                rivet.addColorStop(0.5, '#d4a017');
+                rivet.addColorStop(1, '#5f3f0d');
+                ctx.fillStyle = rivet;
+                ctx.beginPath();
+                ctx.arc(rivetX, rivetY, rivetR, 0, TAU);
+                ctx.fill();
+            }
+            ctx.restore();
+
             const bandGrad = ctx.createLinearGradient(0, h * 0.52, 0, h * 0.6);
             bandGrad.addColorStop(0, '#d4a017');
             bandGrad.addColorStop(0.5, '#ffd24d');
@@ -4922,8 +5244,33 @@ const initLottery = () => {
             ctx.strokeStyle = '#f4c430';
             ctx.lineWidth = 5;
             ctx.stroke();
+
+            ctx.save();
+            ctx.globalAlpha = 0.55;
+            ctx.strokeStyle = 'rgba(255, 232, 150, 0.68)';
+            ctx.lineWidth = 2;
+            for (let i = 1; i < 5; i++) {
+                const lidLineX = -w * 0.42 + (w * 0.84 * i) / 5;
+                ctx.beginPath();
+                ctx.moveTo(lidLineX, -lidH * 0.8);
+                ctx.lineTo(lidLineX, -lidH * 0.08);
+                ctx.stroke();
+            }
+            const crestGrad = ctx.createRadialGradient(0, -lidH * 0.42, 0, 0, -lidH * 0.42, w * 0.08);
+            crestGrad.addColorStop(0, '#fff7ed');
+            crestGrad.addColorStop(0.35, '#fbbf24');
+            crestGrad.addColorStop(1, '#92400e');
+            ctx.fillStyle = crestGrad;
+            ctx.beginPath();
+            ctx.moveTo(0, -lidH * 0.66);
+            ctx.lineTo(w * 0.055, -lidH * 0.42);
+            ctx.lineTo(0, -lidH * 0.18);
+            ctx.lineTo(-w * 0.055, -lidH * 0.42);
+            ctx.closePath();
+            ctx.fill();
             ctx.restore();
 
+            ctx.restore();
             ctx.restore();
         };
 
@@ -5116,19 +5463,35 @@ const initLottery = () => {
 
         const update = (dt) => {
             phaseTime += dt;
-            openProgress = 1; // 始終打開
 
             if (phase === 'idle') {
-                spawnIdleStream(dt);
+                openProgress = Math.max(0, openProgress - dt * 2.8);
+            } else if (phase === 'opening') {
+                const timing = getTiming();
+                const progress = clamp(phaseTime / timing.open, 0, 1);
+                openProgress = easeOutCubic(progress);
+                if (progress > 0.28) {
+                    spawnStream(dt);
+                }
+                if (progress >= 1) {
+                    phase = 'erupting';
+                    phaseTime = 0;
+                    spawnTimer = 0;
+                    spawnNameEruption();
+                    spawnNameBurst();
+                }
             } else if (phase === 'erupting') {
+                openProgress = 1;
                 spawnStream(dt);
                 updateNameEruption(dt);
                 if (nameEruption.phase === 'displaying') phase = 'displaying';
             } else if (phase === 'displaying') {
+                openProgress = 1;
                 spawnIdleStream(dt);
                 updateNameEruption(dt);
                 if (nameEruption.phase === 'exiting') phase = 'exiting';
             } else if (phase === 'exiting') {
+                openProgress = 1;
                 spawnIdleStream(dt);
                 const done = updateNameEruption(dt);
                 if (done) {
@@ -5179,7 +5542,7 @@ const initLottery = () => {
             running = true;
             phase = 'idle';
             phaseTime = 0;
-            openProgress = 1; // 始終打開
+            openProgress = 0;
             spawnTimer = 0;
             idleSpawnTimer = 0;
             nameEruption.active = false;
@@ -5194,11 +5557,10 @@ const initLottery = () => {
                 showChest();
             }
             winner = name || '???';
-            phase = 'erupting';
+            phase = 'opening';
             phaseTime = 0;
+            openProgress = 0;
             spawnTimer = 0;
-            spawnNameEruption();
-            spawnNameBurst();
             sfx.playChestOpen();
         };
 
@@ -5209,7 +5571,7 @@ const initLottery = () => {
         const prepareNext = () => {
             phase = 'idle';
             phaseTime = 0;
-            openProgress = 1; // 保持打開
+            openProgress = 0;
             winner = null;
             nameEruption.active = false;
             nameEruption.phase = 'idle';
@@ -5281,6 +5643,7 @@ const initLottery = () => {
             '#2BCBBA', '#4BCFFA', '#FC427B', '#FD7272',
             '#3742fa', '#ff6b6b', '#feca57', '#54a0ff',
         ];
+        const MARBLE_STYLE_COUNT = 6;
 
         // ─── 內部狀態 ───
         const mrState = {
@@ -5540,6 +5903,9 @@ const initLottery = () => {
                     name: names[i],
                     label: shortLabel(names[i]),
                     color: MARBLE_COLORS[i % MARBLE_COLORS.length],
+                    accentColor: MARBLE_COLORS[(i * 5 + 3) % MARBLE_COLORS.length],
+                    styleIndex: i % MARBLE_STYLE_COUNT,
+                    patternRotation: rand(0, TAU),
                     x, y,
                     vx: rand(-15, 15),
                     vy: rand(-5, 5),
@@ -5778,8 +6144,149 @@ const initLottery = () => {
         const lightenColor = (hex, pct) => {
             const num = parseInt(hex.replace('#', ''), 16);
             let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
-            r = Math.min(255, r + pct); g = Math.min(255, g + pct); b = Math.min(255, b + pct);
+            r = clamp(r + pct, 0, 255); g = clamp(g + pct, 0, 255); b = clamp(b + pct, 0, 255);
             return `rgb(${r},${g},${b})`;
+        };
+
+        const drawMarbleBall = (m, x, y, r, alpha = 1, options = {}) => {
+            const { ctx } = mrState;
+            if (!ctx) return;
+            const { label = true, shadow = true, finished = false } = options;
+            const styleIndex = m.styleIndex ?? 0;
+            const accent = m.accentColor?.startsWith?.('#') ? m.accentColor : m.color;
+            const rotation = (m.patternRotation ?? 0) + (m.x + m.y) * 0.018;
+
+            ctx.save();
+            if (shadow) {
+                ctx.globalAlpha = 0.24 * alpha;
+                ctx.fillStyle = 'rgba(0,0,0,0.92)';
+                ctx.beginPath();
+                ctx.ellipse(x + r * 0.16, y + r * 0.26, r * 1.02, r * 0.78, 0, 0, TAU);
+                ctx.fill();
+            }
+
+            ctx.globalAlpha = (finished ? 0.5 : 1) * alpha;
+            const glow = ctx.createRadialGradient(x, y, r * 0.3, x, y, r * 1.65);
+            glow.addColorStop(0, `${accent}66`);
+            glow.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(x, y, r * 1.5, 0, TAU);
+            ctx.fill();
+
+            const grad = ctx.createRadialGradient(x - r * 0.34, y - r * 0.38, r * 0.1, x + r * 0.08, y + r * 0.16, r * 1.18);
+            grad.addColorStop(0, lightenColor(m.color, 48));
+            grad.addColorStop(0.46, m.color);
+            grad.addColorStop(1, lightenColor(m.color, -58));
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, TAU);
+            ctx.fill();
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, r * 0.96, 0, TAU);
+            ctx.clip();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+            ctx.globalAlpha *= 0.9;
+            if (styleIndex === 0) {
+                ctx.strokeStyle = `${accent}dd`;
+                ctx.lineWidth = r * 0.24;
+                for (let yy = -r * 1.5; yy <= r * 1.5; yy += r * 0.62) {
+                    ctx.beginPath();
+                    ctx.moveTo(-r * 1.4, yy);
+                    ctx.quadraticCurveTo(0, yy - r * 0.28, r * 1.4, yy + r * 0.2);
+                    ctx.stroke();
+                }
+            } else if (styleIndex === 1) {
+                ctx.fillStyle = `${accent}c8`;
+                ctx.beginPath();
+                ctx.moveTo(0, -r * 1.1);
+                ctx.arc(0, 0, r * 1.12, -Math.PI / 2, Math.PI / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.42)';
+                ctx.lineWidth = r * 0.08;
+                ctx.beginPath();
+                ctx.moveTo(0, -r);
+                ctx.lineTo(0, r);
+                ctx.stroke();
+            } else if (styleIndex === 2) {
+                for (let i = 0; i < 9; i++) {
+                    const a = (TAU / 9) * i;
+                    const dotR = i % 3 === 0 ? r * 0.15 : r * 0.105;
+                    const dotX = Math.cos(a) * r * (0.28 + (i % 2) * 0.34);
+                    const dotY = Math.sin(a) * r * (0.28 + (i % 2) * 0.34);
+                    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.72)' : `${accent}cc`;
+                    ctx.beginPath();
+                    ctx.arc(dotX, dotY, dotR, 0, TAU);
+                    ctx.fill();
+                }
+            } else if (styleIndex === 3) {
+                ctx.strokeStyle = `${accent}d8`;
+                ctx.lineWidth = r * 0.11;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r * (0.34 + i * 0.24), i * 0.7, Math.PI * 1.55 + i * 0.7);
+                    ctx.stroke();
+                }
+            } else if (styleIndex === 4) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.78)';
+                ctx.lineWidth = r * 0.13;
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                ctx.moveTo(-r * 0.45, -r * 0.78);
+                ctx.lineTo(r * 0.04, -r * 0.16);
+                ctx.lineTo(-r * 0.16, -r * 0.06);
+                ctx.lineTo(r * 0.42, r * 0.78);
+                ctx.stroke();
+                ctx.strokeStyle = `${accent}d8`;
+                ctx.lineWidth = r * 0.06;
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = `${accent}c0`;
+                const tile = r * 0.35;
+                for (let row = -3; row <= 3; row++) {
+                    for (let col = -3; col <= 3; col++) {
+                        if ((row + col) % 2 !== 0) continue;
+                        ctx.fillRect(col * tile, row * tile, tile, tile);
+                    }
+                }
+            }
+            ctx.restore();
+
+            const rim = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+            rim.addColorStop(0, 'rgba(255,255,255,0.82)');
+            rim.addColorStop(0.48, `${accent}aa`);
+            rim.addColorStop(1, 'rgba(0,0,0,0.4)');
+            ctx.strokeStyle = rim;
+            ctx.lineWidth = Math.max(1.4, r * 0.11);
+            ctx.beginPath();
+            ctx.arc(x, y, r - ctx.lineWidth * 0.35, 0, TAU);
+            ctx.stroke();
+
+            ctx.globalAlpha = 0.4 * alpha;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.ellipse(x - r * 0.34, y - r * 0.38, r * 0.32, r * 0.22, -0.65, 0, TAU);
+            ctx.fill();
+
+            if (label && m.label) {
+                ctx.globalAlpha = alpha;
+                const fontSize = fittedCanvasFontSize(ctx, m.label, r * 1.72, Math.max(9, Math.min(18, r * 1.02)), 9, 'Inter,ui-sans-serif,system-ui,sans-serif', 900);
+                ctx.font = `900 ${fontSize}px Inter,ui-sans-serif,system-ui,sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.lineWidth = Math.max(2, fontSize * 0.24);
+                ctx.strokeStyle = 'rgba(2,6,23,0.72)';
+                ctx.fillStyle = finished ? 'rgba(255,255,255,0.62)' : 'rgba(255,255,255,0.98)';
+                ctx.strokeText(m.label, x, y + 1);
+                ctx.fillText(m.label, x, y + 1);
+            }
+
+            ctx.restore();
+            ctx.globalAlpha = 1;
         };
 
         const drawFrame = () => {
@@ -5859,34 +6366,7 @@ const initLottery = () => {
                     ? (isShowcaseWinner ? 0.12 : (m.finished ? 0.22 : 0.08))
                     : 1;
 
-                // 陰影
-                ctx.globalAlpha = 0.25 * marbleAlpha;
-                ctx.fillStyle = 'black';
-                ctx.beginPath(); ctx.arc(m.x + 2, sy + 3, r * 1.05, 0, TAU); ctx.fill();
-
-                // 主球體
-                ctx.globalAlpha = (m.finished ? 0.5 : 1) * marbleAlpha;
-                const grad = ctx.createRadialGradient(m.x - r * 0.3, sy - r * 0.3, r * 0.15, m.x, sy, r * 1.1);
-                grad.addColorStop(0, lightenColor(m.color, 30));
-                grad.addColorStop(1, m.color);
-                ctx.fillStyle = grad;
-                ctx.beginPath(); ctx.arc(m.x, sy, r, 0, TAU); ctx.fill();
-
-                // 高光
-                ctx.globalAlpha = 0.35 * marbleAlpha;
-                ctx.fillStyle = '#fff';
-                ctx.beginPath(); ctx.arc(m.x - r * 0.28, sy - r * 0.32, r * 0.35, 0, TAU); ctx.fill();
-                ctx.globalAlpha = 1;
-
-                // 名稱 — 放在球中間
-                ctx.globalAlpha = marbleAlpha;
-                ctx.fillStyle = m.finished ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.95)';
-                const fontSize = Math.max(7, Math.min(11, r * 0.7));
-                ctx.font = `700 ${fontSize}px Inter,ui-sans-serif,system-ui,sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(m.label, m.x, sy + 1);
-                ctx.globalAlpha = 1;
+                drawMarbleBall(m, m.x, sy, r, marbleAlpha, { finished: m.finished });
 
                 // 名次徽章
                 if (m.finished && m.rank <= 3) {
@@ -5980,18 +6460,8 @@ const initLottery = () => {
                         ctx.fillText(`${i + 1}`, px + 14 * scale, ry);
                     }
 
-                    // 色球標記
-                    ctx.beginPath();
-                    ctx.arc(px + 44 * scale, ry, 7 * scale, 0, TAU);
-                    ctx.fillStyle = m.color;
-                    ctx.fill();
-                    // 高光
-                    ctx.globalAlpha = 0.3;
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(px + 42 * scale, ry - 2 * scale, 2.5 * scale, 0, TAU);
-                    ctx.fill();
-                    ctx.globalAlpha = 1;
+                    // 色球標記也保留球面紋理，與賽道上的球一一對應。
+                    drawMarbleBall(m, px + 44 * scale, ry, 7 * scale, 1, { label: false, shadow: false, finished: m.finished });
 
                     // 名稱
                     ctx.font = `600 ${15 * scale}px Inter,ui-sans-serif,system-ui,sans-serif`;
@@ -6101,26 +6571,7 @@ const initLottery = () => {
                     ctx.stroke();
                     ctx.globalAlpha = 1;
 
-                    const grad = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.18, x, y, r * 1.08);
-                    grad.addColorStop(0, lightenColor(marble.color, 38));
-                    grad.addColorStop(1, marble.color);
-                    ctx.fillStyle = grad;
-                    ctx.beginPath();
-                    ctx.arc(x, y, r, 0, TAU);
-                    ctx.fill();
-
-                    ctx.globalAlpha = 0.42;
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(x - r * 0.3, y - r * 0.34, r * 0.34, 0, TAU);
-                    ctx.fill();
-                    ctx.globalAlpha = 1;
-
-                    ctx.fillStyle = 'rgba(255,255,255,0.98)';
-                    ctx.font = `800 ${Math.max(14, Math.min(28, r * 0.54))}px Inter,ui-sans-serif,system-ui,sans-serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(marble.label, x, y + 1);
+                    drawMarbleBall(marble, x, y, r, 1, { shadow: false });
 
                     ctx.restore();
                 });
@@ -6311,6 +6762,9 @@ const initLottery = () => {
                     mrState.marbles.push({
                         name, label: shortLabel(name),
                         color: MARBLE_COLORS[i % MARBLE_COLORS.length],
+                        accentColor: MARBLE_COLORS[(i * 5 + 3) % MARBLE_COLORS.length],
+                        styleIndex: i % MARBLE_STYLE_COUNT,
+                        patternRotation: rand(0, TAU),
                         x, y,
                         vx: rand(-15, 15), vy: rand(-5, 5),
                         r: TRACK.marbleRadius,
@@ -6441,6 +6895,15 @@ const initLottery = () => {
         function darkenColor(hex, amt) {
             return lightenColor(hex, -amt);
         }
+        function colorAlpha(color, alpha) {
+            if (color.startsWith('#')) {
+                const { r, g, b } = parseColor(color);
+                return `rgba(${r},${g},${b},${alpha})`;
+            }
+            const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (match) return `rgba(${match[1]},${match[2]},${match[3]},${alpha})`;
+            return color;
+        }
 
         // ─── 名稱池 ───
         const buildNamePool = () => {
@@ -6469,10 +6932,14 @@ const initLottery = () => {
         };
 
         function createTop(name, r) {
+            const color = TOP_COLORS[Math.floor(Math.random() * TOP_COLORS.length)];
             return {
                 name,
                 label: shortLabel(name),
-                color: TOP_COLORS[Math.floor(Math.random() * TOP_COLORS.length)],
+                color,
+                accentColor: lightenColor(color, 68),
+                variant: Math.floor(rand(0, 4)),
+                spinDirection: Math.random() < 0.5 ? -1 : 1,
                 x: btState.cx, y: btState.cy,
                 vx: 0, vy: 0,
                 r: r || 28,
@@ -6550,7 +7017,9 @@ const initLottery = () => {
                     x, y,
                     vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
                     r: rand(2, 5),
-                    life: 1, color,
+                    life: rand(0.45, 0.95),
+                    spin: rand(0, TAU),
+                    color,
                 });
             }
         }
@@ -6837,9 +7306,17 @@ const initLottery = () => {
             const { ctx, cx, cy, arenaR, W, H } = btState;
 
             // 地板背景 (去除全畫面黑影以免遮擋其他 UI，改在圓形範圍內漸層)
+            const stageGlow = ctx.createRadialGradient(cx, cy, arenaR * 0.2, cx, cy, arenaR * 1.45);
+            stageGlow.addColorStop(0, 'rgba(79, 209, 255, 0.1)');
+            stageGlow.addColorStop(0.58, 'rgba(99, 102, 241, 0.05)');
+            stageGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = stageGlow;
+            ctx.fillRect(0, 0, W, H);
+
             const floorGrad = ctx.createRadialGradient(cx, cy - 40, 0, cx, cy, arenaR);
-            floorGrad.addColorStop(0, 'rgba(30, 37, 51, 0.8)');
-            floorGrad.addColorStop(1, 'rgba(17, 22, 31, 1)');
+            floorGrad.addColorStop(0, 'rgba(42, 53, 76, 0.92)');
+            floorGrad.addColorStop(0.58, 'rgba(19, 27, 42, 1)');
+            floorGrad.addColorStop(1, 'rgba(7, 11, 19, 1)');
             ctx.beginPath();
             ctx.arc(cx, cy, arenaR, 0, TAU);
             ctx.fillStyle = floorGrad;
@@ -6860,17 +7337,64 @@ const initLottery = () => {
             }
             ctx.restore();
 
-            // 競技場邊框
+            // 競技場同心刻線與中心標記，參考實體戰鬥盤的金屬塑膠混合質感。
+            ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, arenaR, 0, TAU);
-            ctx.strokeStyle = 'rgba(99,102,241,0.5)';
-            ctx.lineWidth = 3;
+            ctx.clip();
+            ctx.globalAlpha = 0.35;
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.32)';
+            ctx.lineWidth = 1;
+            [0.28, 0.48, 0.68, 0.84].forEach((ratio, index) => {
+                ctx.setLineDash(index % 2 === 0 ? [8, 10] : []);
+                ctx.beginPath();
+                ctx.arc(cx, cy, arenaR * ratio, 0, TAU);
+                ctx.stroke();
+            });
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 0.2;
+            ctx.strokeStyle = 'rgba(79, 209, 255, 0.72)';
+            ctx.lineWidth = 1.2;
+            for (let i = 0; i < 12; i++) {
+                const a = (TAU / 12) * i;
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(a) * arenaR * 0.12, cy + Math.sin(a) * arenaR * 0.12);
+                ctx.lineTo(cx + Math.cos(a) * arenaR * 0.9, cy + Math.sin(a) * arenaR * 0.9);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            const centerGrad = ctx.createRadialGradient(cx - arenaR * 0.035, cy - arenaR * 0.045, 0, cx, cy, arenaR * 0.18);
+            centerGrad.addColorStop(0, 'rgba(255,255,255,0.2)');
+            centerGrad.addColorStop(0.55, 'rgba(79, 209, 255, 0.08)');
+            centerGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = centerGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR * 0.2, 0, TAU);
+            ctx.fill();
+
+            // 競技場邊框
+            const wallGrad = ctx.createRadialGradient(cx, cy, arenaR - 18, cx, cy, arenaR + 16);
+            wallGrad.addColorStop(0, 'rgba(15, 23, 42, 0)');
+            wallGrad.addColorStop(0.48, 'rgba(30, 41, 59, 0.65)');
+            wallGrad.addColorStop(0.72, 'rgba(226, 232, 240, 0.24)');
+            wallGrad.addColorStop(1, 'rgba(15, 23, 42, 0.82)');
+            ctx.fillStyle = wallGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR + 14, 0, TAU);
+            ctx.arc(cx, cy, arenaR - 18, 0, TAU, true);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, arenaR, 0, TAU);
+            ctx.strokeStyle = 'rgba(125, 211, 252, 0.58)';
+            ctx.lineWidth = 4;
             ctx.stroke();
 
             // 內側發光圈
             ctx.beginPath();
             ctx.arc(cx, cy, arenaR - 8, 0, TAU);
-            ctx.strokeStyle = 'rgba(99,102,241,0.15)';
+            ctx.strokeStyle = 'rgba(99,102,241,0.22)';
             ctx.lineWidth = 6;
             ctx.stroke();
         }
@@ -6878,12 +7402,49 @@ const initLottery = () => {
         function drawTop(t, alpha = 1) {
             const { ctx } = btState;
             const { x, y, r, color, angle, omega, winner, wobble } = t;
+            const accent = t.accentColor || lightenColor(color, 55);
+            const variant = t.variant ?? 0;
+            const direction = t.spinDirection ?? 1;
+            const speedRatio = clamp(omega / 35, 0, 1);
 
             const tiltAngle = wobble > 0.05 ? Math.sin(angle * 2.5) * wobble * 0.4 : 0;
 
             ctx.save();
             ctx.globalAlpha = alpha;
             ctx.translate(x, y);
+
+            ctx.globalAlpha = 0.28 * alpha;
+            ctx.fillStyle = 'rgba(0,0,0,0.85)';
+            ctx.beginPath();
+            ctx.ellipse(r * 0.14, r * 0.62, r * 0.98, r * 0.28, tiltAngle * 0.5, 0, TAU);
+            ctx.fill();
+
+            if (speedRatio > 0.25) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                const trail = ctx.createRadialGradient(0, 0, r * 0.35, 0, 0, r * (1.75 + speedRatio * 0.45));
+                trail.addColorStop(0, colorAlpha(accent, 0.13));
+                trail.addColorStop(0.55, colorAlpha(color, 0.15));
+                trail.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.globalAlpha = alpha * speedRatio;
+                ctx.fillStyle = trail;
+                ctx.beginPath();
+                ctx.arc(0, 0, r * 2.05, 0, TAU);
+                ctx.fill();
+                ctx.rotate(angle * direction * 0.35);
+                ctx.strokeStyle = colorAlpha(accent, 0.6);
+                ctx.lineWidth = Math.max(1, r * 0.055);
+                ctx.lineCap = 'round';
+                for (let i = 0; i < 8; i++) {
+                    const a = (TAU / 8) * i;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r * (1.12 + (i % 2) * 0.18), a, a + direction * (0.34 + speedRatio * 0.25), direction < 0);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            ctx.globalAlpha = alpha;
             ctx.rotate(tiltAngle);
 
             if (winner) {
@@ -6898,46 +7459,150 @@ const initLottery = () => {
                 ctx.shadowBlur = 0;
             }
 
-            // 扇形葉片
+            // 金屬外環 + 攻擊刀刃 + 透明能量層，對應參考檔 SVG 的多層陀螺結構。
             ctx.save();
-            ctx.rotate(angle);
+            ctx.rotate(angle * direction);
+
+            const rimGrad = ctx.createRadialGradient(-r * 0.24, -r * 0.28, 0, 0, 0, r * 1.08);
+            rimGrad.addColorStop(0, '#f8fafc');
+            rimGrad.addColorStop(0.36, '#94a3b8');
+            rimGrad.addColorStop(0.72, '#334155');
+            rimGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = rimGrad;
             ctx.beginPath();
             ctx.arc(0, 0, r, 0, TAU);
-            ctx.clip();
-
-            const blades = 6;
-            const bladeAngle = TAU / blades;
-            for (let i = 0; i < blades; i++) {
-                const a0 = bladeAngle * i;
-                const a1 = a0 + bladeAngle * 0.5;
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.arc(0, 0, r, a0, a1);
-                ctx.closePath();
-                ctx.fillStyle = i % 2 === 0 ? color : lightenColor(color, 55);
-                ctx.globalAlpha = alpha;
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.arc(0, 0, r, a1, a0 + bladeAngle);
-                ctx.closePath();
-                ctx.fillStyle = darkenColor(color, 40);
-                ctx.fill();
-            }
-
-            ctx.beginPath();
-            ctx.arc(0, 0, r * 0.38, 0, TAU);
-            ctx.fillStyle = 'rgba(0,0,0,0.65)';
             ctx.fill();
 
+            ctx.strokeStyle = 'rgba(255,255,255,0.38)';
+            ctx.lineWidth = Math.max(1, r * 0.035);
             ctx.beginPath();
-            ctx.arc(0, 0, r - 2, 0, TAU);
-            ctx.strokeStyle = `rgba(255,255,255,0.18)`;
-            ctx.lineWidth = 2.5;
+            ctx.arc(0, 0, r * 0.92, 0, TAU);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.78, 0, TAU);
             ctx.stroke();
 
-            const speedRatio = clamp(omega / 35, 0, 1);
+            ctx.save();
+            ctx.strokeStyle = 'rgba(8, 13, 24, 0.62)';
+            ctx.lineWidth = Math.max(0.7, r * 0.018);
+            for (let i = 0; i < 18; i++) {
+                const a = (TAU / 18) * i;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(a) * r * 0.82, Math.sin(a) * r * 0.82);
+                ctx.lineTo(Math.cos(a) * r * 0.96, Math.sin(a) * r * 0.96);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            const drawBlade = (bladeIndex, bladeCount) => {
+                const bladeGrad = ctx.createLinearGradient(0, -r * 1.15, 0, -r * 0.1);
+                bladeGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
+                bladeGrad.addColorStop(0.34, accent);
+                bladeGrad.addColorStop(0.72, color);
+                bladeGrad.addColorStop(1, darkenColor(color, 58));
+                ctx.fillStyle = bladeGrad;
+                ctx.strokeStyle = 'rgba(8,13,24,0.86)';
+                ctx.lineWidth = Math.max(0.8, r * 0.035);
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                if (variant === 0) {
+                    ctx.moveTo(0, -r * 1.12);
+                    ctx.lineTo(r * 0.5, -r * 0.82);
+                    ctx.lineTo(r * 0.58, -r * 0.42);
+                    ctx.lineTo(r * 0.2, -r * 0.2);
+                    ctx.lineTo(r * 0.04, -r * 0.48);
+                } else if (variant === 1) {
+                    ctx.moveTo(0, -r * 1.12);
+                    ctx.bezierCurveTo(r * 0.36, -r * 1.02, r * 0.48, -r * 0.62, r * 0.2, -r * 0.45);
+                    ctx.bezierCurveTo(r * 0.02, -r * 0.34, -r * 0.08, -r * 0.48, -r * 0.04, -r * 0.72);
+                } else if (variant === 2) {
+                    ctx.moveTo(-r * 0.08, -r * 1.04);
+                    ctx.lineTo(r * 0.45, -r * 0.92);
+                    ctx.lineTo(r * 0.5, -r * 0.52);
+                    ctx.lineTo(r * 0.16, -r * 0.26);
+                    ctx.lineTo(-r * 0.18, -r * 0.5);
+                } else {
+                    ctx.moveTo(0, -r * 1.08);
+                    ctx.quadraticCurveTo(r * 0.42, -r * 0.88, r * 0.38, -r * 0.5);
+                    ctx.quadraticCurveTo(r * 0.12, -r * 0.24, -r * 0.1, -r * 0.44);
+                    ctx.quadraticCurveTo(r * 0.02, -r * 0.68, 0, -r * 1.08);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = Math.max(0.6, r * 0.018);
+                ctx.beginPath();
+                ctx.moveTo(r * 0.04, -r * 0.95);
+                ctx.quadraticCurveTo(r * 0.18, -r * 0.72, r * 0.16, -r * 0.44);
+                ctx.stroke();
+            };
+
+            const bladeCount = variant === 0 ? 3 : variant === 1 ? 6 : variant === 2 ? 4 : 5;
+            for (let i = 0; i < bladeCount; i++) {
+                ctx.save();
+                ctx.rotate((TAU / bladeCount) * i);
+                drawBlade(i, bladeCount);
+                ctx.restore();
+            }
+
+            const layerGrad = ctx.createRadialGradient(-r * 0.18, -r * 0.2, 0, 0, 0, r * 0.78);
+            layerGrad.addColorStop(0, colorAlpha(accent, 0.85));
+            layerGrad.addColorStop(0.58, colorAlpha(color, 0.66));
+            layerGrad.addColorStop(1, colorAlpha(darkenColor(color, 35), 0.53));
+            ctx.fillStyle = layerGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.76, 0, TAU);
+            ctx.fill();
+
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            ctx.strokeStyle = 'rgba(255,255,255,0.44)';
+            ctx.lineWidth = Math.max(0.7, r * 0.02);
+            for (let i = 0; i < 14; i++) {
+                const a = (TAU / 14) * i;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(a) * r * 0.5, Math.sin(a) * r * 0.5);
+                ctx.lineTo(Math.cos(a) * r * 0.72, Math.sin(a) * r * 0.72);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            const discGrad = ctx.createRadialGradient(-r * 0.14, -r * 0.18, 0, 0, 0, r * 0.48);
+            discGrad.addColorStop(0, '#f8fafc');
+            discGrad.addColorStop(0.48, '#64748b');
+            discGrad.addColorStop(1, '#111827');
+            ctx.fillStyle = discGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.48, 0, TAU);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.72)';
+            ctx.lineWidth = Math.max(1, r * 0.04);
+            ctx.stroke();
+
+            ctx.save();
+            ctx.rotate(-angle * direction * 0.6);
+            const coreGrad = ctx.createRadialGradient(-r * 0.08, -r * 0.1, 0, 0, 0, r * 0.27);
+            coreGrad.addColorStop(0, '#ffffff');
+            coreGrad.addColorStop(0.52, winner ? '#fde68a' : '#dbeafe');
+            coreGrad.addColorStop(1, '#475569');
+            ctx.fillStyle = coreGrad;
+            ctx.strokeStyle = 'rgba(8,13,24,0.85)';
+            ctx.lineWidth = Math.max(0.8, r * 0.035);
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const a = -Math.PI / 2 + (TAU / 6) * i;
+                const px = Math.cos(a) * r * 0.29;
+                const py = Math.sin(a) * r * 0.29;
+                i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
             if (speedRatio > 0.3) {
                 ctx.globalAlpha = alpha * speedRatio * 0.18;
                 ctx.strokeStyle = '#fff';
@@ -6958,8 +7623,11 @@ const initLottery = () => {
                 ctx.fillStyle = '#fff';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                const fontSize = Math.max(8, Math.min(13, r * 0.42));
-                ctx.font = `700 ${fontSize}px Inter,system-ui,sans-serif`;
+                const fontSize = fittedCanvasFontSize(ctx, t.label, r * 1.05, Math.max(8, Math.min(13, r * 0.42)), 7, 'Inter,system-ui,sans-serif', 900);
+                ctx.font = `900 ${fontSize}px Inter,system-ui,sans-serif`;
+                ctx.lineWidth = Math.max(2, fontSize * 0.24);
+                ctx.strokeStyle = 'rgba(2,6,23,0.86)';
+                ctx.strokeText(t.label, 0, 0);
                 ctx.fillText(t.label, 0, 0);
             }
 
@@ -7009,13 +7677,28 @@ const initLottery = () => {
 
         function drawParticlesRender() {
             const { ctx } = btState;
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
             btState.particles.forEach(p => {
                 ctx.globalAlpha = clamp(p.life, 0, 1);
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = Math.max(1, p.r * 0.55);
+                ctx.lineCap = 'round';
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, TAU);
-                ctx.fillStyle = p.color;
+                ctx.moveTo(p.x - p.vx * 0.028, p.y - p.vy * 0.028);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+
+                const spark = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2.4);
+                spark.addColorStop(0, 'rgba(255,255,255,0.95)');
+                spark.addColorStop(0.45, p.color);
+                spark.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r * 2.4, 0, TAU);
+                ctx.fillStyle = spark;
                 ctx.fill();
             });
+            ctx.restore();
             ctx.globalAlpha = 1;
         }
 

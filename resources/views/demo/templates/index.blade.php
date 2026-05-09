@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>今天抽什麼區｜線上抽籤、午餐吃什麼、抽獎範本免費套用</title>
-    <meta name="description" content="今天抽什麼區提供午餐吃什麼、飲料喝什麼、聚餐去哪裡、尾牙抽獎等線上抽籤與抽獎範本，免費套用後可直接開始抽。">
+    <title>大家都抽什麼｜線上抽籤、午餐吃什麼、抽獎範本免費套用</title>
+    <meta name="description" content="大家都抽什麼提供午餐吃什麼、飲料喝什麼、聚餐去哪裡、尾牙抽獎等線上抽籤與抽獎範本，免費套用後可直接開始抽。">
     <link rel="canonical" href="{{ route('demo.lottery.templates.index') }}">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="今天抽什麼區｜線上抽籤、午餐吃什麼、抽獎範本免費套用">
-    <meta property="og:description" content="免費套用大家分享的今天抽什麼卡片，用線上抽籤快速決定午餐、飲料、聚餐與活動抽獎。">
+    <meta property="og:title" content="大家都抽什麼｜線上抽籤、午餐吃什麼、抽獎範本免費套用">
+    <meta property="og:description" content="免費套用大家分享的大家都抽什麼卡片，用線上抽籤快速決定午餐、飲料、聚餐與活動抽獎。">
     <meta property="og:url" content="{{ route('demo.lottery.templates.index') }}">
     <meta property="og:image" content="{{ url('/images/og-demo.svg') }}">
     <meta property="og:locale" content="zh_TW">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="今天抽什麼區｜線上抽籤、午餐吃什麼、抽獎範本免費套用">
-    <meta name="twitter:description" content="免費套用大家分享的今天抽什麼卡片，用線上抽籤快速決定午餐、飲料、聚餐與活動抽獎。">
+    <meta name="twitter:title" content="大家都抽什麼｜線上抽籤、午餐吃什麼、抽獎範本免費套用">
+    <meta name="twitter:description" content="免費套用大家分享的大家都抽什麼卡片，用線上抽籤快速決定午餐、飲料、聚餐與活動抽獎。">
     <meta name="twitter:image" content="{{ url('/images/og-demo.svg') }}">
     <style>
         body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; background: #08080d; color: #f8fafc; }
@@ -46,12 +46,12 @@
 <body>
     <main class="wrap">
         <section class="hero">
-            <div class="eyebrow">今天抽什麼區</div>
+            <div class="eyebrow">大家都抽什麼</div>
             <h1>線上抽籤，幫你決定抽什麼</h1>
-            <p class="lead">午餐吃什麼、飲料喝什麼、聚餐去哪裡，或公司活動要抽什麼，都可以套用大家分享的今天抽什麼卡片，直接用抽獎動畫決定。</p>
+            <p class="lead">午餐吃什麼、飲料喝什麼、聚餐去哪裡，或公司活動要抽什麼，都可以套用大家分享的大家都抽什麼卡片，直接用抽獎動畫決定。</p>
         </section>
 
-        <nav class="nav" aria-label="今天抽什麼分類">
+        <nav class="nav" aria-label="大家都抽什麼分類">
             <a href="{{ route('demo.lottery.templates.index') }}" class="{{ $currentCategory ? '' : 'active' }}">全部</a>
             @foreach ($categories as $key => $label)
                 <a href="{{ route('demo.lottery.templates.index', ['category' => $key]) }}" class="{{ $currentCategory === $key ? 'active' : '' }}">{{ $label }}</a>
@@ -59,7 +59,7 @@
         </nav>
 
         @if ($templates->isEmpty())
-            <div class="empty">目前還沒有公開卡片。到任一 Demo 設定抽獎後，可以發佈到今天抽什麼區。</div>
+            <div class="empty">目前還沒有公開卡片。到任一 Demo 設定抽獎後，可以發佈到大家都抽什麼。</div>
         @else
             <div class="grid">
                 @foreach ($templates as $template)

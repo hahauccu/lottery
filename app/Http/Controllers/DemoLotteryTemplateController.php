@@ -85,7 +85,7 @@ class DemoLotteryTemplateController extends Controller
         ]);
 
         return response()->json([
-            'message' => '已發佈到今天抽什麼區',
+            'message' => '已發佈到大家都抽什麼',
             'url' => route('demo.lottery.templates.show', $template),
             'templatesUrl' => route('demo.lottery.templates.index'),
             'template' => [
@@ -125,6 +125,7 @@ class DemoLotteryTemplateController extends Controller
             'is_custom' => true,
             'template_token' => $template->token,
             'template_title' => $template->title,
+            'template_source' => 'applied',
         ]]);
 
         $template->increment('uses_count');

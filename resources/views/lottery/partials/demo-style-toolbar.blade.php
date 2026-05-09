@@ -1,4 +1,5 @@
 {{-- Demo 風格頁工具列 --}}
+<style>[x-cloak] { display: none !important; }</style>
 <div x-data="demoStyleToolbar" class="fixed inset-0 z-50 pointer-events-none" style="font-family: system-ui, -apple-system, sans-serif;">
 
     {{-- ===== A) 選擇 UI overlay ===== --}}
@@ -18,7 +19,7 @@
                 </a>
                 <a href="{{ route('demo.lottery.templates.index') }}"
                     class="ml-3 inline-block mb-4 text-xs text-white/40 hover:text-amber-400 transition">
-                    逛今天抽什麼區
+                    逛大家都抽什麼
                 </a>
                 <h2 class="text-3xl font-bold text-white tracking-wide">{{ $demoStyleLabel }}</h2>
                 <p class="mt-2 text-sm text-white/50">選擇一種方式開始體驗抽獎</p>
@@ -103,7 +104,7 @@
                         <label class="flex cursor-pointer items-center gap-3 text-sm font-medium text-white/75">
                             <input type="checkbox" x-model="publishOnStart"
                                 class="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-500 focus:ring-amber-500">
-                            <span>發佈到今天抽什麼區</span>
+                            <span>發佈到大家都抽什麼</span>
                         </label>
                         <div x-show="publishOnStart" x-transition class="mt-3">
                             <label class="mb-1.5 block text-sm font-medium text-white/70">卡片標題</label>
@@ -168,7 +169,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7" />
                     </svg>
-                    逛今天抽什麼區
+                    逛大家都抽什麼
                 </a>
 
                 <div class="my-2 border-t border-white/10"></div>
@@ -178,10 +179,10 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
-                    發佈到今天抽什麼區
+                    發佈到大家都抽什麼
                 </button>
 
-                <button x-show="template"
+                <button x-show="canReportTemplate()"
                     @@click="openReportModal()"
                     class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-emerald-200 hover:bg-emerald-500/10 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -205,13 +206,13 @@
         </div>
     </div>
 
-    {{-- ===== C) 發佈今天抽什麼卡片 ===== --}}
+    {{-- ===== C) 發佈大家都抽什麼卡片 ===== --}}
     <div x-show="showPublishForm" x-transition.opacity
         class="pointer-events-auto fixed inset-0 z-70 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
         <div @@click.outside="showPublishForm = false" class="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl">
             <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
-                    <h3 class="text-xl font-bold text-white">發佈到今天抽什麼區</h3>
+                    <h3 class="text-xl font-bold text-white">發佈到大家都抽什麼</h3>
                     <p class="mt-1 text-sm leading-relaxed text-white/45">把目前的選項與抽獎設定變成公開卡片，其他人可以套用後自己抽。</p>
                 </div>
                 <button @@click="showPublishForm = false" class="text-2xl leading-none text-white/45 hover:text-white">×</button>
@@ -260,13 +261,14 @@
     </div>
 
     {{-- ===== D) 回報抽獎成果 ===== --}}
-    <div x-show="showReportForm" x-transition.opacity
+    <template x-if="showReportForm">
+    <div x-cloak x-transition.opacity
         class="pointer-events-auto fixed inset-0 z-70 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
         <div @@click.outside="showReportForm = false" class="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl">
             <div class="mb-5 flex items-start justify-between gap-4">
                 <div>
                     <h3 class="text-xl font-bold text-white">回報抽到了什麼</h3>
-                    <p class="mt-1 text-sm leading-relaxed text-white/45">這筆成果會顯示在原本的今天抽什麼卡片下方。</p>
+                    <p class="mt-1 text-sm leading-relaxed text-white/45">這筆成果會顯示在原本的大家都抽什麼卡片下方。</p>
                 </div>
                 <button @@click="showReportForm = false" class="text-2xl leading-none text-white/45 hover:text-white">×</button>
             </div>
@@ -294,6 +296,7 @@
             </div>
         </div>
     </div>
+    </template>
 </div>
 
 <script>
@@ -331,6 +334,7 @@
             async startDefault() {
                 if (this.loading) return;
                 this.loading = true;
+                this.showReportForm = false;
                 try {
                     const res = await fetch(`/demo/lottery/${this.slug}/reset`, {
                         method: 'POST',
@@ -338,6 +342,7 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': this._csrfToken(),
                         },
+                        body: JSON.stringify({ clear_template: true }),
                     });
                     if (!res.ok) return;
                     const payload = await res.json();
@@ -362,6 +367,7 @@
 
                 this.loading = true;
                 this.publishOnStartMessage = '';
+                this.showReportForm = false;
                 try {
                     const res = await fetch(`/demo/lottery/${this.slug}/configure`, {
                         method: 'POST',
@@ -387,13 +393,13 @@
                         this.publishTitle = this.publishOnStartTitle;
                         this.publishCategory = 'other';
                         this.publishDescription = '';
-                        this.publishOnStartMessage = data.message || '已發佈到今天抽什麼區';
+                        this.publishOnStartMessage = data.message || '已發佈到大家都抽什麼';
                         this.publishMessage = this.publishOnStartMessage;
                         this.publishedUrl = data.url;
                         this.showPublishForm = true;
                     }
 
-                    this.template = payload.demoTemplate ?? this.template;
+                    this.template = payload.demoTemplate ?? null;
                     this.setupVisible = false;
                     this.showCustomForm = false;
                     if (window.__lotteryApplyPayload) {
@@ -410,6 +416,7 @@
             async resetDemo() {
                 if (this.loading) return;
                 this.loading = true;
+                this.showReportForm = false;
                 try {
                     const res = await fetch(`/demo/lottery/${this.slug}/reset`, {
                         method: 'POST',
@@ -433,7 +440,7 @@
             },
 
             openPublishModal() {
-                this.publishTitle = this.publishTitle || `${@js($demoStyleLabel)} 今天抽什麼`;
+                this.publishTitle = this.publishTitle || `${@js($demoStyleLabel)} 大家都抽什麼`;
                 this.publishMessage = '';
                 this.publishedUrl = '';
                 this.showPublishForm = true;
@@ -488,7 +495,6 @@
                     throw new Error(data.message || '發佈失敗，請稍後再試');
                 }
                 this.publishedUrl = data.url;
-                this.template = data.template ?? this.template;
 
                 return data;
             },
@@ -503,6 +509,7 @@
             },
 
             openReportModal() {
+                if (!this.canReportTemplate()) return;
                 const state = window.__lotteryGetState?.();
                 const winners = state?.winners ?? [];
                 this.reportResult = winners.map((winner) => winner.employee_name).filter(Boolean).slice(-5).join('、');
@@ -511,8 +518,12 @@
                 this.gearOpen = false;
             },
 
+            canReportTemplate() {
+                return Boolean(this.template?.reportUrl && this.template?.source === 'applied');
+            },
+
             async submitReport() {
-                if (this.loading || !this.template?.reportUrl) return;
+                if (this.loading || !this.canReportTemplate()) return;
                 if (!this.reportResult.trim()) {
                     this.reportMessage = '請填寫抽到了什麼';
                     return;
