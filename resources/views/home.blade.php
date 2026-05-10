@@ -239,6 +239,23 @@
             transform: translateY(0);
         }
 
+        /* Hero 首屏：用 CSS 自動進場，不等 JS。避免 LCP 被 opacity:0 卡住。 */
+        .hero [data-reveal] {
+            opacity: 1;
+            transform: none;
+            animation: heroFadeIn 0.6s cubic-bezier(.16,1,.3,1) both;
+        }
+        .hero [data-reveal][data-reveal-delay="120"] { animation-delay: .12s; }
+        .hero [data-reveal][data-reveal-delay="240"] { animation-delay: .24s; }
+        .hero [data-reveal][data-reveal-delay="320"] { animation-delay: .32s; }
+        @keyframes heroFadeIn {
+            from { opacity: .35; transform: translateY(20px); }
+            to   { opacity: 1; transform: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .hero [data-reveal] { animation: none; }
+        }
+
         /* ── Hero ── */
         .hero {
             position: relative;
