@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class ContactPage extends Page
@@ -73,12 +74,28 @@ class ContactPage extends Page
     {
         $data = $this->form->getState();
 
-        Mail::to('dindin1688888888@gmail.com')->send(new ContactFormMail(
-            name: $data['name'],
-            email: $data['email'],
-            subject: $data['subject'],
-            messageContent: $data['message'],
-        ));
+        try {
+            Mail::to('dindin1688888888@gmail.com')->send(new ContactFormMail(
+                name: $data['name'],
+                email: $data['email'],
+                topic: $data['subject'],
+                messageContent: $data['message'],
+            ));
+        } catch (\Throwable $e) {
+            Log::error('ContactPage submit failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            Notification::make()
+                ->danger()
+                ->title('訊息送出失敗')
+                ->body('系統暫時無法寄送 Email，請稍後再試或直接寫信至 dindin1688888888@gmail.com。')
+                ->persistent()
+                ->send();
+
+            return;
+        }
 
         Notification::make()
             ->success()

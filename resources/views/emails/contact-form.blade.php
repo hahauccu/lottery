@@ -4,7 +4,7 @@
     <meta charset="utf-8">
 </head>
 <body style="font-family: sans-serif; line-height: 1.6; color: #333;">
-    <h2>聯絡我們 - {{ $subject }}</h2>
+    <h2>聯絡我們 - {{ $topic }}</h2>
 
     <table style="border-collapse: collapse; margin: 16px 0;">
         <tr>
@@ -17,7 +17,7 @@
         </tr>
         <tr>
             <td style="padding: 6px 12px; font-weight: bold;">主題</td>
-            <td style="padding: 6px 12px;">{{ $subject }}</td>
+            <td style="padding: 6px 12px;">{{ $topic }}</td>
         </tr>
     </table>
 
