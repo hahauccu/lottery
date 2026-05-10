@@ -188,10 +188,11 @@
     <link rel="apple-touch-icon" href="{{ url('/images/og-home.svg') }}">
     <meta name="theme-color" content="#0a0a0f">
 
-    {{-- Fonts --}}
+    {{-- Fonts: 非阻塞載入，避免行動裝置 render-blocking 拖慢 LCP --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap"></noscript>
 
     <script id="animation-styles-data" type="application/json">{!! json_encode($animationStyles, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
 
