@@ -107,19 +107,6 @@ Alpine.data('animationPreview', () => ({
     },
 }));
 
-/* ── FAQ Accordion ── */
-Alpine.data('faqAccordion', () => ({
-    openIndex: null,
-
-    toggle(i) {
-        this.openIndex = this.openIndex === i ? null : i;
-    },
-
-    isOpen(i) {
-        return this.openIndex === i;
-    },
-}));
-
 /* ── Smooth scroll for anchor links ── */
 function initSmoothScroll() {
     document.querySelectorAll('a[href^="#"]').forEach((a) => {

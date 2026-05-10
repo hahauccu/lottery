@@ -559,6 +559,9 @@
                         <p>{{ $faq['a'] }}</p>
                     </details>
                 @endforeach
+                <p style="margin-top: 1rem;">
+                    系統流程、公平性與技術相關問題 → <a href="{{ route('faq') }}">完整 20 題 FAQ</a>
+                </p>
             @endif
 
             @if (!empty($demoRelatedStyles ?? []))

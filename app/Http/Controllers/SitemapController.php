@@ -29,6 +29,12 @@ class SitemapController extends Controller
                 'priority' => '0.8',
             ],
             [
+                'loc' => url('/faq'),
+                'lastmod' => $lastmod,
+                'changefreq' => 'monthly',
+                'priority' => '0.8',
+            ],
+            [
                 'loc' => url('/demo/lottery/templates'),
                 'lastmod' => $lastmod,
                 'changefreq' => 'weekly',

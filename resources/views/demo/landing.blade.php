@@ -535,12 +535,18 @@
                     </details>
                 @endforeach
             </div>
+            <p style="margin-top: 1.25rem; text-align: center; font-size: 0.92rem;">
+                關於系統流程、公平性、彈幕、QRCode 領獎更多問題 →
+                <a href="{{ route('faq') }}" style="color: var(--gold-light); font-weight: 600;">完整 20 題 FAQ</a>
+            </p>
         </section>
 
         <footer class="landing-footer anim-fade-up" style="animation-delay: 1.2s;">
             <a href="{{ url('/') }}">← 返回首頁</a>
             <span style="color:rgba(255,255,255,.18);margin:0 .75rem;">/</span>
             <a href="{{ route('demo.lottery.templates.index') }}">大家都抽什麼</a>
+            <span style="color:rgba(255,255,255,.18);margin:0 .75rem;">/</span>
+            <a href="{{ route('faq') }}">常見問題</a>
         </footer>
     </main>
 </body>

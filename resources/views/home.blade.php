@@ -39,23 +39,13 @@
             })
             ->all();
 
-        $faqs = [
-            ['q' => '這套系統適合尾牙抽獎嗎？', 'a' => '非常適合，專為企業尾牙抽獎與大型活動設計，具備即時切換與多種抽獎效果。'],
-            ['q' => '線上抽獎可以即時切換獎項嗎？', 'a' => '可以，後台操作後前台可快速同步更新，活動流程不中斷。'],
-            ['q' => '可以分析抽獎結果嗎？', 'a' => '可以，系統支援抽獎報表與中獎機率模擬分析，方便管理層參考。'],
-            ['q' => '是否支援互動功能？', 'a' => '支援，提供即時彈幕讓員工參與，提升活動氣氛。'],
-            ['q' => '中獎後怎麼快速領獎？', 'a' => '可使用 QRCode 掃描進行兌獎驗證，流程更快更準確。'],
-            ['q' => '系統費用如何計算？', 'a' => '提供彈性方案，實際價格會依企業規模與功能需求討論，歡迎直接聯繫我們取得報價。'],
-            ['q' => '可以支援多少人同時抽獎？', 'a' => '系統已驗證可穩定支援數百人規模的現場抽獎，若需更大規模可再評估擴充方式。'],
-            ['q' => '可以匯入哪些格式的員工名單？', 'a' => '支援 Excel（.xlsx）與 CSV 等常見格式，欄位包含姓名、Email、分組資訊等。'],
-            ['q' => '可以匯出中獎名單嗎？', 'a' => '後台提供一鍵下載中獎清單，便於回報或對帳。'],
-            ['q' => '可以重新抽獎或補抽嗎？', 'a' => '後台支援重抽、補抽與重置流程，主辦單位可依現場需求彈性處理。'],
-            ['q' => '可以同時進行多場活動嗎？', 'a' => '支援多組織與多活動並行，不同活動之間的抽獎與名單互相獨立。'],
-            ['q' => '可以客製品牌 Logo 與背景嗎？', 'a' => '後台可上傳活動背景與品牌資料，讓抽獎頁面呈現企業風格。'],
-            ['q' => '支援哪些瀏覽器與裝置？', 'a' => '建議使用最新版 Chrome、Edge、Safari，桌機、平板與手機皆可流暢運作。'],
-            ['q' => '彈幕功能如何啟用？', 'a' => '後台開啟彈幕開關後，員工可透過領獎頁送出訊息，即時顯示於主投影畫面。'],
-            ['q' => '中獎紀錄會保存與備份嗎？', 'a' => '所有抽獎結果皆儲存於資料庫，可由管理者匯出或定期備份保留。'],
-        ];
+        // 首頁精選 FAQ（取流程類 + 公平性類各 3 題，共 6 題作為前導），完整 20 題見 /faq
+        $flowItems = \App\Support\SiteFaqs::category('flow')['items'] ?? [];
+        $fairnessItems = \App\Support\SiteFaqs::category('fairness')['items'] ?? [];
+        $faqs = array_merge(
+            array_slice($flowItems, 0, 3),
+            array_slice($fairnessItems, 0, 3),
+        );
 
         $faqMainEntity = collect($faqs)->map(fn ($faq) => [
             '@type' => 'Question',
@@ -708,6 +698,9 @@
         .faq-item {
             border-bottom: 1px solid var(--c-border);
         }
+        .faq-item--details {
+            padding: 0;
+        }
         .faq-trigger {
             display: flex;
             align-items: center;
@@ -723,32 +716,48 @@
             text-align: left;
             font-family: inherit;
             transition: color 0.2s;
+            list-style: none;
+            gap: 1rem;
         }
+        .faq-trigger::-webkit-details-marker { display: none; }
         .faq-trigger:hover {
             color: var(--c-gold-light);
         }
-        .faq-trigger svg {
-            width: 20px;
-            height: 20px;
+        .faq-toggle-icon {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--c-gold-light);
+            line-height: 1;
             flex-shrink: 0;
-            transition: transform 0.3s ease;
-            color: var(--c-text-dim);
+            transition: transform 0.25s ease;
+        }
+        details[open] .faq-toggle-icon {
+            transform: rotate(45deg);
         }
         .faq-answer {
-            overflow: hidden;
-            max-height: 0;
-            transition: max-height 0.4s ease, padding 0.3s ease;
-            padding: 0 0;
-        }
-        .faq-answer.open {
-            max-height: 24rem;
             padding: 0 0 1.25rem;
         }
         .faq-answer p {
             color: var(--c-text-dim);
             font-size: 0.95rem;
-            line-height: 1.7;
+            line-height: 1.85;
             margin: 0;
+            white-space: pre-wrap;
+        }
+        .faq-more-link {
+            display: inline-block;
+            color: var(--c-gold-light);
+            text-decoration: none;
+            border: 1px solid var(--c-gold-dim);
+            padding: 0.65rem 1.5rem;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.92rem;
+            transition: all 0.2s ease;
+        }
+        .faq-more-link:hover {
+            background: rgba(245, 158, 11, 0.12);
+            border-color: var(--c-gold-light);
         }
 
         /* ── Final CTA ── */
@@ -1017,26 +1026,28 @@
          5. FAQ
     ════════════════════════════════════════════ --}}
     <section class="faq-section" id="faq">
-        <div class="faq-inner" x-data="faqAccordion">
+        <div class="faq-inner">
             <div class="section-header" data-reveal>
                 <div class="section-divider"></div>
                 <h2>常見問題</h2>
+                <p>挑了 6 題最常被問到的，完整 20 題請看 <a href="{{ route('faq') }}" style="color:var(--c-gold-light);text-decoration:underline;text-underline-offset:3px;">FAQ 頁面</a>。</p>
             </div>
 
             @foreach ($faqs as $i => $faq)
-                <div class="faq-item" data-reveal data-reveal-delay="{{ $i * 60 }}">
-                    <button class="faq-trigger" @click="toggle({{ $i }})">
+                <details class="faq-item faq-item--details" data-reveal data-reveal-delay="{{ $i * 60 }}">
+                    <summary class="faq-trigger">
                         <span>{{ $faq['q'] }}</span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                             :style="{ transform: isOpen({{ $i }}) ? 'rotate(180deg)' : 'rotate(0)' }">
-                            <polyline points="6 9 12 15 18 9"/>
-                        </svg>
-                    </button>
-                    <div class="faq-answer" :class="{ 'open': isOpen({{ $i }}) }">
+                        <span class="faq-toggle-icon" aria-hidden="true">+</span>
+                    </summary>
+                    <div class="faq-answer faq-answer--open">
                         <p>{{ $faq['a'] }}</p>
                     </div>
-                </div>
+                </details>
             @endforeach
+
+            <div class="faq-more" data-reveal style="text-align:center;margin-top:2rem;">
+                <a href="{{ route('faq') }}" class="faq-more-link">查看完整 20 題 FAQ →</a>
+            </div>
         </div>
     </section>
 
@@ -1061,7 +1072,12 @@
          7. FOOTER
     ════════════════════════════════════════════ --}}
     <footer class="site-footer">
-        <p>&copy; {{ date('Y') }} 抽獎系統 &mdash; <a href="/admin">登入後台</a></p>
+        <p>
+            &copy; {{ date('Y') }} 抽獎系統 &mdash;
+            <a href="{{ route('faq') }}">常見問題</a> ·
+            <a href="/demo/lottery">抽獎動畫 Demo</a> ·
+            <a href="/admin">登入後台</a>
+        </p>
     </footer>
 </body>
 </html>

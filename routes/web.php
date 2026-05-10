@@ -3,6 +3,7 @@
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\DemoLotteryController;
 use App\Http\Controllers\DemoLotteryTemplateController;
+use App\Http\Controllers\FaqController;
 use App\Http\Controllers\LotteryAnalysisController;
 use App\Http\Controllers\LotteryFrontendController;
 use App\Http\Controllers\LotteryWinnerExportController;
@@ -17,6 +18,8 @@ Route::get('/', function () {
 });
 
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
+Route::get('/faq', [FaqController::class, 'index'])->name('faq');
 
 Route::get('/testSound', function () {
     return view('testSound');
