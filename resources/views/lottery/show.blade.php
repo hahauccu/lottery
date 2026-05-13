@@ -57,6 +57,14 @@
                 'name' => '抽獎系統',
                 'url' => url('/'),
             ],
+            'offers' => [
+                '@type' => 'Offer',
+                'price' => '0',
+                'priceCurrency' => 'TWD',
+                'availability' => 'https://schema.org/InStock',
+                'url' => url('/admin'),
+                'priceValidUntil' => now()->addYear()->format('Y-m-d'),
+            ],
         ];
         $styleFaqs = $demoCurrentStyle['faqs'] ?? [];
         $styleFaqSchema = [
