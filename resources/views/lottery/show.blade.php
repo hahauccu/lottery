@@ -87,7 +87,7 @@
     @endif
     @endif
     @endif
-    <title>{{ $title ?? ($currentPrize?->name ?? $event->name) }} - 抽獎</title>
+    <title>{{ $title ?? (($currentPrize?->name ?? $event->name).' - 抽獎') }}</title>
 
     {{-- Favicon --}}
     <link rel="icon" type="image/svg+xml" href="{{ url('/images/og-home.svg') }}">
@@ -429,7 +429,7 @@
         <aside class="demo-seo-links">
             <div class="demo-seo-links__crumbs">
                 <a href="{{ url('/') }}">首頁</a>
-                <a href="{{ url('/demo/lottery') }}">抽獎動畫 Demo</a>
+                <a href="{{ url('/demo/lottery') }}">抽獎動畫</a>
                 <a href="{{ url('/demo/lottery/'.$demoCurrentStyle['slug']) }}">{{ $demoCurrentStyle['label'] }}</a>
             </div>
 
@@ -438,14 +438,14 @@
 
             <div class="demo-seo-links__nav">
                 <a href="{{ url('/') }}">回首頁看功能介紹</a>
-                <a href="{{ url('/demo/lottery') }}">查看全部 Demo 風格</a>
+                <a href="{{ url('/demo/lottery') }}">查看全部抽獎風格</a>
                 <a href="{{ route('demo.lottery.templates.index') }}">逛大家都抽什麼</a>
             </div>
 
             <p class="demo-seo-links__title">你也可以試試其他抽獎動畫</p>
             <div class="demo-seo-links__related">
                 @foreach ($demoRelatedStyles as $relatedStyle)
-                    <a href="{{ url('/demo/lottery/'.$relatedStyle['slug']) }}">試玩 {{ $relatedStyle['label'] }} Demo</a>
+                    <a href="{{ url('/demo/lottery/'.$relatedStyle['slug']) }}">試玩 {{ $relatedStyle['label'] }}抽獎</a>
                 @endforeach
             </div>
         </aside>
@@ -537,7 +537,7 @@
 
     @if (!empty($isDemo) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null))
         <article class="demo-aeo-article">
-            <div class="demo-aeo-eyebrow">抽獎動畫 Demo</div>
+            <div class="demo-aeo-eyebrow">抽獎動畫介紹</div>
             <h2>{{ $demoCurrentStyle['label'] }}：{{ $demoCurrentStyle['bestFitFor'] ?? '' }}</h2>
             <p>{{ $demoCurrentStyle['longDesc'] }}</p>
 

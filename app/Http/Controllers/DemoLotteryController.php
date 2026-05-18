@@ -57,6 +57,18 @@ class DemoLotteryController extends Controller
         return "demo_lottery_{$style}";
     }
 
+    private function styleLabel(string $style): string
+    {
+        $styleMeta = collect(AnimationStyles::all())->firstWhere('key', $style);
+
+        return $styleMeta['label'] ?? '線上';
+    }
+
+    private function prizeName(string $style): string
+    {
+        return $this->styleLabel($style).'抽獎';
+    }
+
     private function ensureSession(string $style): array
     {
         $key = $this->sessionKey($style);
@@ -79,6 +91,7 @@ class DemoLotteryController extends Controller
 
     private function buildPayload(array $data, string $slug): array
     {
+        $prizeName = $this->prizeName($data['animation_style']);
         $totalNames = $data['is_custom']
             ? count($data['winners']) + count($data['eligible_names'])
             : count(self::DEMO_NAMES);
@@ -96,7 +109,7 @@ class DemoLotteryController extends Controller
         return [
             'brandCode' => 'DEMO',
             'eventId' => 0,
-            'eventName' => '範例抽獎',
+            'eventName' => $prizeName,
             'event' => [
                 'is_lottery_open' => true,
                 'is_test_mode' => false,
@@ -106,7 +119,7 @@ class DemoLotteryController extends Controller
             ],
             'current_prize' => [
                 'id' => $data['prize_id'],
-                'name' => '範例抽獎',
+                'name' => $prizeName,
                 'draw_mode' => $data['draw_mode'] ?? 'all_at_once',
                 'animation_style' => $data['animation_style'],
                 'lotto_hold_seconds' => 10,
@@ -121,7 +134,7 @@ class DemoLotteryController extends Controller
             'all_prizes' => [
                 [
                     'id' => 1,
-                    'name' => '範例抽獎',
+                    'name' => $prizeName,
                     'winnersCount' => $totalNames,
                     'drawnCount' => count($data['winners']),
                 ],
@@ -157,8 +170,8 @@ class DemoLotteryController extends Controller
             return response()->json($payload);
         }
 
-        $event = (object) ['name' => '範例抽獎'];
-        $currentPrize = (object) ['name' => '範例抽獎'];
+        $event = (object) ['name' => $this->prizeName($style)];
+        $currentPrize = (object) ['name' => $this->prizeName($style)];
         $allStyles = array_column($styles, null, 'key');
         $currentStyle = $allStyles[$style] ?? [
             'key' => $style,
@@ -185,7 +198,7 @@ class DemoLotteryController extends Controller
             [
                 '@type' => 'ListItem',
                 'position' => 2,
-                'name' => '抽獎動畫 Demo',
+                'name' => '抽獎動畫',
                 'item' => url('/demo/lottery'),
             ],
             [
@@ -207,10 +220,10 @@ class DemoLotteryController extends Controller
             'demoSlug' => $slug,
             'demoStyleLabel' => $label,
             'demoSetupMode' => true,
-            'title' => "{$label} — 線上抽獎 Demo",
-            'seoTitle' => "{$label} — 線上抽獎 Demo｜抽獎動畫免費試玩",
-            'seoDescription' => "免費試玩「{$label}」抽獎與線上抽獎動畫，即時體驗企業尾牙、活動抽獎的趣味與互動效果。",
-            'seoKeywords' => "抽獎,線上抽獎,{$label},{$label} 抽獎動畫,線上抽獎 Demo,尾牙抽獎,活動抽獎",
+            'title' => "{$label}抽獎｜線上抽獎、尾牙抽獎、抽獎系統",
+            'seoTitle' => "{$label}抽獎｜線上抽獎、尾牙抽獎、抽獎系統",
+            'seoDescription' => "免費體驗「{$label}抽獎」動畫，適合線上抽獎、企業尾牙抽獎、春酒活動與抽獎系統展示情境。",
+            'seoKeywords' => "抽獎,線上抽獎,{$label}抽獎,{$label}抽獎動畫,尾牙抽獎,抽獎系統,活動抽獎",
             'seoCanonical' => url("/demo/lottery/{$slug}"),
             'seoImage' => $seoImage,
             'demoCurrentStyle' => $currentStyle,
@@ -312,7 +325,7 @@ class DemoLotteryController extends Controller
 
         return response()->json([
             'prize_id' => $data['prize_id'],
-            'prize_name' => '範例抽獎',
+            'prize_name' => $this->prizeName($style),
             'winners' => $newWinners,
         ]);
     }

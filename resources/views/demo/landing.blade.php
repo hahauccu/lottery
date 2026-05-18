@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>線上抽獎 Demo｜7 種抽獎動畫免費體驗</title>
+    <title>線上抽獎｜7 種尾牙抽獎與抽獎系統動畫免費體驗</title>
     <meta name="description" content="免費試玩 7 種抽獎與線上抽獎動畫風格：樂透氣流機、紅包雨、刮刮樂、寶箱、大寶箱、圓球賽跑、戰鬥陀螺。即時體驗企業尾牙抽獎的趣味互動效果。">
-    <meta name="keywords" content="抽獎,線上抽獎,抽獎動畫 Demo,線上抽獎 Demo,尾牙抽獎,樂透氣流機,紅包雨,刮刮樂,寶箱抽獎,戰鬥陀螺抽獎">
+    <meta name="keywords" content="抽獎,線上抽獎,抽獎動畫,尾牙抽獎,抽獎系統,樂透氣流機,紅包雨,刮刮樂,寶箱抽獎,戰鬥陀螺抽獎">
     <link rel="canonical" href="{{ url('/demo/lottery') }}">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="線上抽獎 Demo｜7 種抽獎動畫免費體驗">
+    <meta property="og:title" content="線上抽獎｜7 種尾牙抽獎與抽獎系統動畫免費體驗">
     <meta property="og:description" content="免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
     <meta property="og:url" content="{{ url('/demo/lottery') }}">
     <meta property="og:image" content="{{ url('/images/og-demo.svg') }}">
     <meta property="og:site_name" content="抽獎系統">
     <meta property="og:locale" content="zh_TW">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="線上抽獎 Demo｜7 種抽獎動畫免費體驗">
+    <meta name="twitter:title" content="線上抽獎｜7 種尾牙抽獎與抽獎系統動畫免費體驗">
     <meta name="twitter:description" content="免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
     <meta name="twitter:image" content="{{ url('/images/og-demo.svg') }}">
 
@@ -38,7 +38,7 @@
     {
         "@@context": "https://schema.org",
         "@@type": "CollectionPage",
-        "name": "線上抽獎 Demo｜7 種抽獎動畫免費體驗",
+        "name": "線上抽獎｜7 種尾牙抽獎與抽獎系統動畫免費體驗",
         "description": "免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。",
         "url": "{{ url('/demo/lottery') }}",
         "image": "{{ url('/images/og-demo.svg') }}",
@@ -55,16 +55,16 @@
             '@type' => 'BreadcrumbList',
             'itemListElement' => [
                 ['@type' => 'ListItem', 'position' => 1, 'name' => '首頁', 'item' => url('/')],
-                ['@type' => 'ListItem', 'position' => 2, 'name' => '抽獎動畫 Demo', 'item' => url('/demo/lottery')],
+                ['@type' => 'ListItem', 'position' => 2, 'name' => '抽獎動畫', 'item' => url('/demo/lottery')],
             ],
         ];
 
         $landingFaqs = [
             ['q' => '這 7 種抽獎動畫有什麼不同？', 'a' => '每種動畫在視覺、節奏與互動方式上各有重點，如樂透氣流機走經典搖獎感、紅包雨強調喜氣互動、戰鬥陀螺則偏重激烈對決的臨場感。'],
-            ['q' => '這些 Demo 可以在手機上執行嗎？', 'a' => '可以，所有 Demo 都針對桌機與手機調整過，在 390×844 手機直式畫面也能流暢運作。'],
-            ['q' => '可以自己輸入名單試玩嗎？', 'a' => '可以，Demo 頁面提供自訂名單、抽獎人數與抽獎模式，僅保存在你的瀏覽器 session 中，不會寫入實際資料庫。'],
+            ['q' => '這些抽獎動畫可以在手機上執行嗎？', 'a' => '可以，所有抽獎動畫都針對桌機與手機調整過，在 390×844 手機直式畫面也能流暢運作。'],
+            ['q' => '可以自己輸入名單試玩嗎？', 'a' => '可以，頁面提供自訂名單、抽獎人數與抽獎模式，僅保存在你的瀏覽器 session 中，不會寫入實際資料庫。'],
             ['q' => '正式活動要用哪一種動畫？', 'a' => '後台新增獎項時可為每個獎項獨立指定動畫風格，活動中也能依節奏切換不同獎項搭配不同動畫。'],
-            ['q' => 'Demo 有提供彈幕或領獎 QRCode 嗎？', 'a' => '彈幕與 QRCode 兌獎屬於正式活動功能，Demo 主要展示動畫視覺，可到首頁或後台申請試用實際完整功能。'],
+            ['q' => '抽獎動畫有提供彈幕或領獎 QRCode 嗎？', 'a' => '彈幕與 QRCode 兌獎屬於正式活動功能，這個頁面主要展示動畫視覺，可到首頁或後台申請試用實際完整功能。'],
         ];
 
         $landingFaqSchema = [
@@ -456,8 +456,8 @@
 
     <main class="landing-container">
         <header class="landing-header anim-fade-up" style="animation-delay: 0.1s;">
-            <div class="landing-badge">DEMO 體驗</div>
-            <h1 class="landing-title">線上抽獎 Demo</h1>
+            <div class="landing-badge">免費體驗</div>
+            <h1 class="landing-title">線上抽獎動畫</h1>
             <p class="landing-subtitle">選擇一種抽獎動畫風格，開始體驗互動抽獎與線上抽獎流程</p>
             <p style="margin-top:1.25rem;">
                 <a href="{{ route('demo.lottery.templates.index') }}" style="color:var(--gold-light);font-size:0.95rem;text-decoration:none;border-bottom:1px dashed rgba(245,166,35,.45);">逛大家都抽什麼：午餐、飲料、聚餐抽籤範本</a>

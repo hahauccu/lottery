@@ -10,10 +10,19 @@ class SitemapController extends Controller
 {
     public function __invoke(): Response
     {
-        $manifest = public_path('build/manifest.json');
-        $lastmod = file_exists($manifest)
-            ? Carbon::createFromTimestamp(filemtime($manifest))->toAtomString()
-            : Carbon::now()->toAtomString();
+        $lastmod = $this->latestLastmod([
+            public_path('build/manifest.json'),
+            app_path('Http/Controllers/DemoLotteryController.php'),
+            app_path('Http/Controllers/DemoLotteryTemplateController.php'),
+            app_path('Http/Controllers/FaqController.php'),
+            app_path('Support/AnimationStyles.php'),
+            resource_path('views/demo/landing.blade.php'),
+            resource_path('views/demo/templates/index.blade.php'),
+            resource_path('views/demo/templates/show.blade.php'),
+            resource_path('views/faq.blade.php'),
+            resource_path('views/home.blade.php'),
+            resource_path('views/lottery/show.blade.php'),
+        ]);
 
         $urls = [
             [
@@ -54,5 +63,15 @@ class SitemapController extends Controller
         return response()
             ->view('sitemap', ['urls' => $urls])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    private function latestLastmod(array $paths): string
+    {
+        $latestTimestamp = collect($paths)
+            ->filter(fn (string $path) => file_exists($path))
+            ->map(fn (string $path) => filemtime($path))
+            ->max();
+
+        return Carbon::createFromTimestamp($latestTimestamp ?: time())->toAtomString();
     }
 }
