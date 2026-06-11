@@ -862,7 +862,7 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     開始使用
                 </a>
-                <a href="/demo/lottery" class="btn btn-secondary">範例抽獎</a>
+                <a href="/demo/lottery" class="btn btn-secondary">試玩抽獎動畫</a>
             </div>
             <p data-reveal data-reveal-delay="320" style="text-align:center;margin-top:-1rem;">
                 <a href="/admin" style="color:var(--c-text-dim);font-size:0.88rem;text-decoration:underline;text-underline-offset:3px;">如何取得測試帳號？</a>
@@ -1012,6 +1012,10 @@
             </div>
 
             <div class="preview-desc" data-reveal data-reveal-delay="260" x-text="current.desc"></div>
+
+            <p data-reveal data-reveal-delay="300" style="text-align:center;margin-top:1.5rem;">
+                <a href="/demo/lottery" style="color:var(--c-gold-light);font-size:0.95rem;text-decoration:underline;text-underline-offset:3px;">查看全部 {{ count($animationStyles) }} 種抽獎動畫，免費試玩 →</a>
+            </p>
         </div>
     </section>
 
@@ -1081,7 +1085,7 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     開始使用
                 </a>
-                <a href="/demo/lottery" class="btn btn-secondary">範例抽獎</a>
+                <a href="/demo/lottery" class="btn btn-secondary">試玩抽獎動畫</a>
             </div>
         </div>
     </section>

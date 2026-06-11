@@ -319,7 +319,7 @@
             <h2>還有問題沒解答？</h2>
             <p>免費試玩 7 種抽獎動畫，或直接登入後台建立活動。</p>
             <div class="faq-cta-buttons">
-                <a href="{{ url('/demo/lottery') }}" class="faq-btn faq-btn-primary">免費試玩 Demo</a>
+                <a href="{{ url('/demo/lottery') }}" class="faq-btn faq-btn-primary">免費試玩抽獎動畫</a>
                 <a href="/admin" class="faq-btn faq-btn-secondary">登入後台</a>
             </div>
         </section>

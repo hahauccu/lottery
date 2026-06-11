@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>線上抽獎｜7 種尾牙抽獎與抽獎系統動畫免費體驗</title>
-    <meta name="description" content="免費試玩 7 種抽獎與線上抽獎動畫風格：樂透氣流機、紅包雨、刮刮樂、寶箱、大寶箱、圓球賽跑、戰鬥陀螺。即時體驗企業尾牙抽獎的趣味互動效果。">
-    <meta name="keywords" content="抽獎,線上抽獎,抽獎動畫,尾牙抽獎,抽獎系統,樂透氣流機,紅包雨,刮刮樂,寶箱抽獎,戰鬥陀螺抽獎">
+    <title>抽獎動畫｜7 種尾牙抽獎、線上抽獎動畫免費體驗</title>
+    <meta name="description" content="免費試玩 7 種抽獎動畫：樂透氣流機、紅包雨、刮刮樂、寶箱、大寶箱、圓球賽跑、戰鬥陀螺。不用下載模板或自己做動畫，線上即點即抽，適合尾牙抽獎與企業活動。">
+    <meta name="keywords" content="抽獎動畫,尾牙抽獎動畫,線上抽獎,抽獎,尾牙抽獎,抽獎系統,樂透氣流機,紅包雨,刮刮樂,寶箱抽獎,戰鬥陀螺抽獎">
     <link rel="canonical" href="{{ url('/demo/lottery') }}">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="線上抽獎｜7 種尾牙抽獎與抽獎系統動畫免費體驗">
-    <meta property="og:description" content="免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
+    <meta property="og:title" content="抽獎動畫｜7 種尾牙抽獎、線上抽獎動畫免費體驗">
+    <meta property="og:description" content="免費試玩 7 種抽獎動畫，不用下載模板或自己做動畫，線上即點即抽，適合尾牙抽獎與企業活動。">
     <meta property="og:url" content="{{ url('/demo/lottery') }}">
     <meta property="og:image" content="{{ url('/images/og-demo.svg') }}">
     <meta property="og:site_name" content="抽獎系統">
     <meta property="og:locale" content="zh_TW">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="線上抽獎｜7 種尾牙抽獎與抽獎系統動畫免費體驗">
-    <meta name="twitter:description" content="免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。">
+    <meta name="twitter:title" content="抽獎動畫｜7 種尾牙抽獎、線上抽獎動畫免費體驗">
+    <meta name="twitter:description" content="免費試玩 7 種抽獎動畫，不用下載模板或自己做動畫，線上即點即抽，適合尾牙抽獎與企業活動。">
     <meta name="twitter:image" content="{{ url('/images/og-demo.svg') }}">
 
     @php
@@ -38,8 +38,8 @@
     {
         "@@context": "https://schema.org",
         "@@type": "CollectionPage",
-        "name": "線上抽獎｜7 種尾牙抽獎與抽獎系統動畫免費體驗",
-        "description": "免費試玩 7 種抽獎與線上抽獎動畫風格，即時體驗企業尾牙抽獎的趣味互動效果。",
+        "name": "抽獎動畫｜7 種尾牙抽獎、線上抽獎動畫免費體驗",
+        "description": "免費試玩 7 種抽獎動畫，不用下載模板或自己做動畫，線上即點即抽，適合尾牙抽獎與企業活動。",
         "url": "{{ url('/demo/lottery') }}",
         "image": "{{ url('/images/og-demo.svg') }}",
         "mainEntity": {
@@ -523,6 +523,18 @@
                     </li>
                 @endforeach
             </ul>
+        </section>
+
+        <section class="landing-section anim-fade-up" style="animation-delay: 1.05s;">
+            <h2 class="landing-section__title">不用 PPT、AE 自己做抽獎動畫</h2>
+            <p class="landing-section__lead">
+                搜尋抽獎動畫，常找到的是要自己剪的 AE 影片模板、要自己拉的 PPT 刮刮樂教學，或要會寫程式才能用的元件。
+                這裡的 7 種抽獎動畫都已經做好：不用下載素材、不用改投影片、不用寫一行程式，打開瀏覽器貼上名單就能直接抽。
+            </p>
+            <p class="landing-section__lead">
+                每種尾牙抽獎動畫都支援一次全抽或逐一開獎，中獎名單即時同步到畫面上；正式活動時還能搭配後台獎項設定、QRCode 領獎與彈幕互動，
+                從春酒、尾牙到直播抽獎，一套線上抽獎動畫直接用到底。
+            </p>
         </section>
 
         <section class="landing-section anim-fade-up" style="animation-delay: 1.1s;">

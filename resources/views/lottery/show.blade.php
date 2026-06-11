@@ -438,7 +438,7 @@
 
             <div class="demo-seo-links__nav">
                 <a href="{{ url('/') }}">回首頁看功能介紹</a>
-                <a href="{{ url('/demo/lottery') }}">查看全部抽獎風格</a>
+                <a href="{{ url('/demo/lottery') }}">查看全部抽獎動畫</a>
                 <a href="{{ route('demo.lottery.templates.index') }}">逛大家都抽什麼</a>
             </div>
 
