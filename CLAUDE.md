@@ -59,6 +59,18 @@ Organization → LotteryEvent → Prize → PrizeWinner → Employee
 - Draw action: `POST /{brandCode}/draw`
 - Winners list: `/{brandCode}/winners`
 
+### Demo SEO 與互動頁邊界
+
+- `AnimationStyles::all()` 管理各風格的 `seoTitle`／`seoDescription`；七種風格維持原 slug，不因拆頁變更搜尋入口。
+- `/demo/lottery/{slug}` 使用 `lottery.intro`：可索引、self canonical、完整伺服器渲染內容；不可載入 `lottery.js` 或初始化抽獎 session。只有 payload／JSON 請求例外。
+- `/demo/lottery/{slug}/play` 使用 `lottery.show`：`noindex, follow`，不輸出 canonical 或 Product／FAQ JSON-LD，保留描述與 OG 分享資料。正式品牌抽獎畫面仍為 `noindex, nofollow`。
+- `/play` 不顯示舊版 SEO 導覽浮層或長文，避免手機動畫被覆蓋；切換與重新設定由 Demo 工具選單提供。
+- 「查看介紹」連向介紹頁；「立即試玩」與範本套用連向 `/play`；舊 embedded 重新導向須保留 `embedded=1`。
+- GET payload／JSON 回應使用 `X-Robots-Tag: noindex`；不在 robots.txt 封鎖試玩頁，以便爬蟲讀到 noindex。
+- 介紹頁 Product 的零元 Offer 僅對應可見的免費 Demo 說明，不虛構評價、庫存期限或正式方案價格；動畫示意圖位於 `public/images/previews/{key}.svg`。
+- sitemap 不列試玩／payload 網址；尚無逐頁內容日期來源，省略 `lastmod`，不可使用 build manifest 或部署檔案 mtime 代替。
+- 修改上述契約時，同步更新 README 及 `tests/Feature/DemoLotteryPagesTest.php`。
+
 ### Real-time Updates
 Events broadcast via Laravel Reverb:
 - `LotteryEventUpdated` - when admin changes event/prize settings

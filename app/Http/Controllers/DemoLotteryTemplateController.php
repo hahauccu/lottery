@@ -131,7 +131,7 @@ class DemoLotteryTemplateController extends Controller
         $template->increment('uses_count');
         $template->forceFill(['last_used_at' => now()])->save();
 
-        $redirectUrl = route('demo.lottery.style', ['slug' => $template->styleSlug()]);
+        $redirectUrl = route('demo.lottery.play', ['slug' => $template->styleSlug()]);
 
         if ($request->expectsJson()) {
             return response()->json(['redirectUrl' => $redirectUrl]);

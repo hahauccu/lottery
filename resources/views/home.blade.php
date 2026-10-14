@@ -194,7 +194,6 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap"></noscript>
 
-    <script id="animation-styles-data" type="application/json">{!! json_encode($animationStyles, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
 
     @vite(['resources/css/app.css', 'resources/js/home.js'])
 
@@ -551,6 +550,83 @@
             border: none;
             transition: opacity 0.35s ease;
         }
+        .preview-card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+        }
+        .preview-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            overflow: hidden;
+            border: 1px solid var(--c-border);
+            border-radius: 16px;
+            background: var(--c-bg-card);
+            text-decoration: none;
+            transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+        }
+        .preview-card:hover {
+            background: var(--c-bg-card-hover);
+            border-color: rgba(245, 158, 11, 0.35);
+            transform: translateY(-3px);
+        }
+        .preview-card-visual {
+            display: grid;
+            place-items: center;
+            min-height: 10rem;
+            padding: 1rem;
+            background: radial-gradient(circle at 50% 40%, rgba(245, 158, 11, 0.12), transparent 65%);
+        }
+        .preview-card-visual img {
+            display: block;
+            width: 100%;
+            height: 9rem;
+            object-fit: contain;
+        }
+        .preview-card-visual-fallback {
+            color: var(--c-gold-light);
+            font-size: 1.15rem;
+            font-weight: 800;
+            text-align: center;
+        }
+        .preview-card-content {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            padding: 1.15rem 1.25rem 1.25rem;
+        }
+        .preview-card-content h3 {
+            margin: 0 0 0.5rem;
+            font-size: 1.05rem;
+        }
+        .preview-card-content p {
+            flex: 1;
+            margin: 0;
+            color: var(--c-text-dim);
+            font-size: 0.9rem;
+            line-height: 1.65;
+        }
+        .preview-card-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .preview-card-actions a {
+            text-decoration: none;
+        }
+        .preview-card-actions span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            padding: 0.45rem 0.75rem;
+            color: var(--c-gold-light);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
         .preview-desc {
             text-align: center;
             color: var(--c-text-dim);
@@ -834,6 +910,7 @@
             .preview-window {
                 aspect-ratio: 4 / 3;
             }
+            .preview-card-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -981,37 +1058,35 @@
          3. ANIMATION PREVIEW
     ════════════════════════════════════════════ --}}
     <section class="preview-section" id="preview">
-        <div class="preview-inner" x-data="animationPreview"
-             @mouseenter="paused = true" @mouseleave="paused = false"
-             @touchstart.passive="handleTouchStart($event)"
-             @touchend="handleTouchEnd($event)">
+        <div class="preview-inner">
 
             <div class="section-header" data-reveal>
                 <div class="section-divider"></div>
-                <h2><span class="accent">抽獎動畫</span>即時預覽</h2>
-                <p>{{ count($animationStyles) }} 種風格任你切換，點擊預覽實際效果</p>
+                <h2><span class="accent">抽獎動畫</span>風格介紹</h2>
+                <p>{{ count($animationStyles) }} 種風格，各自對應不同活動情境；先看介紹，再進入參數試玩。</p>
             </div>
 
-            <div class="preview-tabs" data-reveal data-reveal-delay="100">
-                <template x-for="(item, i) in items" :key="item.key">
-                    <a class="preview-tab"
-                       :href="'/demo/lottery/' + item.slug"
-                       :class="{ 'active': active === i }"
-                       @click.prevent="switchTo(i)"
-                       x-text="item.label"></a>
-                </template>
+            <div class="preview-card-grid" data-reveal data-reveal-delay="120">
+                @foreach ($animationStyles as $style)
+                    <article class="preview-card">
+                        <a href="{{ route('demo.lottery.style', ['slug' => $style['slug']]) }}" class="preview-card-visual" aria-label="查看{{ $style['label'] }}介紹">
+                            @if (file_exists(public_path('images/previews/'.$style['key'].'.svg')))
+                                <img src="{{ url('/images/previews/'.$style['key'].'.svg') }}" alt="{{ $style['label'] }}抽獎動畫示意圖" width="800" height="450" loading="lazy">
+                            @else
+                                <span class="preview-card-visual-fallback">{{ $style['label'] }}<br>抽獎動畫</span>
+                            @endif
+                        </a>
+                        <div class="preview-card-content">
+                            <h3>{{ $style['label'] }}</h3>
+                            <p>{{ $style['desc'] }}</p>
+                            <div class="preview-card-actions">
+                                <a href="{{ route('demo.lottery.style', ['slug' => $style['slug']]) }}"><span>查看介紹</span></a>
+                                <a href="{{ route('demo.lottery.play', ['slug' => $style['slug']]) }}"><span>立即試玩</span></a>
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
             </div>
-
-            <div class="preview-window" data-reveal data-reveal-delay="180">
-                <template x-for="(item, i) in items" :key="item.key">
-                    <iframe :src="item.iframeSrc ?? ''"
-                            :aria-label="item.label + ' 動畫預覽'"
-                            :style="{ opacity: active === i ? 1 : 0, zIndex: active === i ? 1 : 0 }"
-                            frameborder="0" scrolling="no"></iframe>
-                </template>
-            </div>
-
-            <div class="preview-desc" data-reveal data-reveal-delay="260" x-text="current.desc"></div>
 
             <p data-reveal data-reveal-delay="300" style="text-align:center;margin-top:1.5rem;">
                 <a href="/demo/lottery" style="color:var(--c-gold-light);font-size:0.95rem;text-decoration:underline;text-underline-offset:3px;">查看全部 {{ count($animationStyles) }} 種抽獎動畫，免費試玩 →</a>

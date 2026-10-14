@@ -38,6 +38,7 @@ Route::get('/demo/lottery/templates', [DemoLotteryTemplateController::class, 'in
 Route::get('/demo/lottery/templates/{template}', [DemoLotteryTemplateController::class, 'show'])->name('demo.lottery.templates.show');
 Route::post('/demo/lottery/templates/{template}/use', [DemoLotteryTemplateController::class, 'apply'])->middleware('throttle:30,1')->name('demo.lottery.templates.apply');
 Route::post('/demo/lottery/templates/{template}/reports', [DemoLotteryTemplateController::class, 'report'])->middleware('throttle:10,1')->name('demo.lottery.templates.report');
+Route::get('/demo/lottery/{slug}/play', [DemoLotteryController::class, 'playStyle'])->name('demo.lottery.play');
 Route::get('/demo/lottery/{slug}', [DemoLotteryController::class, 'showStyle'])->name('demo.lottery.style');
 Route::post('/demo/lottery/{slug}/templates', [DemoLotteryTemplateController::class, 'store'])->middleware('throttle:10,1')->name('demo.lottery.templates.store');
 Route::post('/demo/lottery/{slug}/configure', [DemoLotteryController::class, 'configure'])->name('demo.lottery.configure');

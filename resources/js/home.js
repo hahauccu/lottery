@@ -1,24 +1,3 @@
-import Alpine from 'alpinejs';
-
-window.Alpine = Alpine;
-
-function readAnimationStyles() {
-    const el = document.getElementById('animation-styles-data');
-
-    if (!el) {
-        return [];
-    }
-
-    try {
-        return JSON.parse(el.textContent || '[]');
-    } catch (error) {
-        console.error('[home] failed to parse animation styles', error);
-        return [];
-    }
-}
-
-const animationStyles = readAnimationStyles();
-
 /* ── Scroll Reveal (IntersectionObserver) ── */
 function initScrollReveal() {
     const els = document.querySelectorAll('[data-reveal]');
@@ -40,73 +19,6 @@ function initScrollReveal() {
     els.forEach((el) => ob.observe(el));
 }
 
-/* ── Animation Preview Carousel ── */
-Alpine.data('animationPreview', () => ({
-    // 從後端注入的 PHP 資料讀取，每項加上 iframeSrc: null（懶載入）
-    items: animationStyles.map((s) => ({ ...s, iframeSrc: null })),
-    active: 0,
-    paused: false,
-    timer: null,
-    touchStartX: 0,
-
-    get current() {
-        return this.items[this.active];
-    },
-
-    loadIframe(i) {
-        if (!this.items[i].iframeSrc) {
-            this.items[i].iframeSrc = '/demo/lottery/' + this.items[i].slug + '?embedded=1';
-        }
-    },
-
-    switchTo(i) {
-        this.loadIframe(i);
-        this.active = i;
-        this.restartTimer();
-    },
-
-    next() {
-        const i = (this.active + 1) % this.items.length;
-        this.loadIframe(i);
-        this.active = i;
-    },
-
-    prev() {
-        const i = (this.active - 1 + this.items.length) % this.items.length;
-        this.loadIframe(i);
-        this.active = i;
-    },
-
-    restartTimer() {
-        clearInterval(this.timer);
-        this.timer = setInterval(() => {
-            if (!this.paused) this.next();
-        }, 6000);
-    },
-
-    handleTouchStart(e) {
-        this.touchStartX = e.touches[0].clientX;
-    },
-
-    handleTouchEnd(e) {
-        const diff = e.changedTouches[0].clientX - this.touchStartX;
-        if (Math.abs(diff) > 50) {
-            diff > 0 ? this.prev() : this.next();
-        }
-    },
-
-    init() {
-        if (this.items.length) {
-            this.loadIframe(this.active);
-        }
-        this.restartTimer();
-    },
-
-    destroy() {
-        clearInterval(this.timer);
-    },
-}));
-
 /* ── Smooth scroll for anchor links ── */
 function initSmoothScroll() {
     document.querySelectorAll('a[href^="#"]').forEach((a) => {
@@ -125,5 +37,3 @@ document.addEventListener('DOMContentLoaded', () => {
     initScrollReveal();
     initSmoothScroll();
 });
-
-Alpine.start();

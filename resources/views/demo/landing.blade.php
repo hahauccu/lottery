@@ -267,6 +267,11 @@
             color: rgba(255, 255, 255, 0.45);
         }
 
+        .style-card__heading { display: block; color: inherit; text-decoration: none; }
+        .style-card__actions { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: .65rem; margin-top: 1.25rem; }
+        .style-card__actions a { padding: .5rem .75rem; border: 1px solid rgba(245,166,35,.35); border-radius: .5rem; color: var(--gold-light); font-size: .85rem; text-decoration: none; }
+        .style-card a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 4px; }
+
         .style-card__arrow {
             position: absolute;
             top: 1.5rem;
@@ -469,18 +474,16 @@
                 $icons = ['🎰', '🧧', '🎫', '📦', '🎁', '🏁', '🌀'];
             @endphp
             @foreach ($styles as $i => $s)
-                <a href="{{ url('/demo/lottery/' . $s['slug']) }}"
-                   class="style-card anim-fade-up"
+                <article class="style-card anim-fade-up"
                    style="animation-delay: {{ 0.15 + $i * 0.07 }}s;">
-                    <div class="style-card__arrow">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M7 17L17 7M17 7H7M17 7v10"/>
-                        </svg>
-                    </div>
                     <div class="style-card__icon">{{ $icons[$i] }}</div>
-                    <div class="style-card__name">{{ $s['label'] }}</div>
+                    <h2 class="style-card__name"><a class="style-card__heading" href="{{ route('demo.lottery.style', ['slug' => $s['slug']]) }}">{{ $s['label'] }}抽獎</a></h2>
                     <div class="style-card__desc">{{ $s['desc'] }}</div>
-                </a>
+                    <div class="style-card__actions">
+                        <a href="{{ route('demo.lottery.style', ['slug' => $s['slug']]) }}" aria-label="查看{{ $s['label'] }}抽獎介紹">查看介紹</a>
+                        <a href="{{ route('demo.lottery.play', ['slug' => $s['slug']]) }}" aria-label="立即試玩{{ $s['label'] }}抽獎">立即試玩</a>
+                    </div>
+                </article>
             @endforeach
         </div>
 

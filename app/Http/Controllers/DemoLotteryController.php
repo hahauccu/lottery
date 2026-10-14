@@ -144,7 +144,7 @@ class DemoLotteryController extends Controller
             'readyUrl' => "/demo/lottery/{$slug}/ready",
             'drawingStateUrl' => "/demo/lottery/{$slug}/drawing-state",
             'switchAckUrl' => "/demo/lottery/{$slug}/switch-ack",
-            'winnersUrl' => "/demo/lottery/{$slug}",
+            'winnersUrl' => route('demo.lottery.play', ['slug' => $slug]),
             'bgUrl' => null,
             'danmakuEnabled' => false,
             'demoTemplate' => $template,
@@ -160,18 +160,52 @@ class DemoLotteryController extends Controller
 
     public function showStyle(Request $request, string $slug)
     {
-        $isEmbeddedPreview = $request->boolean('embedded');
+        $style = $this->resolveStyle($slug);
+        if ($request->has('payload') || $request->expectsJson()) {
+            return response()->json($this->buildPayload($this->ensureSession($style), $slug))
+                ->header('X-Robots-Tag', 'noindex');
+        }
+
+        if ($request->boolean('embedded')) {
+            return redirect()->route('demo.lottery.play', ['slug' => $slug, 'embedded' => 1]);
+        }
+
+        return view('lottery.intro', $this->demoPageData($style, $slug));
+    }
+
+    public function playStyle(Request $request, string $slug)
+    {
         $style = $this->resolveStyle($slug);
         $data = $this->ensureSession($style);
         $payload = $this->buildPayload($data, $slug);
-        $styles = AnimationStyles::all();
 
         if ($request->has('payload') || $request->expectsJson()) {
-            return response()->json($payload);
+            return response()->json($payload)->header('X-Robots-Tag', 'noindex');
         }
 
-        $event = (object) ['name' => $this->prizeName($style)];
-        $currentPrize = (object) ['name' => $this->prizeName($style)];
+        $page = $this->demoPageData($style, $slug);
+        $label = $page['demoStyleLabel'];
+
+        return view('lottery.show', [
+            'payload' => $payload,
+            'event' => (object) ['name' => $this->prizeName($style)],
+            'currentPrize' => (object) ['name' => $this->prizeName($style)],
+            'currentWinners' => collect(),
+            'bgUrl' => null,
+            'isDemo' => true,
+            'isDemoPlay' => true,
+            'isEmbeddedPreview' => $request->boolean('embedded'),
+            'demoSlug' => $slug,
+            'demoSetupMode' => ! $request->boolean('embedded'),
+            'title' => "{$label}抽獎試玩｜自訂名單與抽獎模式",
+            'seoTitle' => "{$label}抽獎試玩｜自訂名單與抽獎模式",
+            'seoDescription' => "設定名單與抽獎方式，立即試玩「{$label}抽獎」動畫。適合線上抽獎、企業尾牙與春酒活動。",
+        ] + $page);
+    }
+
+    private function demoPageData(string $style, string $slug): array
+    {
+        $styles = AnimationStyles::all();
         $allStyles = array_column($styles, null, 'key');
         $currentStyle = $allStyles[$style] ?? [
             'key' => $style,
@@ -205,31 +239,23 @@ class DemoLotteryController extends Controller
                 '@type' => 'ListItem',
                 'position' => 3,
                 'name' => $label,
-                'item' => url("/demo/lottery/{$slug}"),
+                'item' => route('demo.lottery.style', ['slug' => $slug]),
             ],
         ];
 
-        return view('lottery.show', [
-            'payload' => $payload,
-            'event' => $event,
-            'currentPrize' => $currentPrize,
-            'currentWinners' => collect(),
-            'bgUrl' => null,
+        return [
             'isDemo' => true,
-            'isEmbeddedPreview' => $isEmbeddedPreview,
             'demoSlug' => $slug,
             'demoStyleLabel' => $label,
-            'demoSetupMode' => true,
-            'title' => "{$label}抽獎｜線上抽獎、尾牙抽獎、抽獎系統",
-            'seoTitle' => "{$label}抽獎｜線上抽獎、尾牙抽獎、抽獎系統",
-            'seoDescription' => "免費體驗「{$label}抽獎」動畫，適合線上抽獎、企業尾牙抽獎、春酒活動與抽獎系統展示情境。",
-            'seoKeywords' => "抽獎,線上抽獎,{$label}抽獎,{$label}抽獎動畫,尾牙抽獎,抽獎系統,活動抽獎",
-            'seoCanonical' => url("/demo/lottery/{$slug}"),
+            'seoTitle' => $currentStyle['seoTitle'] ?? "{$label}抽獎動畫｜免費線上試玩",
+            'seoDescription' => $currentStyle['seoDescription'] ?? $currentStyle['desc'],
+            'seoCanonical' => route('demo.lottery.style', ['slug' => $slug]),
+            'demoPlayUrl' => route('demo.lottery.play', ['slug' => $slug]),
             'seoImage' => $seoImage,
             'demoCurrentStyle' => $currentStyle,
             'demoRelatedStyles' => $relatedStyles,
             'demoBreadcrumbItems' => $breadcrumbItems,
-        ]);
+        ];
     }
 
     public function configure(Request $request, string $slug): JsonResponse

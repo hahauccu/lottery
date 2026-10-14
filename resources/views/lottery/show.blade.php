@@ -3,89 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    @unless($isDemo ?? false)
-    <meta name="robots" content="noindex, nofollow">
-    @endunless
     @if($isDemo ?? false)
+    <meta name="robots" content="noindex, follow">
     <meta name="description" content="{{ $seoDescription ?? '' }}">
-    @isset($seoKeywords)
-    <meta name="keywords" content="{{ $seoKeywords }}">
-    @endisset
-    <link rel="canonical" href="{{ $seoCanonical ?? url('/demo/lottery') }}">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="{{ $seoTitle ?? '範例抽獎' }}">
+    <meta property="og:title" content="{{ $seoTitle ?? '抽獎動畫試玩' }}">
     <meta property="og:description" content="{{ $seoDescription ?? '' }}">
-    <meta property="og:url" content="{{ $seoCanonical ?? url('/demo/lottery') }}">
-    <meta property="og:image" content="{{ $seoImage ?? url('/images/og-demo.svg') }}">
+    <meta property="og:url" content="{{ $demoPlayUrl }}">
+    <meta property="og:image" content="{{ $seoImage }}">
     <meta property="og:site_name" content="抽獎系統">
     <meta property="og:locale" content="zh_TW">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ $seoTitle ?? '範例抽獎' }}">
+    <meta name="twitter:title" content="{{ $seoTitle ?? '抽獎動畫試玩' }}">
     <meta name="twitter:description" content="{{ $seoDescription ?? '' }}">
-    <meta name="twitter:image" content="{{ $seoImage ?? url('/images/og-demo.svg') }}">
-    <script type="application/ld+json">
-    {
-        "@@context": "https://schema.org",
-        "@@type": "WebPage",
-        "name": {!! json_encode($seoTitle ?? '範例抽獎', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!},
-        "description": {!! json_encode($seoDescription ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!},
-        "url": {!! json_encode($seoCanonical ?? url('/demo/lottery'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!},
-        "image": {!! json_encode($seoImage ?? url('/images/og-demo.svg'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
-    }
-    </script>
-    @isset($demoBreadcrumbItems)
-    <script type="application/ld+json">
-    {
-        "@@context": "https://schema.org",
-        "@@type": "BreadcrumbList",
-        "itemListElement": {!! json_encode($demoBreadcrumbItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
-    }
-    </script>
-    @endisset
-    @if(isset($demoCurrentStyle))
-    @php
-        $styleProduct = [
-            '@context' => 'https://schema.org',
-            '@type' => 'Product',
-            'name' => $demoCurrentStyle['label'].' 抽獎動畫',
-            'description' => $demoCurrentStyle['longDesc'] ?? $demoCurrentStyle['desc'] ?? '',
-            'image' => $seoImage ?? url('/images/og-demo.svg'),
-            'category' => '抽獎動畫',
-            'url' => $seoCanonical ?? url('/demo/lottery/'.($demoCurrentStyle['slug'] ?? '')),
-            'brand' => [
-                '@type' => 'Organization',
-                'name' => '抽獎系統',
-                'url' => url('/'),
-            ],
-            'offers' => [
-                '@type' => 'Offer',
-                'price' => '0',
-                'priceCurrency' => 'TWD',
-                'availability' => 'https://schema.org/InStock',
-                'url' => url('/admin'),
-                'priceValidUntil' => now()->addYear()->format('Y-m-d'),
-            ],
-        ];
-        $styleFaqs = $demoCurrentStyle['faqs'] ?? [];
-        $styleFaqSchema = [
-            '@context' => 'https://schema.org',
-            '@type' => 'FAQPage',
-            'mainEntity' => collect($styleFaqs)->map(fn ($f) => [
-                '@type' => 'Question',
-                'name' => $f['q'] ?? '',
-                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a'] ?? ''],
-            ])->all(),
-        ];
-    @endphp
-    <script type="application/ld+json">
-    {!! json_encode($styleProduct, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
-    </script>
-    @if(!empty($styleFaqs))
-    <script type="application/ld+json">
-    {!! json_encode($styleFaqSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
-    </script>
-    @endif
-    @endif
+    <meta name="twitter:image" content="{{ $seoImage }}">
+    @else
+    <meta name="robots" content="noindex, nofollow">
     @endif
     <title>{{ $title ?? (($currentPrize?->name ?? $event->name).' - 抽獎') }}</title>
 
@@ -94,9 +27,6 @@
     <link rel="icon" href="{{ url('/favicon.ico') }}" sizes="any">
     <link rel="apple-touch-icon" href="{{ url('/images/og-home.svg') }}">
     <meta name="theme-color" content="#030712">
-    @if(!empty($isDemo))
-    <meta name="robots" content="index,follow,max-image-preview:large">
-    @endif
 
     <script id="lottery-config-data" type="application/json">{!! json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
 
@@ -415,7 +345,7 @@
     </style>
 </head>
 @php
-    $demoScrollable = !empty($isDemo) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null);
+    $demoScrollable = !empty($isDemo) && empty($isDemoPlay) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null);
 @endphp
 <body class="{{ $demoScrollable ? 'min-h-[100svh] overflow-x-hidden' : 'h-[100svh] overflow-hidden' }} bg-black text-white {{ !empty($isEmbeddedPreview) ? 'is-embedded-preview' : '' }}">
     @if (!empty($isDemo))
@@ -425,7 +355,7 @@
             @include('lottery.partials.demo-toolbar')
         @endif
     @endif
-    @if (!empty($isDemo) && empty($isEmbeddedPreview))
+    @if (!empty($isDemo) && empty($isDemoPlay) && empty($isEmbeddedPreview))
         <aside class="demo-seo-links">
             <div class="demo-seo-links__crumbs">
                 <a href="{{ url('/') }}">首頁</a>
@@ -445,7 +375,7 @@
             <p class="demo-seo-links__title">你也可以試試其他抽獎動畫</p>
             <div class="demo-seo-links__related">
                 @foreach ($demoRelatedStyles as $relatedStyle)
-                    <a href="{{ url('/demo/lottery/'.$relatedStyle['slug']) }}">試玩 {{ $relatedStyle['label'] }}抽獎</a>
+                    <a href="{{ route('demo.lottery.play', ['slug' => $relatedStyle['slug']]) }}">試玩 {{ $relatedStyle['label'] }}抽獎</a>
                 @endforeach
             </div>
         </aside>
@@ -535,7 +465,7 @@
 
     </main>
 
-    @if (!empty($isDemo) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null))
+    @if (!empty($isDemo) && empty($isDemoPlay) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null))
         <article class="demo-aeo-article">
             <div class="demo-aeo-eyebrow">抽獎動畫介紹</div>
             <h2>{{ $demoCurrentStyle['label'] }}：{{ $demoCurrentStyle['bestFitFor'] ?? '' }}</h2>

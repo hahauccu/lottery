@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-labelledby="title desc">
+  <title id="title">圓球賽跑抽獎動畫示意圖</title>
+  <desc id="desc">紅、藍、綠、金色圓球沿彎曲賽道向黑白格終點競速。</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#102331"/><stop offset="1" stop-color="#12121f"/></linearGradient>
+    <radialGradient id="red" cx=".3" cy=".25"><stop stop-color="#fecaca"/><stop offset=".45" stop-color="#f87171"/><stop offset="1" stop-color="#b91c1c"/></radialGradient>
+    <radialGradient id="blue" cx=".3" cy=".25"><stop stop-color="#cffafe"/><stop offset=".45" stop-color="#38bdf8"/><stop offset="1" stop-color="#1d4ed8"/></radialGradient>
+    <radialGradient id="green" cx=".3" cy=".25"><stop stop-color="#d1fae5"/><stop offset=".45" stop-color="#34d399"/><stop offset="1" stop-color="#047857"/></radialGradient>
+    <radialGradient id="gold" cx=".3" cy=".25"><stop stop-color="#fef3c7"/><stop offset=".45" stop-color="#fbbf24"/><stop offset="1" stop-color="#b45309"/></radialGradient>
+    <pattern id="finish" width="32" height="32" patternUnits="userSpaceOnUse"><rect width="32" height="32" fill="#f8fafc"/><path d="M0 0h16v16H0zM16 16h16v16H16z" fill="#0f172a"/></pattern>
+  </defs>
+  <rect width="800" height="450" rx="20" fill="url(#bg)"/>
+  <path d="M101 130h425c131 0 168 179 25 179H186c-93 0-94-90 0-90h425" fill="none" stroke="#0a101c" stroke-width="100" stroke-linecap="round"/>
+  <path d="M101 130h425c131 0 168 179 25 179H186c-93 0-94-90 0-90h425" fill="none" stroke="#334155" stroke-width="86" stroke-linecap="round"/>
+  <path d="M101 130h425c131 0 168 179 25 179H186c-93 0-94-90 0-90h425" fill="none" stroke="#94a3b8" stroke-opacity=".5" stroke-width="2" stroke-dasharray="10 12"/>
+  <rect x="586" y="176" width="32" height="86" fill="url(#finish)"/>
+  <g fill="none" stroke-linecap="round" stroke-width="5" opacity=".55"><path d="M155 117h35m-42 17h25" stroke="#f87171"/><path d="M347 297h31m-40 16h20" stroke="#38bdf8"/><path d="M252 206h30m-42 17h27" stroke="#34d399"/><path d="M427 206h36m-48 17h27" stroke="#fbbf24"/></g>
+  <circle cx="225" cy="130" r="26" fill="url(#red)"/>
+  <circle cx="414" cy="308" r="26" fill="url(#blue)"/>
+  <circle cx="319" cy="219" r="26" fill="url(#green)"/>
+  <circle cx="504" cy="219" r="29" fill="url(#gold)"/>
+  <text x="400" y="410" text-anchor="middle" fill="#fbbf24" font-family="system-ui,sans-serif" font-weight="700" font-size="30">圓球賽跑</text>
+</svg>
