@@ -915,6 +915,7 @@
     </style>
 </head>
 <body>
+    @include('lottery.partials.demo-metrics', ['metricEntry' => 'home'])
     {{-- ════════════════════════════════════════════
          1. HERO
     ════════════════════════════════════════════ --}}
@@ -1044,6 +1045,7 @@
             <p>從建立活動到中獎兌獎，照著做就能快速上手。</p>
         </div>
 
+        <p style="text-align:center; margin-bottom:2rem;"><a href="{{ route('guides.year-end-lottery') }}" style="color:var(--c-gold-light);">籌備尾牙抽獎：查看名單、獎項安排與當天彩排清單 →</a></p>
         <div class="steps-grid">
             @foreach ($setupSteps as $i => $step)
                 <div class="step-card" data-reveal data-reveal-delay="{{ $i * 80 }}">
@@ -1081,7 +1083,7 @@
                             <p>{{ $style['desc'] }}</p>
                             <div class="preview-card-actions">
                                 <a href="{{ route('demo.lottery.style', ['slug' => $style['slug']]) }}"><span>查看介紹</span></a>
-                                <a href="{{ route('demo.lottery.play', ['slug' => $style['slug']]) }}"><span>立即試玩</span></a>
+                                <a href="{{ route('demo.lottery.play', ['slug' => $style['slug']]) }}" data-demo-event="play_click" data-demo-style="{{ $style['key'] }}"><span>立即試玩</span></a>
                             </div>
                         </div>
                     </article>
@@ -1172,6 +1174,7 @@
         <p>
             &copy; {{ date('Y') }} 抽獎系統 &mdash;
             <a href="{{ route('faq') }}">常見問題</a> ·
+            <a href="{{ route('feedback.index', ['from' => '/']) }}">意見回饋／聯絡我們</a> ·
             <a href="/demo/lottery">抽獎動畫 Demo</a> ·
             <a href="/admin">登入後台</a>
         </p>

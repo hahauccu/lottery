@@ -28,7 +28,7 @@ class DemoLotteryPagesTest extends TestCase
 
         $response->assertOk()
             ->assertSee($style['label'].'抽獎動畫')
-            ->assertSee('開始設定參數試玩')
+            ->assertSee('免費試玩'.$style['label'].'抽獎')
             ->assertSee('此動畫 Demo 免費（NT$0），不需登入。')
             ->assertSessionMissing('demo_lottery_'.$style['key'])
             ->assertDontSee('lottery-config-data');
@@ -39,9 +39,19 @@ class DemoLotteryPagesTest extends TestCase
         $this->assertSame($style['seoDescription'], $xpath->evaluate('string(//meta[@name="description"]/@content)'));
         $this->assertSame('index,follow,max-image-preview:large', $xpath->evaluate('string(//meta[@name="robots"]/@content)'));
         $this->assertSame(1, $xpath->query('//h1')->length);
-        $this->assertSame(0, $xpath->query('//script[@src]')->length);
+        $this->assertSame(0, $xpath->query('//script[contains(@src, "lottery.js") or contains(@src, "lottery-")]')->length);
+        $this->assertSame(1, $xpath->query('//*[@id="demo-metrics" and @data-entry="intro"]')->length);
         $this->assertFileExists(public_path('images/previews/'.$style['key'].'.svg'));
         $this->assertSame(url('/images/previews/'.$style['key'].'.svg'), $xpath->evaluate('string(//meta[@property="og:image"]/@content)'));
+        if (in_array($style['key'], ['battle_top', 'marble_race'], true)) {
+            $response->assertSee('從設定名單到揭獎，實際畫面預覽')->assertSee('390 × 844');
+            foreach (['setup', 'action', 'result', 'mobile'] as $stage) {
+                $this->assertFileExists(public_path('images/demos/'.$style['key'].'/'.$stage.'.jpg'));
+                $this->assertGreaterThan(0, $xpath->query('//img[contains(@src, "/images/demos/'.$style['key'].'/'.$stage.'.jpg") and @width and @height]')->length);
+            }
+        } else {
+            $response->assertDontSee('id="demo-preview"', false);
+        }
 
         $schemas = [];
         foreach ($xpath->query('//script[@type="application/ld+json"]') as $script) {
@@ -183,7 +193,9 @@ class DemoLotteryPagesTest extends TestCase
 
         $xml = simplexml_load_string($response->getContent());
         $urls = array_map(fn ($url) => (string) $url->loc, iterator_to_array($xml->url, false));
-        $this->assertCount(11, $urls);
+        $this->assertCount(13, $urls);
+        $this->assertContains(route('guides.year-end-lottery'), $urls);
+        $this->assertContains(route('feedback.index'), $urls);
         foreach (AnimationStyles::all() as $style) {
             $this->assertContains(route('demo.lottery.style', ['slug' => $style['slug']]), $urls);
             $this->assertNotContains(route('demo.lottery.play', ['slug' => $style['slug']]), $urls);

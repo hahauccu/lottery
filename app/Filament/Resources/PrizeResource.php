@@ -109,7 +109,7 @@ class PrizeResource extends Resource
                         TextInput::make('lotto_hold_seconds')
                             ->label('抽獎秒數')
                             ->helperText(fn (Get $get) => $get('animation_style') === 'battle_top'
-                                ? '戰鬥陀螺：此秒數主要控制戰鬥節奏；逐一抽出會盡量貼近設定，一次全抽且人多時可能自動延長'
+                                ? '戰鬥陀螺：設定戰鬥階段時間，5–60 秒；另含倒數入場與得主揭曉時間'
                                 : '每次抽獎的動畫時間（秒），5–60 秒')
                             ->numeric()
                             ->minValue(5)

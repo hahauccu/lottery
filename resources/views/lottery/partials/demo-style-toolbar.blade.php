@@ -156,6 +156,12 @@
                 </a>
 
                 {{-- 重新設定 --}}
+                <a href="{{ route('feedback.index', ['from' => '/demo/lottery/'.$demoSlug.'/play', 'style' => \App\Support\AnimationStyles::slugToKey()[$demoSlug] ?? null]) }}"
+                    target="_blank" rel="noopener"
+                    class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-white/70 hover:bg-white/10 hover:text-white transition">
+                    意見回饋／問題回報 ↗
+                </a>
+
                 <button @@click="backToSetup()"
                     class="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-white/70 hover:bg-white/10 hover:text-white transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -336,13 +342,13 @@
                 this.loading = true;
                 this.showReportForm = false;
                 try {
-                    const res = await fetch(`/demo/lottery/${this.slug}/reset`, {
+                    const res = await fetch(`/demo/lottery/${this.slug}/configure`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': this._csrfToken(),
                         },
-                        body: JSON.stringify({ clear_template: true }),
+                        body: JSON.stringify({ names: '', draw_count: 5, draw_mode: 'all_at_once' }),
                     });
                     if (!res.ok) return;
                     const payload = await res.json();

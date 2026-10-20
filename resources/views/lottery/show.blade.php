@@ -348,6 +348,9 @@
     $demoScrollable = !empty($isDemo) && empty($isDemoPlay) && empty($isEmbeddedPreview) && !empty($demoCurrentStyle['longDesc'] ?? null);
 @endphp
 <body class="{{ $demoScrollable ? 'min-h-[100svh] overflow-x-hidden' : 'h-[100svh] overflow-hidden' }} bg-black text-white {{ !empty($isEmbeddedPreview) ? 'is-embedded-preview' : '' }}">
+    @if (!empty($isDemo) && empty($isEmbeddedPreview))
+        @include('lottery.partials.demo-metrics', ['metricEntry' => 'play', 'metricStyle' => $demoCurrentStyle['key']])
+    @endif
     @if (!empty($isDemo))
         @if (!empty($demoSetupMode))
             @include('lottery.partials.demo-style-toolbar')

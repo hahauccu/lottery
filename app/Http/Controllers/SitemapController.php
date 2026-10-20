@@ -12,6 +12,16 @@ class SitemapController extends Controller
         // 未追蹤每頁的內容更新日期；省略 lastmod，避免部署時間被誤認為內容更新。
         $urls = [
             [
+                'loc' => route('guides.year-end-lottery'),
+                'changefreq' => 'monthly',
+                'priority' => '0.7',
+            ],
+            [
+                'loc' => route('feedback.index'),
+                'changefreq' => 'monthly',
+                'priority' => '0.3',
+            ],
+            [
                 'loc' => url('/'),
                 'changefreq' => 'monthly',
                 'priority' => '1.0',

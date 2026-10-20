@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @vite('resources/js/demo-metrics.js')
     <title>抽獎動畫｜7 種尾牙抽獎、線上抽獎動畫免費體驗</title>
     <meta name="description" content="免費試玩 7 種抽獎動畫：樂透氣流機、紅包雨、刮刮樂、寶箱、大寶箱、圓球賽跑、戰鬥陀螺。不用下載模板或自己做動畫，線上即點即抽，適合尾牙抽獎與企業活動。">
     <meta name="keywords" content="抽獎動畫,尾牙抽獎動畫,線上抽獎,抽獎,尾牙抽獎,抽獎系統,樂透氣流機,紅包雨,刮刮樂,寶箱抽獎,戰鬥陀螺抽獎">
@@ -61,8 +62,8 @@
 
         $landingFaqs = [
             ['q' => '這 7 種抽獎動畫有什麼不同？', 'a' => '每種動畫在視覺、節奏與互動方式上各有重點，如樂透氣流機走經典搖獎感、紅包雨強調喜氣互動、戰鬥陀螺則偏重激烈對決的臨場感。'],
-            ['q' => '這些抽獎動畫可以在手機上執行嗎？', 'a' => '可以，所有抽獎動畫都針對桌機與手機調整過，在 390×844 手機直式畫面也能流暢運作。'],
-            ['q' => '可以自己輸入名單試玩嗎？', 'a' => '可以，頁面提供自訂名單、抽獎人數與抽獎模式，僅保存在你的瀏覽器 session 中，不會寫入實際資料庫。'],
+            ['q' => '這些抽獎動畫可以在手機上執行嗎？', 'a' => '支援手機與電腦。正式活動前，建議先用實際裝置、瀏覽器與投影解析度試玩，確認動畫與中獎名單顯示正常。'],
+            ['q' => '可以自己輸入名單試玩嗎？', 'a' => '可以，試玩頁可自訂名單、抽獎人數與抽獎模式，設定保存在試玩 session，不會建立正式活動或員工紀錄。'],
             ['q' => '正式活動要用哪一種動畫？', 'a' => '後台新增獎項時可為每個獎項獨立指定動畫風格，活動中也能依節奏切換不同獎項搭配不同動畫。'],
             ['q' => '抽獎動畫有提供彈幕或領獎 QRCode 嗎？', 'a' => '彈幕與 QRCode 兌獎屬於正式活動功能，這個頁面主要展示動畫視覺，可到首頁或後台申請試用實際完整功能。'],
         ];
@@ -78,13 +79,13 @@
         ];
 
         $landingCompare = [
-            ['label' => '樂透氣流機', 'slug' => 'lotto-air', 'scene' => '尾牙 / 春酒 / 大型抽獎', 'feature' => '經典搖獎感、氣勢十足', 'people' => '50 ~ 500 人'],
-            ['label' => '紅包雨', 'slug' => 'red-packet', 'scene' => '年節 / 春酒 / 喜慶活動', 'feature' => '紅包雨特效、點擊互動', 'people' => '30 ~ 300 人'],
-            ['label' => '刮刮樂', 'slug' => 'scratch-card', 'scene' => '攤位活動 / 小型聚會', 'feature' => '刮開塗層揭曉名單', 'people' => '10 ~ 150 人'],
-            ['label' => '寶箱', 'slug' => 'treasure-chest', 'scene' => '獎勵揭曉 / 答謝晚宴', 'feature' => '多寶箱依序開啟', 'people' => '20 ~ 200 人'],
-            ['label' => '大寶箱', 'slug' => 'big-treasure-chest', 'scene' => '最終大獎揭曉', 'feature' => '巨型寶箱儀式感', 'people' => '全場適用'],
-            ['label' => '圓球賽跑', 'slug' => 'marble-race', 'scene' => '品牌發表會 / 遊戲化活動', 'feature' => '多球競速賽道', 'people' => '20 ~ 150 人'],
-            ['label' => '戰鬥陀螺', 'slug' => 'battle-top', 'scene' => '年輕化品牌 / 潮流活動', 'feature' => '陀螺激烈對決、戲劇張力', 'people' => '20 ~ 200 人'],
+            ['label' => '樂透氣流機', 'slug' => 'lotto-air', 'scene' => '尾牙 / 春酒 / 大型抽獎', 'feature' => '經典搖獎感、氣勢十足', 'pace' => '經典搖獎、逐球揭曉'],
+            ['label' => '紅包雨', 'slug' => 'red-packet', 'scene' => '年節 / 春酒 / 喜慶活動', 'feature' => '紅包雨特效、點擊互動', 'pace' => '喜氣鋪陳、紅包揭曉'],
+            ['label' => '刮刮樂', 'slug' => 'scratch-card', 'scene' => '攤位活動 / 小型聚會', 'feature' => '刮開塗層揭曉名單', 'pace' => '刮開塗層、逐張揭曉'],
+            ['label' => '寶箱', 'slug' => 'treasure-chest', 'scene' => '獎勵揭曉 / 答謝晚宴', 'feature' => '多寶箱依序開啟', 'pace' => '依序開箱、逐步揭曉'],
+            ['label' => '大寶箱', 'slug' => 'big-treasure-chest', 'scene' => '最終大獎揭曉', 'feature' => '巨型寶箱儀式感', 'pace' => '聚焦單一大箱、壓軸揭曉'],
+            ['label' => '圓球賽跑', 'slug' => 'marble-race', 'scene' => '品牌發表會 / 遊戲化活動', 'feature' => '多球競速賽道', 'pace' => '賽道競速、排名揭曉'],
+            ['label' => '戰鬥陀螺', 'slug' => 'battle-top', 'scene' => '年輕化品牌 / 潮流活動', 'feature' => '陀螺激烈對決、戲劇張力', 'pace' => '碰撞淘汰、存活者揭曉'],
         ];
 
         $landingScenes = [
@@ -301,6 +302,8 @@
         .style-card:nth-child(6) { --card-accent: rgba(34, 197, 94, 0.12); }
         .style-card:nth-child(7) { --card-accent: rgba(236, 72, 153, 0.12); }
 
+        .style-card__preview { display: block; width: 100%; height: auto; border-radius: .75rem; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,.1); }
+
         /* ── 比較區塊 ── */
         .landing-section {
             margin-top: 4.5rem;
@@ -457,6 +460,7 @@
     </style>
 </head>
 <body>
+    @include('lottery.partials.demo-metrics', ['metricEntry' => 'hub'])
     <div class="landing-bg"></div>
 
     <main class="landing-container">
@@ -476,12 +480,16 @@
             @foreach ($styles as $i => $s)
                 <article class="style-card anim-fade-up"
                    style="animation-delay: {{ 0.15 + $i * 0.07 }}s;">
-                    <div class="style-card__icon">{{ $icons[$i] }}</div>
+                    @if ($demoPreviews[$s['key']] ?? null)
+                        <img class="style-card__preview" src="{{ $demoPreviews[$s['key']]['action']['url'] }}" alt="{{ $s['label'] }}抽獎實際 Demo 畫面" width="{{ $demoPreviews[$s['key']]['action']['width'] }}" height="{{ $demoPreviews[$s['key']]['action']['height'] }}" loading="lazy" decoding="async">
+                    @else
+                        <div class="style-card__icon">{{ $icons[$i] }}</div>
+                    @endif
                     <h2 class="style-card__name"><a class="style-card__heading" href="{{ route('demo.lottery.style', ['slug' => $s['slug']]) }}">{{ $s['label'] }}抽獎</a></h2>
                     <div class="style-card__desc">{{ $s['desc'] }}</div>
                     <div class="style-card__actions">
                         <a href="{{ route('demo.lottery.style', ['slug' => $s['slug']]) }}" aria-label="查看{{ $s['label'] }}抽獎介紹">查看介紹</a>
-                        <a href="{{ route('demo.lottery.play', ['slug' => $s['slug']]) }}" aria-label="立即試玩{{ $s['label'] }}抽獎">立即試玩</a>
+                        <a href="{{ route('demo.lottery.play', ['slug' => $s['slug']]) }}" aria-label="立即試玩{{ $s['label'] }}抽獎" data-demo-event="play_click" data-demo-style="{{ $s['key'] }}">立即試玩</a>
                     </div>
                 </article>
             @endforeach
@@ -489,7 +497,7 @@
 
         <section class="landing-section anim-fade-up" style="animation-delay: 0.9s;">
             <h2 class="landing-section__title">7 種抽獎動畫怎麼選？</h2>
-            <p class="landing-section__lead">每種風格針對不同活動規模與情境設計，參考下表挑選最適合你場合的抽獎動畫。</p>
+            <p class="landing-section__lead">先比較揭獎方式與主持節奏，再免費試玩確認。每種動畫都能設定名單、人數，以及一次全抽或逐一抽出。</p>
             <div class="compare-table-wrap">
                 <table class="compare-table">
                     <thead>
@@ -497,7 +505,7 @@
                             <th>動畫風格</th>
                             <th>適合活動</th>
                             <th>特色</th>
-                            <th>建議人數</th>
+                            <th>揭獎節奏</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -506,7 +514,7 @@
                                 <td><a href="{{ url('/demo/lottery/'.$row['slug']) }}">{{ $row['label'] }}</a></td>
                                 <td>{{ $row['scene'] }}</td>
                                 <td>{{ $row['feature'] }}</td>
-                                <td>{{ $row['people'] }}</td>
+                                <td>{{ $row['pace'] }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -540,6 +548,12 @@
             </p>
         </section>
 
+        <section class="landing-section">
+            <h2 class="landing-section__title">選好動畫後，尾牙抽獎流程怎麼安排？</h2>
+            <p class="landing-section__lead">先整理參加名單與資格，決定能否重複中獎、各獎項的名額與順序，再選一次全抽或逐一抽出。多人動畫與倒數、唱名、領獎都會影響整輪時間，建議用正式設備完成彩排。</p>
+            <p><a href="{{ route('guides.year-end-lottery') }}" style="color:var(--gold-light);">閱讀尾牙抽獎流程指南：主持範例、動畫選擇與檢查清單 →</a></p>
+        </section>
+
         <section class="landing-section anim-fade-up" style="animation-delay: 1.1s;">
             <h2 class="landing-section__title">常見問題</h2>
             <div class="landing-faq">
@@ -562,6 +576,7 @@
             <a href="{{ route('demo.lottery.templates.index') }}">大家都抽什麼</a>
             <span style="color:rgba(255,255,255,.18);margin:0 .75rem;">/</span>
             <a href="{{ route('faq') }}">常見問題</a>
+            <a href="{{ route('feedback.index', ['from' => '/demo/lottery']) }}">意見回饋</a>
         </footer>
     </main>
 </body>

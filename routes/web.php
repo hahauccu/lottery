@@ -3,7 +3,9 @@
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\DemoLotteryController;
 use App\Http\Controllers\DemoLotteryTemplateController;
+use App\Http\Controllers\DemoMetricController;
 use App\Http\Controllers\FaqController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\LotteryAnalysisController;
 use App\Http\Controllers\LotteryFrontendController;
 use App\Http\Controllers\LotteryWinnerExportController;
@@ -20,6 +22,9 @@ Route::get('/', function () {
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::get('/faq', [FaqController::class, 'index'])->name('faq');
+Route::view('/guides/year-end-lottery', 'guides.year-end-lottery')->name('guides.year-end-lottery');
+Route::get('/feedback', [FeedbackController::class, 'index'])->name('feedback.index');
+Route::post('/feedback', [FeedbackController::class, 'store'])->middleware('throttle:feedback')->name('feedback.store');
 
 Route::get('/testSound', function () {
     return view('testSound');
@@ -33,6 +38,7 @@ Route::get('/claim/{token}', [ClaimController::class, 'verify'])
     ->name('claim.verify');
 
 // Demo 抽獎（免登入）
+Route::post('/demo/metrics', DemoMetricController::class)->middleware('throttle:demo-metrics')->name('demo.metrics');
 Route::get('/demo/lottery', [DemoLotteryController::class, 'landing'])->name('demo.lottery.landing');
 Route::get('/demo/lottery/templates', [DemoLotteryTemplateController::class, 'index'])->name('demo.lottery.templates.index');
 Route::get('/demo/lottery/templates/{template}', [DemoLotteryTemplateController::class, 'show'])->name('demo.lottery.templates.show');

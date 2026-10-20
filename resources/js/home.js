@@ -1,3 +1,5 @@
+import './demo-metrics.js';
+
 /* ── Scroll Reveal (IntersectionObserver) ── */
 function initScrollReveal() {
     const els = document.querySelectorAll('[data-reveal]');

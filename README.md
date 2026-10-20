@@ -90,6 +90,9 @@ Organization (租戶)
 | `PrizeWinnersUpdated` | 抽出中獎者 | 更新中獎名單、剩餘人數、獎項進度 |
 | `DanmakuSent` | 觀眾發彈幕 | 顯示彈幕 |
 
+- 頻道為公開 `lottery.{brand_code}`，活動代碼有全站唯一索引；抽獎鎖與重送防護依活動 ID、心跳依活動代碼區分。正常各自訂閱時不同公司不共用頻道或抽獎鎖。公開頻道不等於租戶讀取授權，活動 HTTP payload 目前也可公開讀取。
+- 多公司隔離回歸：`php artisan test --filter=LotteryBroadcastIsolationTest`、`node --test tests/JavaScript/broadcast-isolation.test.mjs`。2026-10-20 本機另以獨立 Reverb 驗證雙連線、100 筆交錯彈幕與重連；大名單可能超過預設 10,000 bytes 的 Reverb HTTP 上限，且目前 winners 廣播例外可能在結果寫入後中斷抽獎回應。調查與待處理項目見 `todo/websocket-multi-company-audit.md`。
+
 ⚠️ 前端狀態與 WebSocket 有競爭條件，新增動畫前**務必先讀 `CLAUDE.md` 的「前端狀態管理注意事項」**。
 
 ---
@@ -119,6 +122,7 @@ php artisan reverb:start                           # WebSocket
 
 php artisan migrate                                # 資料庫
 php artisan test                                   # 測試
+node --test tests/JavaScript/*.test.mjs              # 動畫完成通知、尺寸切換與 API 結果收尾
 ./vendor/bin/pint                                  # 格式化
 php artisan route:list | grep lottery              # 看路由
 ```
@@ -152,8 +156,32 @@ php artisan route:list | grep lottery              # 看路由
 - 分享範本套用後直接前往 `/play`，保留同風格的 Demo session 設定。
 - sitemap 僅列公開搜尋入口；未追蹤可靠的逐頁更新日期前省略 `lastmod`，不以部署或前端 build 時間代替內容更新時間。
 - FAQ 保留作為訪客說明；不以 Google FAQ 複合式結果作為成效指標。
+- 戰鬥陀螺與圓球賽跑提供設定／動畫／結果及手機實圖，檔案位於 `public/images/demos/{key}/`，由 `DemoPreviews` 讀取；均使用合成名單。介紹頁圖片有固定尺寸，非首屏圖片延遲載入，不內嵌試玩 iframe。
 
 SEO 回歸驗證：`php artisan test --filter=DemoLotteryPagesTest`，涵蓋所有風格、JSON-LD、索引控制、試玩與範本導向。
+
+### 尾牙抽獎內容指南
+
+- `/guides/year-end-lottery` 提供名單與資格、重複中獎規則、主持流程範例、七種動畫比較、彩排與現場檢查清單。內容以現有功能為依據，流程範例不代表自動套用活動設定。
+- 指南由 Blade 直接輸出，無抽獎 JS／iframe；具有獨立 title／description、self canonical、Article 與 BreadcrumbList，列入 sitemap。首頁、動畫總覽、FAQ 與七種動畫介紹頁提供可爬取連結。
+- `AnimationStyles::all()` 的 `planningTips` 提供各動畫獨立使用提醒；秒數說明必須反映現況，不可把 pending 的時間一致化方案寫成已完成，也不保證任意裝置流暢或任意名單容量。
+- 不為內容新增虛構評分、作者資歷、日期或 `lastmod`。回歸：`php artisan test --filter='LotteryGuideTest|DemoLotteryPagesTest'`。
+
+### Demo 試玩成效
+
+- 首頁、動畫總覽、介紹頁與非 embedded 試玩頁使用輕量 `demo-metrics.js`，透過 `POST /demo/metrics` 記錄瀏覽、試玩／註冊入口點擊、抽獎開始及動畫完成／失敗。正式品牌活動不啟用；統計送出失敗不影響抽獎。
+- 僅按台灣日期、動畫、入口與事件累加次數和動畫耗時，不保存 IP、訪客識別碼、網址參數、名單或 Email；尊重 Do Not Track／Global Privacy Control。IP 僅供 Laravel 快取中的每分鐘 60 次頻率限制。
+- 系統管理員（`is_admin`）在後台「系統管理 → 試玩成效」查看近 7／28 天。這是事件次數，不是獨立訪客漏斗；註冊點擊不代表註冊成功，開始／完成可能跨日或因離頁、網路與拒絕追蹤而有落差。
+- 上版需執行 `php artisan migrate` 建立 `demo_metrics`，並以 `npm run build` 包含新增入口。初次上版沒有歷史資料，GSC 排名／收錄仍需上版後另行觀察。
+- 回歸：`php artisan test --filter=DemoMetricsTest`、`node --test tests/JavaScript/*.test.mjs`。預設抽獎須還原 30 人／抽 5 人／一次全抽，不沿用上次自訂設定。
+
+### 意見回饋與聯絡我們
+
+- `/feedback` 免登入收集動畫卡住、顯示異常、功能建議與其他意見；首頁頁尾、Demo 總覽與試玩工具面板提供入口。此公開頁可索引並列入 sitemap（含尾牙指南目前共 13 個網址）。
+- Email 選填；記錄來源公開頁面的路徑、動畫與視窗尺寸，不收集網址 query、存取碼或參加者名單。回饋不公開。
+- 先存入 `feedback` 資料表再寄通知，寄信失敗不影響收件；系統管理員（`is_admin`）可在後台「系統管理 → 意見回饋」標記待處理／已處理與內部備註，一般租戶無權讀取。
+- 通知收件人設定：`FEEDBACK_NOTIFICATION_EMAIL`；預設沿用客服信箱，留空可停用通知。仍需正確設定 `MAIL_*`；`MAIL_MAILER=log` 只寫入本機 log，不代表已寄達。
+- 上版需執行 `php artisan migrate` 建立資料表；回歸驗證：`php artisan test --filter=FeedbackTest`。
 
 ---
 

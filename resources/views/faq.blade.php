@@ -292,6 +292,7 @@
         <h1>抽獎系統<span class="accent">常見問題 FAQ</span></h1>
         <p class="faq-page__lead">尾牙抽獎、企業活動、線上抽獎最常被問到的 20 題實戰問答 — 涵蓋活動流程、抽獎公平性、彈幕與 QRCode 領獎，以及瀏覽器與裝置相容性。</p>
 
+        <p><a href="{{ route('guides.year-end-lottery') }}">從頭準備一場尾牙？查看抽獎流程、主持範例與彩排清單 →</a></p>
         <nav class="faq-nav" aria-label="FAQ 分類導航">
             @foreach ($categories as $key => $cat)
                 <a href="#{{ $key }}">

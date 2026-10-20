@@ -1,3 +1,5 @@
+import { trackDemoEvent } from './demo-metrics.js';
+
 const initLottery = () => {
     // 防止重複初始化（Vite HMR 會重新執行模組）
     if (window.__lotteryInitialized) {
@@ -1525,6 +1527,9 @@ const initLottery = () => {
             pending: [],
             picked: [],
             waiters: [],
+            completedPicks: 0,
+            completionCursor: 0,
+            cancelled: false,
             finishPauseId: null,
             drum: { x: 0, y: 0, r: 0 },
             chute: { x: 0, y: 0, w: 0, h: 0, active: false },
@@ -1738,12 +1743,29 @@ const initLottery = () => {
             airState.trayPage = 0;
         };
 
+        const settleWaiters = () => {
+            airState.waiters.splice(0).forEach((resolve) => resolve());
+        };
+
+        const flushCompletedPicks = () => {
+            // 球可能同幀或逆序抵達，依 API 指定的 pick 順序保留完成通知。
+            while (airState.picked[airState.completionCursor]?.out) {
+                airState.completionCursor += 1;
+                const resolve = airState.waiters.shift();
+                if (resolve) resolve();
+                else airState.completedPicks += 1;
+            }
+        };
+
         const reset = () => {
+            settleWaiters();
             particles.length = 0;
             airState.balls.length = 0;
             airState.picked.length = 0;
             airState.pending.length = 0;
-            airState.waiters.length = 0;
+            airState.completedPicks = 0;
+            airState.completionCursor = 0;
+            airState.cancelled = false;
             stopTrayCarousel();
             if (airState.finishPauseId) {
                 clearTimeout(airState.finishPauseId);
@@ -1857,10 +1879,7 @@ const initLottery = () => {
                 target.label = shortLabel(winnerName);
             }
             target.grabbed = true;
-            target.onOut = () => {
-                const waiter = airState.waiters.shift();
-                waiter?.();
-            };
+            target.onOut = flushCompletedPicks;
             target.forceOutAt = performance.now() + 6000;
             airState.picked.push(target);
             const tx = airState.chute.x - airState.chute.w * 0.15;
@@ -2346,6 +2365,7 @@ const initLottery = () => {
 
         const start = () => {
             ensureReady();
+            airState.cancelled = false;
             airState.paused = false;
             airState.mode = 'mixing';
             airState.t = 0;
@@ -2360,6 +2380,8 @@ const initLottery = () => {
 
         const stop = () => {
             airState.running = false;
+            airState.cancelled = true;
+            settleWaiters();
             if (airState.rafId) {
                 cancelAnimationFrame(airState.rafId);
                 airState.rafId = null;
@@ -2368,7 +2390,8 @@ const initLottery = () => {
                 clearTimeout(airState.finishPauseId);
                 airState.finishPauseId = null;
             }
-            airState.waiters.length = 0;
+            airState.completedPicks = 0;
+            airState.completionCursor = 0;
             airState.balls.length = 0;
             airState.picked.length = 0;
             airState.pending.length = 0;
@@ -2400,12 +2423,15 @@ const initLottery = () => {
                 reset();
             } else {
                 airState.pending.length = 0;
-                airState.waiters.length = 0;
+                settleWaiters();
+                airState.completedPicks = 0;
             }
+            airState.cancelled = false;
             airState.pending = list.map((name) => ({ name }));
             airState.initialPendingCount = list.length || 1;
             if (resetPicked) {
                 airState.picked.length = 0;
+                airState.completionCursor = 0;
             }
             airState.mode = 'mixing';
             airState.t = 0;
@@ -2416,7 +2442,14 @@ const initLottery = () => {
         };
 
         const waitForNextPick = () => new Promise((resolve) => {
-            airState.waiters.push(resolve);
+            if (airState.cancelled) {
+                resolve();
+            } else if (airState.completedPicks > 0) {
+                airState.completedPicks -= 1;
+                resolve();
+            } else {
+                airState.waiters.push(resolve);
+            }
         });
 
         const pause = () => {
@@ -5668,7 +5701,7 @@ const initLottery = () => {
             rafId: null,
             last: 0,
             holdSeconds: 5,
-            pending: [],
+            pendingPicks: 0,
             winnerQueue: [],
             totalWinners: 0,
             waiters: [],
@@ -5842,12 +5875,15 @@ const initLottery = () => {
 
             mrState.pegs = [];
             const startY = TRACK.gateY + 100;
+            // 容得下球、左右各 3px 的隨機偏移，並保留 6px 通行餘裕。
+            const minPegSpacing = 2 * (TRACK.marbleRadius + TRACK.pegRadius) + 12;
+            const pegCols = Math.max(2, Math.min(TRACK.pegCols, Math.floor(trackW / minPegSpacing)));
             for (let row = 0; row < TRACK.pegRows; row++) {
                 const y = startY + row * TRACK.rowSpacing;
                 const isOdd = row % 2 === 1;
-                const cols = isOdd ? TRACK.pegCols - 1 : TRACK.pegCols;
-                const offset = isOdd ? (trackW / TRACK.pegCols) / 2 : 0;
-                const spacing = trackW / TRACK.pegCols;
+                const cols = isOdd ? pegCols - 1 : pegCols;
+                const offset = isOdd ? (trackW / pegCols) / 2 : 0;
+                const spacing = trackW / pegCols;
                 for (let col = 0; col < cols; col++) {
                     const px = mrState.trackLeft + spacing / 2 + col * spacing + offset;
                     const jx = rand(-3, 3);
@@ -5942,6 +5978,15 @@ const initLottery = () => {
         };
 
         const getFinishShowcaseDurationMs = () => (FINISH_SHOWCASE.moveDuration + FINISH_SHOWCASE.settleDuration) * 1000;
+
+        const notifyPick = () => {
+            const resolve = mrState.waiters.shift();
+            if (resolve) {
+                resolve();
+            } else {
+                mrState.pendingPicks++;
+            }
+        };
 
         // ─── 物理引擎 ───
         const updatePhysics = (dt) => {
@@ -6051,11 +6096,7 @@ const initLottery = () => {
                         spawnParticles(m.x, m.y, 12, 120, 0, 360);
                     }
 
-                    // resolve waitForNextPick
-                    if (mrState.waiters.length > 0) {
-                        const resolve = mrState.waiters.shift();
-                        resolve();
-                    }
+                    notifyPick();
 
                     if (mrState.rankings.length >= mrState.marbles.length) {
                         mrState.phase = 'finished';
@@ -6074,10 +6115,7 @@ const initLottery = () => {
                     }
                     mrState.rankings.push(m);
                     spawnParticles(m.x, m.y, 6, 60, 0, 360);
-                    if (mrState.waiters.length > 0) {
-                        const resolve = mrState.waiters.shift();
-                        resolve();
-                    }
+                    notifyPick();
                     if (mrState.rankings.length >= mrState.marbles.length) {
                         mrState.phase = 'finished';
                     }
@@ -6661,7 +6699,7 @@ const initLottery = () => {
             mrParticles.length = 0;
             mrState.marbles = [];
             mrState.rankings = [];
-            mrState.pending = [];
+            mrState.pendingPicks = 0;
             mrState.winnerQueue = [];
             mrState.totalWinners = 0;
             mrState.waiters.forEach((r) => r()); // resolve all pending
@@ -6722,6 +6760,12 @@ const initLottery = () => {
             // resolve 所有等待中的 Promise
             mrState.waiters.forEach((r) => r());
             mrState.waiters = [];
+            mrState.pendingPicks = 0;
+            mrState.winnerQueue = [];
+            mrState.totalWinners = 0;
+            mrState.marbles = [];
+            mrState.pegs = [];
+            mrState.rankings = [];
             mrState.phase = 'idle';
             mrState.gateOpen = false;
             clearFinishShowcase();
@@ -6739,9 +6783,9 @@ const initLottery = () => {
 
         const waitForNextPick = () => {
             return new Promise((resolve) => {
-                // 如果已有彈珠衝線但尚未被消費
-                const consumed = mrState.waiters.length;
-                if (mrState.rankings.length > consumed) {
+                // 每顆衝線的球只能解除一次等待，包含同一幀內先完成的球。
+                if (mrState.pendingPicks > 0) {
+                    mrState.pendingPicks--;
                     resolve();
                     return;
                 }
@@ -6780,12 +6824,22 @@ const initLottery = () => {
 
         const resize = () => {
             if (!mrState.running) return;
-            resizeCanvas();
+            const oldLeft = mrState.trackLeft;
+            const oldWidth = mrState.trackRight - oldLeft;
+            const oldW = mrState.W;
+            const oldH = mrState.H;
+            if (!resizeCanvas()) return;
             generateTrack();
-            // 彈珠維持在賽道內
-            const cx = (mrState.trackLeft + mrState.trackRight) / 2;
+            // 橫豎切換時保留球在賽道中的相對位置，避免全部被擠到同一側。
+            const newWidth = mrState.trackRight - mrState.trackLeft;
             mrState.marbles.forEach((m) => {
+                const progressX = oldWidth > 0 ? (m.x - oldLeft) / oldWidth : 0.5;
+                m.x = mrState.trackLeft + progressX * newWidth;
                 m.x = clamp(m.x, mrState.trackLeft + m.r + 2, mrState.trackRight - m.r - 2);
+            });
+            mrState.finishShowcaseWinners.forEach((item) => {
+                item.sourceX *= oldW > 0 ? mrState.W / oldW : 1;
+                item.sourceY *= oldH > 0 ? mrState.H / oldH : 1;
             });
             drawFrame();
         };
@@ -6851,6 +6905,7 @@ const initLottery = () => {
             waveElimTimer: 0,         // 淘汰計時累積
             waveElimInterval: 0,      // 淘汰間隔
             waveStartedElim: false,   // 是否已進入淘汰期
+            waveSwapTimer: 0,
             entryQueue: [],           // 待入場的名稱佇列
             entrySpawnTimer: 0,       // spawn 計時
             entrySpawnInterval: 0.15, // spawn 間隔
@@ -6861,6 +6916,8 @@ const initLottery = () => {
             if (!lottoCanvasEl) return false;
             const rect = (lottoWrapEl ?? lottoCanvasEl).getBoundingClientRect();
             if (!rect.width || !rect.height) return false;
+
+            const previous = { cx: btState.cx, cy: btState.cy, arenaR: btState.arenaR };
 
             btState.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
             btState.W = rect.width;
@@ -6876,6 +6933,18 @@ const initLottery = () => {
             // 讓競技場稍微偏下一點，留空間給煙火和頂部
             btState.cx = btState.W / 2;
             btState.cy = btState.H / 2 + Math.min(btState.H * 0.05, 40);
+
+            // 旋轉螢幕／改變視窗時，同步物理座標，避免沿用舊場地的位置與半徑。
+            if (previous.arenaR > 0) {
+                const scale = btState.arenaR / previous.arenaR;
+                [...btState.tops, ...btState.dying, ...btState.particles].forEach((item) => {
+                    item.x = btState.cx + (item.x - previous.cx) * scale;
+                    item.y = btState.cy + (item.y - previous.cy) * scale;
+                    item.r *= scale;
+                    item.vx *= scale;
+                    item.vy *= scale;
+                });
+            }
 
             return true;
         };
@@ -7825,17 +7894,20 @@ const initLottery = () => {
                             }
                         }
                     }
+                }
 
-                    // 超時：補滿所有剩餘
-                    if (isOvertimePhase && btState.wavePool.length > 0) {
-                        while (btState.wavePool.length > 0) {
-                            spawnWaveTop();
-                        }
-                    }
+                // 抽獎結果由 API 決定；場上陀螺僅代表揭曉動畫。
+                // 設定秒數到期就收尾，避免大量名單把動畫延長至共用保護計時器之外。
+                if (isOvertimePhase && btState.winnerQueue.length > 0) {
+                    btState.wavePool = [];
+                    const survivors = getAliveTops()
+                        .sort((a, b) => Number(Boolean(b.protectedWinner)) - Number(Boolean(a.protectedWinner)))
+                        .slice(0, targetSurvivors);
+                    startReveal(survivors);
                 }
 
                 // 揭曉條件：超過保護期 + wavePool 已清空 + 倖存者 ≤ 目標
-                if (btState.battleTimer > actualGraceTime
+                else if (btState.battleTimer > actualGraceTime
                     && btState.wavePool.length === 0
                     && alive.length <= targetSurvivors) {
                     if (btState.winnerQueue.length > 0) {
@@ -7893,6 +7965,7 @@ const initLottery = () => {
             btState.waveElimTimer = 0;
             btState.waveElimInterval = 0;
             btState.waveStartedElim = false;
+            btState.waveSwapTimer = 0;
             btState.entryQueue = [];
             btState.entrySpawnTimer = 0;
 
@@ -7929,11 +8002,6 @@ const initLottery = () => {
             btState.totalWinners = savedTotal;
             createTops();
 
-            // 波浪模式下自動延長 holdSeconds，確保每個中獎者至少 0.5 秒
-            if (btState.waveMode) {
-                btState.holdSeconds = Math.max(btState.holdSeconds, btState.totalWinners * 0.5);
-            }
-
             if (!btState.running) {
                 btState.running = true;
                 btState.last = performance.now();
@@ -7957,6 +8025,11 @@ const initLottery = () => {
             btState.waveElimTimer = 0;
             btState.waveElimInterval = 0;
             btState.waveStartedElim = false;
+            btState.waveSwapTimer = 0;
+            btState.winnerQueue = [];
+            btState.totalWinners = 0;
+            btState.particles = [];
+            btState.dying = [];
             btState.entryQueue = [];
             btState.entrySpawnTimer = 0;
             clearCanvas();
@@ -7977,7 +8050,10 @@ const initLottery = () => {
             });
         };
 
-        const setHoldSeconds = (s) => { btState.holdSeconds = s; };
+        const setHoldSeconds = (s) => {
+            const seconds = Number(s);
+            btState.holdSeconds = Number.isFinite(seconds) ? clamp(seconds, 5, 60) : 5;
+        };
 
         const resize = () => {
             if (!btState.running) return;
@@ -8365,14 +8441,7 @@ const initLottery = () => {
             },
             prepareToDraw: () => {
                 battleTop.ensureReady();
-                const baseHold = state.currentPrize?.lottoHoldSeconds ?? 5;
-                const isOneByOne = state.currentPrize?.drawMode === 'one_by_one';
-                // wave pool 只包含 eligibleNames（未得獎者），winners 已離場，不計入
-                const eligibleForWave = state.eligibleNames?.length ?? 0;
-                // 逐一抽出時應盡量貼近設定秒數，避免可抽人數一多每抽都被拉長。
-                // 額外延長只保留給一次全抽，因為那時需要在同一輪展示更多補位陀螺。
-                const waveExtra = !isOneByOne && eligibleForWave > 12 ? (eligibleForWave - 12) * 1.5 : 0;
-                battleTop.setHoldSeconds(baseHold + waveExtra);
+                battleTop.setHoldSeconds(state.currentPrize?.lottoHoldSeconds ?? 5);
             },
             revealWinners: async (winners, runtime = {}) => {
                 const append = runtime.appendWinner ?? appendWinner;
@@ -8470,7 +8539,8 @@ const initLottery = () => {
         startDrawingHeartbeat(backendRunId);
 
         const runId = ++drawRunId;
-        const isRunStale = () => runId !== drawRunId;
+        let animationExpired = false;
+        const isRunStale = () => runId !== drawRunId || animationExpired;
         const appendWinnerForRun = (winner) => {
             if (isRunStale() || !state.isDrawing) return;
             appendWinner(winner);
@@ -8481,6 +8551,14 @@ const initLottery = () => {
         if (state.currentPrize?.drawMode !== 'one_by_one' || !state.winners?.length) {
             state.winners = [];
         }
+        const previousWinners = [...state.winners];
+        let receivedWinners = [];
+        let animationFailed = false;
+
+        // API 結果是本輪權威資料；動畫只決定揭曉時機，不得使已抽出的名單遺失。
+        const restoreReceivedWinners = () => {
+            state.winners = [...previousWinners, ...receivedWinners];
+        };
 
         render();
 
@@ -8489,25 +8567,32 @@ const initLottery = () => {
         const isLotto = isLottoStyle(style);
         let ballRumbleSound = null;
         let safetyTimer = null;
+        const startedAt = Date.now();
+        trackDemoEvent('draw_start', style);
 
         try {
             startDrawAudio();
             lottoTimerLabel = '';
 
             await driver.prepareToDraw();
+            if (isRunStale()) return;
             if (isLotto) {
                 ballRumbleSound = sfx.playBallRumble();
             }
 
             const drawAbort = new AbortController();
             const drawTimeout = setTimeout(() => drawAbort.abort(), 15000);
-            const response = await fetch(config.drawUrl, {
-                method: 'POST',
-                headers: operatorHeaders(),
-                body: JSON.stringify({ run_id: backendRunId }),
-                signal: drawAbort.signal,
-            });
-            clearTimeout(drawTimeout);
+            let response;
+            try {
+                response = await fetch(config.drawUrl, {
+                    method: 'POST',
+                    headers: operatorHeaders(),
+                    body: JSON.stringify({ run_id: backendRunId }),
+                    signal: drawAbort.signal,
+                });
+            } finally {
+                clearTimeout(drawTimeout);
+            }
 
             if (isRunStale()) {
                 return;
@@ -8530,6 +8615,7 @@ const initLottery = () => {
                 return;
             }
             const winners = data?.winners ?? [];
+            receivedWinners = [...winners];
 
             if (winners.length === 0) {
                 console.warn('[lottery] no winners returned from /draw');
@@ -8548,36 +8634,35 @@ const initLottery = () => {
             const holdMs = (state.currentPrize?.lottoHoldSeconds ?? 5) * 1000;
             const clock = createDrawClock(Math.max(3000, holdMs));
 
-            // 75 秒安全計時器：動畫開始後若超時仍未結束，強制收尾
-            safetyTimer = setTimeout(() => {
-                console.warn('[lottery] 75s safety timeout — forcing end');
-                safetyTimer = null;
-                state.isDrawing = false;
-                stopDrawAudio();
-                stopDrawingHeartbeat();
-                ballRumbleSound?.stop();
-
-                if (state.winners?.length > 0) {
-                    stopAllAnimations();
-                    render();
-                    resultMode.show();
-                } else {
-                    location.reload();
-                }
-            }, 75000);
-
-            await driver.revealWinners(winners, {
-                appendWinner: appendWinnerForRun,
-                isRunStale,
-                clock,
+            // 圓球賽跑本身允許兩倍設定秒數的安全收尾，外層不能提早截斷。
+            const animationTimeoutMs = Math.max(75000, holdMs * (style === 'marble_race' ? 2 : 1) + 15000);
+            const animationTimeout = new Promise((resolve) => {
+                safetyTimer = setTimeout(() => {
+                    safetyTimer = null;
+                    if (!isRunStale()) {
+                        console.warn('[lottery] animation timeout — showing received draw results');
+                        animationFailed = true;
+                        animationExpired = true;
+                        driver.stop();
+                    }
+                    resolve();
+                }, animationTimeoutMs);
             });
-        } catch {
-            stopDrawingHeartbeat();
-            if (isLotto) {
-                lottoAir.slowStopMachine();
-            } else {
-                driver.stop();
-            }
+
+            await Promise.race([
+                driver.revealWinners(winners, {
+                    appendWinner: appendWinnerForRun,
+                    isRunStale,
+                    clock,
+                }),
+                animationTimeout,
+            ]);
+        } catch (error) {
+            if (runId !== drawRunId) return;
+            animationFailed = receivedWinners.length > 0;
+            animationExpired = true;
+            console.warn('[lottery] draw presentation interrupted', error);
+            driver.stop();
             return null;
         } finally {
             if (safetyTimer) {
@@ -8586,26 +8671,26 @@ const initLottery = () => {
             }
             ballRumbleSound?.stop();
 
-            // 不論 runId 是否過期，都需要清理狀態和檢查結果模式
+            // 被切換掉的舊流程，不得停止新一輪的音效、心跳或覆蓋新獎項結果。
+            if (runId !== drawRunId) {
+                trackDemoEvent('draw_failed', style, Date.now() - startedAt);
+                return;
+            }
+
+            trackDemoEvent(receivedWinners.length > 0 && !animationFailed ? 'draw_complete' : 'draw_failed', style, Date.now() - startedAt);
+
+            if (receivedWinners.length > 0) {
+                restoreReceivedWinners();
+            }
             stopDrawAudio();
             stopDrawingHeartbeat();
             state.isDrawing = false;
-
-            if (isRunStale()) {
-                // 即使被中斷，若獎項已完成仍需顯示結果
-                if (isPrizeCompleted() || ((state.eligibleNames?.length === 0) && state.winners?.length > 0)) {
-                    render();
-                    sfx.playVictory();
-                    resultMode.show();
-                }
-                return;
-            }
 
             render();
 
             // 檢查是否抽完，切換到結果模式
             const exhausted = (state.eligibleNames?.length === 0) && !isPrizeCompleted() && (state.winners?.length > 0);
-            if (isPrizeCompleted() || exhausted) {
+            if (animationFailed || isPrizeCompleted() || exhausted) {
                 sfx.playVictory();
                 // 直接顯示結果，避免 timer 被後續 WebSocket 事件取消
                 resultMode.show();
@@ -8849,13 +8934,17 @@ const initLottery = () => {
     const pollPayload = async () => {
         // 抽獎期間仍輪詢，但只更新切換狀態（不覆蓋 winners）
         const skipWinnersUpdate = state.isDrawing;
+        const pollRunId = drawRunId;
         try {
             const response = await fetch(pollUrl, {
                 headers: { 'Accept': 'application/json' },
             });
             if (!response.ok) return;
             const payload = await response.json();
-            applyLotteryPayload(payload, { skipWinnersUpdate });
+            // 抽獎前的舊快照可能直到揭曉後才回來，不能覆蓋已收到的結果。
+            if (pollRunId !== drawRunId) return;
+            // 請求可能在抽獎開始前送出、開始後才回來，仍不可提前覆蓋動畫中的名單。
+            applyLotteryPayload(payload, { skipWinnersUpdate: skipWinnersUpdate || state.isDrawing });
         } catch {
             // ignore
         }

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @vite('resources/js/demo-metrics.js')
     <meta name="description" content="{{ $seoDescription }}">
     <meta name="robots" content="index,follow,max-image-preview:large">
     <link rel="canonical" href="{{ $seoCanonical }}">
@@ -92,6 +93,15 @@
         .btn-secondary { color: #fde68a; border: 1px solid rgba(251,191,36,.3); background: rgba(255,255,255,.04); }
         .visual { min-height: 20rem; display: grid; place-items: center; padding: 1.5rem; border: 1px solid rgba(255,255,255,.1); border-radius: 1.5rem; background: linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); box-shadow: 0 2rem 5rem rgba(0,0,0,.25); }
         .visual img { display: block; width: min(100%, 25rem); max-height: 20rem; object-fit: contain; }
+        .visual.actual { padding: .75rem; min-height: 0; }
+        .visual.actual img { width: 100%; max-height: none; height: auto; border-radius: .85rem; }
+        figure { margin: 0; }
+        figcaption { padding: .75rem .25rem; color: var(--muted); font-size: .85rem; line-height: 1.6; }
+        .preview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+        .preview-grid img { width: 100%; height: auto; border: 1px solid rgba(255,255,255,.12); border-radius: .75rem; }
+        .mobile-preview { margin-top: 1rem; }
+        .mobile-preview img { display: block; width: min(100%, 19.5rem); height: auto; margin-top: 1rem; border-radius: .75rem; }
+        .preview-grid strong { display: block; color: #fff; }
         .visual-fallback { color: #fde68a; font-size: 1.2rem; font-weight: 800; text-align: center; }
         .section { margin-top: 1.5rem; padding: clamp(1.5rem, 4vw, 3rem); border: 1px solid rgba(255,255,255,.08); border-radius: 1.25rem; background: rgba(255,255,255,.035); }
         h2 { margin: 0 0 1rem; color: #fff; font-size: clamp(1.4rem, 3vw, 2rem); }
@@ -106,10 +116,11 @@
         .related { display: flex; flex-wrap: wrap; gap: .6rem; }
         .related a { padding: .5rem .8rem; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; color: #fde68a; text-decoration: none; }
         .related a:hover { border-color: rgba(251,191,36,.5); background: rgba(245,158,11,.08); }
-        @media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 1.5rem; padding-top: 0; } .intro-nav { align-items: flex-start; flex-direction: column; margin-bottom: 2rem; } .feature-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 1.5rem; padding-top: 0; } .intro-nav { align-items: flex-start; flex-direction: column; margin-bottom: 2rem; } .feature-grid, .preview-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
+    @include('lottery.partials.demo-metrics', ['metricEntry' => 'intro', 'metricStyle' => $demoCurrentStyle['key']])
     <main class="intro-wrap">
         <nav class="intro-nav" aria-label="頁面導覽">
             <div class="crumbs">
@@ -126,18 +137,43 @@
                 <h1>{{ $demoStyleLabel }}抽獎動畫</h1>
                 <p class="lead">{{ $demoCurrentStyle['longDesc'] ?? $demoCurrentStyle['desc'] }}</p>
                 <div class="actions">
-                    <a class="btn btn-primary" href="{{ $demoPlayUrl }}">開始設定參數試玩</a>
+                    <a class="btn btn-primary" href="{{ $demoPlayUrl }}" data-demo-event="play_click">免費試玩{{ $demoStyleLabel }}抽獎</a>
                     <a class="btn btn-secondary" href="{{ route('demo.lottery.landing') }}">查看全部動畫</a>
                 </div>
+                <p>免登入・可自訂名單・支援手機與電腦</p>
             </div>
-            <div class="visual">
-                @if (file_exists(public_path('images/previews/'.$demoCurrentStyle['key'].'.svg')))
+            <div class="visual {{ $demoPreview ? 'actual' : '' }}">
+                @if ($demoPreview)
+                    <figure>
+                        <img src="{{ $demoPreview['action']['url'] }}" alt="{{ $demoStyleLabel }}抽獎動畫實際試玩畫面" width="{{ $demoPreview['action']['width'] }}" height="{{ $demoPreview['action']['height'] }}" fetchpriority="high">
+                        <figcaption>實際 Demo 畫面，使用合成名單示範；按「免費試玩」可觀看完整動畫。</figcaption>
+                    </figure>
+                @elseif (file_exists(public_path('images/previews/'.$demoCurrentStyle['key'].'.svg')))
                     <img src="{{ url('/images/previews/'.$demoCurrentStyle['key'].'.svg') }}" alt="{{ $demoStyleLabel }}抽獎動畫示意圖" width="800" height="450" fetchpriority="high">
                 @else
                     <div class="visual-fallback">{{ $demoStyleLabel }}<br>抽獎動畫</div>
                 @endif
             </div>
         </section>
+
+        @if ($demoPreview)
+            <section class="section" aria-labelledby="demo-preview">
+                <h2 id="demo-preview">從設定名單到揭獎，實際畫面預覽</h2>
+                <p>以下為 8 位合成參加者、一次抽出 3 人的 Demo 截圖，呈現設定、動畫與中獎名單。</p>
+                <div class="preview-grid">
+                    @foreach (['setup' => ['設定名單', '輸入參加者，選擇中獎人數與抽獎模式。'], 'action' => ['觀看動畫', '開始抽獎後，觀看競賽與揭曉效果。'], 'result' => ['得主揭曉', '動畫結束後，可在中獎名單確認結果。']] as $stage => $copy)
+                        <figure>
+                            <img src="{{ $demoPreview[$stage]['url'] }}" alt="{{ $demoStyleLabel }}抽獎：{{ $copy[0] }}實際畫面" width="{{ $demoPreview[$stage]['width'] }}" height="{{ $demoPreview[$stage]['height'] }}" loading="lazy" decoding="async">
+                            <figcaption><strong>{{ $copy[0] }}</strong>{{ $copy[1] }}</figcaption>
+                        </figure>
+                    @endforeach
+                </div>
+                <details class="mobile-preview">
+                    <summary>查看手機直式畫面（390 × 844）</summary>
+                    <img src="{{ $demoPreview['mobile']['url'] }}" alt="{{ $demoStyleLabel }}抽獎手機直式畫面與中獎名單" width="{{ $demoPreview['mobile']['width'] }}" height="{{ $demoPreview['mobile']['height'] }}" loading="lazy" decoding="async">
+                </details>
+            </section>
+        @endif
 
         <section class="section" aria-labelledby="demo-steps">
             <h2 id="demo-steps">{{ $demoStyleLabel }}抽獎怎麼玩？</h2>
@@ -164,13 +200,23 @@
             @endif
         </section>
 
+        <section class="section" aria-labelledby="planning-tips">
+            <h2 id="planning-tips">{{ $demoStyleLabel }}的活動安排與試玩重點</h2>
+            <ul>
+                @foreach (($demoCurrentStyle['planningTips'] ?? []) as $tip)
+                    <li>{{ $tip }}</li>
+                @endforeach
+            </ul>
+            <p>正在籌備尾牙或春酒？查看<a href="{{ route('guides.year-end-lottery') }}">尾牙抽獎流程指南：名單、規則與彩排清單</a>，把動畫選擇接到完整活動流程。</p>
+        </section>
+
         <section class="section" aria-labelledby="demo-scope">
             <h2 id="demo-scope">免費 Demo 與正式活動有什麼不同？</h2>
             <p><strong>此動畫 Demo 免費（NT$0），不需登入。</strong>可使用預設名單，或自訂參加者、中獎人數與抽獎模式，體驗動畫與結果呈現。</p>
             <p>正式活動的組織後台、員工名單匯入、獎項管理與 QRCode 兌獎需註冊登入，使用額度依方案而定；免費 Demo 不代表所有正式活動功能皆免費。</p>
             <div class="actions">
-                <a class="btn btn-primary" href="{{ $demoPlayUrl }}">免費試玩{{ $demoStyleLabel }}抽獎</a>
-                <a class="btn btn-secondary" href="{{ route('register-account') }}">註冊並設定正式活動</a>
+                <a class="btn btn-primary" href="{{ $demoPlayUrl }}" data-demo-event="play_click">免費試玩{{ $demoStyleLabel }}抽獎</a>
+                <a class="btn btn-secondary" href="{{ route('register-account') }}" data-demo-event="register_click">註冊並設定正式活動</a>
             </div>
         </section>
 

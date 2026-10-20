@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\AnimationStyles;
+use App\Support\DemoPreviews;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -155,6 +156,7 @@ class DemoLotteryController extends Controller
     {
         return view('demo.landing', [
             'styles' => AnimationStyles::all(),
+            'demoPreviews' => collect(AnimationStyles::all())->mapWithKeys(fn (array $style) => [$style['key'] => DemoPreviews::forStyle($style['key'])])->all(),
         ]);
     }
 
@@ -253,6 +255,7 @@ class DemoLotteryController extends Controller
             'demoPlayUrl' => route('demo.lottery.play', ['slug' => $slug]),
             'seoImage' => $seoImage,
             'demoCurrentStyle' => $currentStyle,
+            'demoPreview' => DemoPreviews::forStyle($style),
             'demoRelatedStyles' => $relatedStyles,
             'demoBreadcrumbItems' => $breadcrumbItems,
         ];
@@ -268,7 +271,7 @@ class DemoLotteryController extends Controller
             'draw_mode' => 'nullable|in:all_at_once,one_by_one',
         ]);
 
-        $rawNames = $request->input('names', '');
+        $rawNames = $request->input('names') ?? '';
         $names = collect(preg_split('/[\n,]+/', $rawNames))
             ->map(fn ($n) => trim($n))
             ->filter()
