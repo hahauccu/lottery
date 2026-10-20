@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('ip_hash', 80)->nullable();
             $table->timestamps();
 
-            $table->index(['demo_lottery_template_id', 'is_public', 'is_hidden']);
+            $table->index(['demo_lottery_template_id', 'is_public', 'is_hidden'], 'demo_template_reports_visibility_index');
         });
     }
 
