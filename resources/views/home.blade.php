@@ -72,7 +72,7 @@
         ];
 
         $setupSteps = [
-            ['title' => '建立活動與匯入名單', 'desc' => '在後台建立抽獎活動，匯入員工或參與者名單（Excel、CSV），可分群管理。'],
+            ['title' => '建立活動與匯入名單', 'desc' => '在後台建立抽獎活動，匯入員工或參與者名單（CSV），可分群管理。'],
             ['title' => '設定獎項與抽獎規則', 'desc' => '新增獎項、設定中獎人數、抽獎模式（一次抽完或逐一抽出）與資格條件。'],
             ['title' => '開放前台抽獎與兌獎', 'desc' => '大屏投影執行抽獎、即時切換獎項；中獎者可透過 QRCode 完成兌獎驗證。'],
         ];
@@ -84,7 +84,7 @@
             'description' => '從建立活動到中獎兌獎的完整流程。',
             'step' => [
                 ['@type' => 'HowToStep', 'position' => 1, 'name' => '建立抽獎活動', 'text' => '在後台建立活動並設定名稱、時間與品牌代碼。'],
-                ['@type' => 'HowToStep', 'position' => 2, 'name' => '匯入參與者名單', 'text' => '支援 Excel、CSV 匯入名單，可依部門或群組分組管理。'],
+                ['@type' => 'HowToStep', 'position' => 2, 'name' => '匯入參與者名單', 'text' => '以 CSV 匯入名單（Excel 可另存為 CSV），可依部門或群組分組管理。'],
                 ['@type' => 'HowToStep', 'position' => 3, 'name' => '設定獎項與規則', 'text' => '新增獎項、設定中獎人數與抽獎模式，並選擇動畫風格。'],
                 ['@type' => 'HowToStep', 'position' => 4, 'name' => '開放前台抽獎', 'text' => '以投影或大屏執行抽獎，主持人可即時切換獎項。'],
                 ['@type' => 'HowToStep', 'position' => 5, 'name' => '通知與兌獎', 'text' => '中獎者收到通知並以 QRCode 完成兌獎驗證與領獎。'],
@@ -103,6 +103,9 @@
                 ['@type' => 'HowToStep', 'position' => 4, 'name' => '現場領取獎品', 'text' => '工作人員核對後發放獎品，系統自動標記為已領獎。'],
             ],
         ];
+
+        // 價格以後台方案資料為準，避免結構化資料與實際方案脫節
+        $activePlans = \App\Models\SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get();
 
         $softwareApplication = [
             '@context' => 'https://schema.org',
@@ -124,14 +127,25 @@
                 '後台下載中獎清單',
             ],
             'offers' => [
-                '@type' => 'Offer',
-                'availability' => 'https://schema.org/InStock',
-                'priceSpecification' => [
-                    '@type' => 'PriceSpecification',
-                    'description' => '提供彈性方案，請聯繫洽談報價',
-                ],
+                '@type' => 'AggregateOffer',
+                'priceCurrency' => 'TWD',
+                'lowPrice' => $activePlans->min('price'),
+                'highPrice' => $activePlans->max('price'),
+                'offerCount' => $activePlans->count(),
+                'offers' => $activePlans->map(fn ($plan) => [
+                    '@type' => 'Offer',
+                    'name' => $plan->name,
+                    'description' => $plan->description,
+                    'price' => $plan->price,
+                    'priceCurrency' => 'TWD',
+                    'availability' => 'https://schema.org/InStock',
+                ])->values()->all(),
             ],
         ];
+
+        if ($activePlans->isEmpty()) {
+            unset($softwareApplication['offers']);
+        }
     @endphp
 
     {{-- Organization JSON-LD --}}
