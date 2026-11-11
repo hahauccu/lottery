@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Support\AnimationStyles;
+use App\Support\LotteryFeatures;
+use App\Support\LotteryGuides;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
@@ -12,7 +14,12 @@ class SitemapController extends Controller
         // 未追蹤每頁的內容更新日期；省略 lastmod，避免部署時間被誤認為內容更新。
         $urls = [
             [
-                'loc' => route('guides.year-end-lottery'),
+                'loc' => route('features.index'),
+                'changefreq' => 'monthly',
+                'priority' => '0.8',
+            ],
+            [
+                'loc' => route('guides.index'),
                 'changefreq' => 'monthly',
                 'priority' => '0.7',
             ],
@@ -42,6 +49,22 @@ class SitemapController extends Controller
                 'priority' => '0.7',
             ],
         ];
+
+        foreach (LotteryFeatures::all() as $slug => $feature) {
+            $urls[] = [
+                'loc' => route('features.'.$slug),
+                'changefreq' => 'monthly',
+                'priority' => '0.7',
+            ];
+        }
+
+        foreach (LotteryGuides::all() as $slug => $guide) {
+            $urls[] = [
+                'loc' => route('guides.'.$slug),
+                'changefreq' => 'monthly',
+                'priority' => '0.7',
+            ];
+        }
 
         foreach (AnimationStyles::all() as $style) {
             $urls[] = [

@@ -1,0 +1,5 @@
+﻿姓名,Email,電話,部門,員工編號,群組
+測試甲,demo001@example.com,,企劃部,DEMO001,彩排甲組
+測試甲,demo002@example.com,,研發部,DEMO002,彩排乙組
+測試乙,demo003@example.com,,企劃部,DEMO003,彩排甲組
+測試丙,demo004@example.com,,研發部,DEMO004,彩排乙組

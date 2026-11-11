@@ -162,22 +162,31 @@ SEO 回歸驗證：`php artisan test --filter=DemoLotteryPagesTest`，涵蓋所�
 
 ### 尾牙抽獎內容指南
 
+- 首頁以「尾牙抽獎系統」介紹產品，首屏展示合成名單的實際動畫截圖，連到試玩與正式活動建立；名單、主持稿與補抽三個入口接往教學及功能頁。title、分享描述與可見內容一致，HowTo 直接使用畫面上的三步設定資料。
+- 共用 FAQ 由 `SiteFaqs` 提供，說明 CSV 匯入、後台手動發送中獎通知及工作人員掃碼領獎；不承諾自動寄信、獨立彩排模式、固定同步延遲或未驗證容量。內容調整不改動抽獎與分析服務。
 - `/guides/year-end-lottery` 提供名單與資格、重複中獎規則、主持流程範例、七種動畫比較、彩排與現場檢查清單。內容以現有功能為依據，流程範例不代表自動套用活動設定。
 - 指南由 Blade 直接輸出，無抽獎 JS／iframe；具有獨立 title／description、self canonical、Article 與 BreadcrumbList，列入 sitemap。首頁、動畫總覽、FAQ 與七種動畫介紹頁提供可爬取連結。
 - `AnimationStyles::all()` 的 `planningTips` 提供各動畫獨立使用提醒；秒數說明必須反映現況，不可把 pending 的時間一致化方案寫成已完成，也不保證任意裝置流暢或任意名單容量。
 - 不為內容新增虛構評分、作者資歷、日期或 `lastmod`。回歸：`php artisan test --filter='LotteryGuideTest|DemoLotteryPagesTest'`。
+- `/guides` 為活動指南總覽，`LotteryGuides` 管理四篇指南的導覽資訊；新增主持稿、CSV 名單匯入、重複中獎／不在場重抽三篇深入教學，與首頁、FAQ、動畫總覽、介紹頁及既有尾牙指南互相連結。含功能介紹系列，sitemap 共 21 個公開網址。
+- 新教學共用 Blade 版型與輕量 `guides.js`，不載入抽獎引擎；主持稿可複製，`public/examples/lottery-run-of-show.csv` 與 `lottery-participants-sample.csv` 可下載，使用 UTF-8 BOM 與合成資料。複製不可用時保留手動選取說明。
+- `/features` 以本站功能與使用情境為宣傳主軸，三篇明細為 `lottery-analysis`、`lottery-control`、`absent-redraw`，由 `LotteryFeatures` 管理 metadata。功能頁不載入外部 JS，與操作指南互連；事實核對及分析器已知落差見 `todo/feature-content-audit.md`。
+- 分析文案上限為單次 1,000 次，明列動態資格限制；後台管理獎項與預覽、前台觸發正式抽獎；不在場釋出不會自動補抽。`LotteryFeatureClaimsTest` 核對現有行為，`LotteryFeaturePagesTest` 檢查索引與內容連結。
+- 教學依實際程式描述：員工匯入接受 CSV，以同組織 Email 更新；群組欄位不存在不更新、留白清空、有值覆蓋。重抽會保留原紀錄，資格依包含與排除規則判斷；指南不代替後台設定。
+- 陀螺／圓球介紹補上 8 人抽 3 人的設定對照、正式秒數與完整一輪的差異，明確說明免費 Demo 固定 10 秒。未實作動畫時間標準或 WebSocket 待辦方案。
 
 ### Demo 試玩成效
 
 - 首頁、動畫總覽、介紹頁與非 embedded 試玩頁使用輕量 `demo-metrics.js`，透過 `POST /demo/metrics` 記錄瀏覽、試玩／註冊入口點擊、抽獎開始及動畫完成／失敗。正式品牌活動不啟用；統計送出失敗不影響抽獎。
 - 僅按台灣日期、動畫、入口與事件累加次數和動畫耗時，不保存 IP、訪客識別碼、網址參數、名單或 Email；尊重 Do Not Track／Global Privacy Control。IP 僅供 Laravel 快取中的每分鐘 60 次頻率限制。
 - 系統管理員（`is_admin`）在後台「系統管理 → 試玩成效」查看近 7／28 天。這是事件次數，不是獨立訪客漏斗；註冊點擊不代表註冊成功，開始／完成可能跨日或因離頁、網路與拒絕追蹤而有落差。
+- 指南總覽及三篇新教學以 `guide_hub`、`guide_host`、`guide_csv`、`guide_rule` 區分入口，沿用原匿名統計資料表；另記下載點擊及主持稿複製成功，不傳送剪貼簿、主持稿或名單內容。下載點擊不代表檔案已儲存。
 - 上版需執行 `php artisan migrate` 建立 `demo_metrics`，並以 `npm run build` 包含新增入口。初次上版沒有歷史資料，GSC 排名／收錄仍需上版後另行觀察。
 - 回歸：`php artisan test --filter=DemoMetricsTest`、`node --test tests/JavaScript/*.test.mjs`。預設抽獎須還原 30 人／抽 5 人／一次全抽，不沿用上次自訂設定。
 
 ### 意見回饋與聯絡我們
 
-- `/feedback` 免登入收集動畫卡住、顯示異常、功能建議與其他意見；首頁頁尾、Demo 總覽與試玩工具面板提供入口。此公開頁可索引並列入 sitemap（含尾牙指南目前共 13 個網址）。
+- `/feedback` 免登入收集動畫卡住、顯示異常、功能建議與其他意見；首頁頁尾、Demo 總覽與試玩工具面板提供入口。此公開頁可索引並列入 sitemap（含功能與指南系列目前共 21 個網址）。
 - Email 選填；記錄來源公開頁面的路徑、動畫與視窗尺寸，不收集網址 query、存取碼或參加者名單。回饋不公開。
 - 先存入 `feedback` 資料表再寄通知，寄信失敗不影響收件；系統管理員（`is_admin`）可在後台「系統管理 → 意見回饋」標記待處理／已處理與內部備註，一般租戶無權讀取。
 - 通知收件人設定：`FEEDBACK_NOTIFICATION_EMAIL`；預設沿用客服信箱，留空可停用通知。仍需正確設定 `MAIL_*`；`MAIL_MAILER=log` 只寫入本機 log，不代表已寄達。

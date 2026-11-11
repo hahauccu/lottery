@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Support\AnimationStyles;
+use App\Support\LotteryGuides;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,6 +52,69 @@ class LotteryGuideTest extends TestCase
         }
         $this->get('/sitemap.xml')->assertOk()->assertSee('<loc>'.$url.'</loc>', false)->assertDontSee('<lastmod>', false);
         $this->get('/demo/lottery/marble-race/play')->assertOk()->assertDontSee('id="planning-tips"', false)->assertSee('noindex, follow');
+    }
+
+    public function test_library_and_articles_have_distinct_metadata_and_reachable_content(): void
+    {
+        $library = $this->get(route('guides.index'))->assertOk()->assertDontSee('lottery-config-data');
+        $libraryXpath = $this->xpath($library->getContent());
+        $titles = [];
+        foreach (LotteryGuides::all() as $slug => $guide) {
+            $url = route('guides.'.$slug);
+            $this->assertGreaterThan(0, $libraryXpath->query('//a[@href="'.$url.'"]')->length);
+            $response = $this->get($url)->assertOk()->assertDontSee('lottery-config-data');
+            $xpath = $this->xpath($response->getContent());
+            $titles[] = $xpath->evaluate('string(//title)');
+            $this->assertSame(1, $xpath->query('//h1')->length);
+            $this->assertSame($url, $xpath->evaluate('string(//link[@rel="canonical"]/@href)'));
+            $this->assertSame('index,follow,max-image-preview:large', $xpath->evaluate('string(//meta[@name="robots"]/@content)'));
+            $this->assertSame(0, $xpath->query('//iframe')->length);
+            $this->assertGreaterThan(0, $xpath->query('//a[@href="'.route('guides.index').'"]')->length);
+            foreach ($xpath->query('//a[starts-with(@href, "#")]') as $link) {
+                $this->assertSame(1, $xpath->query('//*[@id="'.substr($link->getAttribute('href'), 1).'"]')->length);
+            }
+            foreach ($xpath->query('//script[@type="application/ld+json"]') as $script) {
+                $schema = json_decode($script->textContent, true, 512, JSON_THROW_ON_ERROR);
+                if ($schema['@type'] === 'Article') {
+                    $this->assertSame($url, $schema['mainEntityOfPage']);
+                    $this->assertSame($xpath->evaluate('string(//title)'), $schema['headline']);
+                    $this->assertArrayNotHasKey('dateModified', $schema);
+                }
+            }
+        }
+        $this->assertCount(count($titles), array_unique($titles));
+        $this->get('/guides/not-a-guide')->assertNotFound();
+        foreach (['/', '/faq', '/demo/lottery', '/demo/lottery/battle-top', '/demo/lottery/marble-race'] as $path) {
+            $this->get($path)->assertOk()->assertSee(route('guides.index'));
+        }
+        $this->get('/sitemap.xml')->assertOk()->assertSee('<loc>'.route('guides.index').'</loc>', false);
+    }
+
+    public function test_downloads_are_valid_synthetic_csv_and_copy_targets_match_visible_scripts(): void
+    {
+        $csv = \League\Csv\Reader::createFromPath(public_path('examples/lottery-participants-sample.csv'));
+        $csv->setHeaderOffset(0);
+        $this->assertSame(['姓名', 'Email', '電話', '部門', '員工編號', '群組'], $csv->getHeader());
+        $rows = iterator_to_array($csv->getRecords(), false);
+        $this->assertCount(4, $rows);
+        $this->assertCount(4, array_unique(array_column($rows, 'Email')));
+        foreach ($rows as $row) {
+            $this->assertStringEndsWith('@example.com', $row['Email']);
+            $this->assertSame('', $row['電話']);
+        }
+        $host = $this->get(route('guides.lottery-host-script'))->assertOk();
+        $xpath = $this->xpath($host->getContent());
+        $this->assertSame(4, $xpath->query('//button[@data-copy-target]')->length);
+        foreach ($xpath->query('//button[@data-copy-target]') as $button) {
+            $id = $button->getAttribute('data-copy-target');
+            $this->assertSame(1, $xpath->query('//blockquote[@id="'.$id.'"]')->length);
+            $this->assertSame(1, $xpath->query('//*[@id="'.$id.'-status" and @role="status"]')->length);
+        }
+        $schedule = \League\Csv\Reader::createFromPath(public_path('examples/lottery-run-of-show.csv'));
+        $schedule->setHeaderOffset(0);
+        $this->assertCount(5, iterator_to_array($schedule->getRecords()));
+        $host->assertSee(asset('examples/lottery-run-of-show.csv'));
+        $this->get(route('guides.lottery-participant-import'))->assertOk()->assertSee(asset('examples/lottery-participants-sample.csv'));
     }
 
     private function xpath(string $html): DOMXPath

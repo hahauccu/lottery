@@ -1,4 +1,4 @@
-const events = new Set(['page_view', 'play_click', 'register_click', 'draw_start', 'draw_complete', 'draw_failed']);
+const events = new Set(['page_view', 'play_click', 'register_click', 'draw_start', 'draw_complete', 'draw_failed', 'download_click', 'copy_click']);
 
 // 只傳白名單事件與動畫種類；不讀取網址參數、名單、Email或訪客識別碼。
 export function createDemoTracker({ endpoint, csrf, entry, style = 'all' }, { send, optedOut = false }) {

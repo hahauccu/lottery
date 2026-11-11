@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DemoLotteryTemplate;
+use App\Models\SubscriptionPlan;
 use App\Support\AnimationStyles;
 use DOMDocument;
 use DOMXPath;
@@ -95,6 +96,57 @@ class DemoLotteryPagesTest extends TestCase
             ->assertDontSee('<iframe', false)
             ->assertSee('查看介紹', false)
             ->assertSee('立即試玩', false);
+
+        $xpath = $this->xpath($response->getContent());
+        $title = $xpath->evaluate('string(//title)');
+        $description = $xpath->evaluate('string(//meta[@name="description"]/@content)');
+        $this->assertSame('尾牙抽獎系統｜名單匯入、抽獎動畫與不在場重抽', $title);
+        $this->assertSame(1, $xpath->query('//h1')->length);
+        $this->assertSame('尾牙抽獎系統', trim($xpath->evaluate('string(//h1)')));
+        $this->assertSame($title, $xpath->evaluate('string(//meta[@property="og:title"]/@content)'));
+        $this->assertSame($description, $xpath->evaluate('string(//meta[@property="og:description"]/@content)'));
+        $this->assertSame($description, $xpath->evaluate('string(//meta[@name="twitter:description"]/@content)'));
+        $this->assertSame(url('/'), $xpath->evaluate('string(//link[@rel="canonical"]/@href)'));
+        foreach (['guides.year-end-lottery', 'guides.lottery-host-script', 'guides.lottery-participant-import', 'guides.lottery-rules', 'features.absent-redraw'] as $route) {
+            $this->assertGreaterThan(0, $xpath->query('//a[@href="'.route($route).'"]')->length);
+        }
+        $this->assertSame(1, $xpath->query('//img[@fetchpriority="high"]')->length);
+        $this->assertSame(0, $xpath->query('//script[contains(@src,"lottery-")]')->length);
+        foreach ($xpath->query('//script[@type="application/ld+json"]') as $script) {
+            $schema = json_decode($script->textContent, true, 512, JSON_THROW_ON_ERROR);
+            if ($schema['@type'] === 'HowTo') {
+                $this->assertCount(3, $schema['step']);
+                $this->assertSame('建立活動與匯入名單', $schema['step'][0]['name']);
+                $this->assertStringContainsString('另存 CSV', $schema['step'][0]['text']);
+            }
+        }
+    }
+
+    public function test_home_prices_use_only_active_plans_and_omit_offers_when_none_exist(): void
+    {
+        SubscriptionPlan::query()->delete();
+        $schemaForHome = function (): array {
+            $html = $this->get('/')->assertOk()->getContent();
+            foreach ($this->xpath($html)->query('//script[@type="application/ld+json"]') as $script) {
+                $schema = json_decode($script->textContent, true, 512, JSON_THROW_ON_ERROR);
+                if ($schema['@type'] === 'SoftwareApplication') {
+                    return $schema;
+                }
+            }
+            $this->fail('Missing SoftwareApplication schema.');
+        };
+        $this->assertArrayNotHasKey('offers', $schemaForHome());
+        foreach ([['free', 0, true], ['paid', 3000, true], ['inactive', 9999, false]] as [$code, $price, $active]) {
+            SubscriptionPlan::create(['name' => $code, 'code' => $code, 'price' => $price,
+                'max_employees' => 50, 'max_prizes_per_event' => 4, 'duration_days' => 30,
+                'is_active' => $active, 'sort_order' => $price]);
+        }
+        $offers = $schemaForHome()['offers'];
+        $this->assertSame('AggregateOffer', $offers['@type']);
+        $this->assertEquals(0, $offers['lowPrice']);
+        $this->assertEquals(3000, $offers['highPrice']);
+        $this->assertSame(2, $offers['offerCount']);
+        $this->assertSame(['free', 'paid'], array_column($offers['offers'], 'name'));
     }
 
     public function test_landing_keeps_its_search_topic_and_links_to_both_introduction_and_play_pages(): void
@@ -193,7 +245,7 @@ class DemoLotteryPagesTest extends TestCase
 
         $xml = simplexml_load_string($response->getContent());
         $urls = array_map(fn ($url) => (string) $url->loc, iterator_to_array($xml->url, false));
-        $this->assertCount(13, $urls);
+        $this->assertCount(21, $urls);
         $this->assertContains(route('guides.year-end-lottery'), $urls);
         $this->assertContains(route('feedback.index'), $urls);
         foreach (AnimationStyles::all() as $style) {

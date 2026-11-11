@@ -293,6 +293,8 @@
         <p class="faq-page__lead">尾牙抽獎、企業活動、線上抽獎最常被問到的 20 題實戰問答 — 涵蓋活動流程、抽獎公平性、彈幕與 QRCode 領獎，以及瀏覽器與裝置相容性。</p>
 
         <p><a href="{{ route('guides.year-end-lottery') }}">從頭準備一場尾牙？查看抽獎流程、主持範例與彩排清單 →</a></p>
+        <p><a href="{{ route('features.index') }}">認識本站功能：模擬分析、後台主控與不在場重抽 →</a></p>
+        <p><a href="{{ route('guides.index') }}">更多活動準備教學：主持稿、CSV 名單與重複中獎規則 →</a></p>
         <nav class="faq-nav" aria-label="FAQ 分類導航">
             @foreach ($categories as $key => $cat)
                 <a href="#{{ $key }}">
