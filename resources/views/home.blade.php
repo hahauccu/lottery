@@ -1,3 +1,8 @@
+@php
+    $pageTitle = '尾牙抽獎系統｜名單匯入、抽獎動畫與不在場重抽';
+    $pageDescription = '為公司尾牙、春酒準備的線上抽獎系統。匯入員工名單、設定獎項與參加資格，從後台切換投影畫面；中獎者不在場時，可釋出名額再補抽。7 種抽獎動畫可免費試玩。';
+    $heroPreview = \App\Support\DemoPreviews::forStyle('battle_top');
+@endphp
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -5,15 +10,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {{-- SEO --}}
-    <title>抽獎｜線上抽獎｜尾牙抽獎系統推薦｜QRCode 領獎</title>
-    <meta name="description" content="專為企業活動打造的抽獎、尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
-    <meta name="keywords" content="抽獎,線上抽獎,尾牙抽獎,抽獎系統推薦,企業抽獎系統,抽獎平台,QRCode 領獎,彈幕互動,抽獎動畫">
+    <title>{{ $pageTitle }}</title>
+    <meta name="description" content="{{ $pageDescription }}">
     <link rel="canonical" href="{{ url('/') }}">
 
     {{-- OG --}}
     <meta property="og:type" content="website">
-    <meta property="og:title" content="抽獎｜線上抽獎｜尾牙抽獎系統推薦｜QRCode 領獎">
-    <meta property="og:description" content="專為企業活動打造的抽獎、尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選，讓每場抽獎更公平、更熱鬧、更有效率。">
+    <meta property="og:title" content="{{ $pageTitle }}">
+    <meta property="og:description" content="{{ $pageDescription }}">
     <meta property="og:url" content="{{ url('/') }}">
     <meta property="og:image" content="{{ url('/images/og-home.svg') }}">
     <meta property="og:site_name" content="抽獎系統">
@@ -21,8 +25,8 @@
 
     {{-- Twitter Card --}}
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="抽獎｜線上抽獎｜尾牙抽獎系統推薦｜QRCode 領獎">
-    <meta name="twitter:description" content="專為企業活動打造的抽獎、尾牙抽獎與線上抽獎平台。支援後台即切前台即換、員工分群、即時彈幕、抽獎分析報表、QRCode 快速兌獎，是企業抽獎系統推薦首選。">
+    <meta name="twitter:title" content="{{ $pageTitle }}">
+    <meta name="twitter:description" content="{{ $pageDescription }}">
     <meta name="twitter:image" content="{{ url('/images/og-home.svg') }}">
 
     @php
@@ -72,36 +76,19 @@
         ];
 
         $setupSteps = [
-            ['title' => '建立活動與匯入名單', 'desc' => '在後台建立抽獎活動，匯入員工或參與者名單（Excel、CSV），可分群管理。'],
+            ['title' => '建立活動與匯入名單', 'desc' => '名單可用 Excel 整理，另存 CSV 匯入後台，再依部門或群組設定參加資格。'],
             ['title' => '設定獎項與抽獎規則', 'desc' => '新增獎項、設定中獎人數、抽獎模式（一次抽完或逐一抽出）與資格條件。'],
             ['title' => '開放前台抽獎與兌獎', 'desc' => '大屏投影執行抽獎、即時切換獎項；中獎者可透過 QRCode 完成兌獎驗證。'],
         ];
 
         $howToSetup = [
-            '@context' => 'https://schema.org',
-            '@type' => 'HowTo',
-            'name' => '如何設定並執行一場線上抽獎',
-            'description' => '從建立活動到中獎兌獎的完整流程。',
-            'step' => [
-                ['@type' => 'HowToStep', 'position' => 1, 'name' => '建立抽獎活動', 'text' => '在後台建立活動並設定名稱、時間與品牌代碼。'],
-                ['@type' => 'HowToStep', 'position' => 2, 'name' => '匯入參與者名單', 'text' => '支援 Excel、CSV 匯入名單，可依部門或群組分組管理。'],
-                ['@type' => 'HowToStep', 'position' => 3, 'name' => '設定獎項與規則', 'text' => '新增獎項、設定中獎人數與抽獎模式，並選擇動畫風格。'],
-                ['@type' => 'HowToStep', 'position' => 4, 'name' => '開放前台抽獎', 'text' => '以投影或大屏執行抽獎，主持人可即時切換獎項。'],
-                ['@type' => 'HowToStep', 'position' => 5, 'name' => '通知與兌獎', 'text' => '中獎者收到通知並以 QRCode 完成兌獎驗證與領獎。'],
-            ],
-        ];
-
-        $howToClaim = [
-            '@context' => 'https://schema.org',
-            '@type' => 'HowTo',
-            'name' => '如何透過 QRCode 完成中獎兌獎',
-            'description' => '中獎者從收到通知到領獎的步驟。',
-            'step' => [
-                ['@type' => 'HowToStep', 'position' => 1, 'name' => '收到中獎通知', 'text' => '中獎者於活動現場或 Email 收到中獎結果與 QRCode 連結。'],
-                ['@type' => 'HowToStep', 'position' => 2, 'name' => '掃描 QRCode', 'text' => '使用手機掃描連結，進入活動中獎名單頁面。'],
-                ['@type' => 'HowToStep', 'position' => 3, 'name' => '以公司 Email 驗證身份', 'text' => '輸入公司 Email 以確認中獎者身份，避免冒領。'],
-                ['@type' => 'HowToStep', 'position' => 4, 'name' => '現場領取獎品', 'text' => '工作人員核對後發放獎品，系統自動標記為已領獎。'],
-            ],
+            '@context' => 'https://schema.org', '@type' => 'HowTo',
+            'name' => '如何設定尾牙抽獎活動',
+            'description' => '從名單與資格設定，到前台抽獎與工作人員兌獎。',
+            'step' => collect($setupSteps)->map(fn ($step, $index) => [
+                '@type' => 'HowToStep', 'position' => $index + 1,
+                'name' => $step['title'], 'text' => $step['desc'],
+            ])->all(),
         ];
 
         $softwareApplication = [
@@ -112,7 +99,7 @@
             'operatingSystem' => 'Web',
             'url' => url('/'),
             'image' => url('/images/og-home.svg'),
-            'description' => '專為企業尾牙、春酒與品牌活動打造的線上抽獎平台，支援即時切換獎項、員工分群、彈幕互動、QRCode 兌獎與多種抽獎動畫。',
+            'description' => $pageDescription,
             'featureList' => [
                 '即時切換獎項',
                 '員工名單分群管理',
@@ -169,12 +156,9 @@
     {!! json_encode($softwareApplication, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
     </script>
 
-    {{-- HowTo JSON-LD × 2 --}}
+    {{-- HowTo JSON-LD：與可見設定步驟共用內容 --}}
     <script type="application/ld+json">
     {!! json_encode($howToSetup, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
-    </script>
-    <script type="application/ld+json">
-    {!! json_encode($howToClaim, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) !!}
     </script>
 
     {{-- FAQ JSON-LD --}}
@@ -912,6 +896,39 @@
             }
             .preview-card-grid { grid-template-columns: 1fr; }
         }
+
+        /* 尾牙產品首頁 */
+        .hero { min-height:80svh; padding:5rem 1.5rem 4rem; }
+        .hero-layout { position:relative; z-index:1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:center; gap:3rem; width:min(100%,72rem); text-align:left; }
+        .hero-layout .hero-content { min-width:0; }
+        .hero-eyebrow { margin:0 0 1.5rem; color:var(--c-gold-light); font-size:.82rem; letter-spacing:.13em; }
+        .hero-layout h1 { font-size:clamp(2.3rem,4.5vw,3.8rem); margin-bottom:1rem; }
+        .hero-tagline { font-size:clamp(1.2rem,2.5vw,1.65rem); font-weight:700; margin:0 0 1.2rem; color:var(--c-text); }
+        .hero-layout .subtitle { margin:0 0 1.75rem; font-size:1rem; }
+        .hero-layout .btn-group { justify-content:flex-start; margin-bottom:1rem; gap:.7rem; }
+        .hero-layout .btn { padding:.9rem 1.25rem; }
+        .hero-account { font-size:.77rem; color:var(--c-text-dim); line-height:1.8; }
+        .hero-account a { color:var(--c-gold-light); margin-left:.5rem; text-underline-offset:.25em; }
+        .hero-shortcuts { display:flex; flex-wrap:wrap; gap:1.25rem; margin-top:1.5rem; }
+        .hero-shortcuts a { font-size:.82rem; color:var(--c-text-dim); text-decoration:none; }
+        .hero-preview { min-width:0; margin:0; border:1px solid #f59e0b44; border-radius:1rem; overflow:hidden; background:#12121a; box-shadow:0 30px 80px #0006; }
+        .hero-preview-bar { display:flex; justify-content:space-between; padding:.8rem 1rem; color:var(--c-text-dim); font-size:.7rem; border-bottom:1px solid var(--c-border); }
+        .hero-preview-bar i { display:inline-block; width:6px; height:6px; border-radius:50%; background:#685b47; margin-right:5px; }
+        .hero-preview img { display:block; width:100%; height:auto; }
+        .hero-preview figcaption { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; padding:1rem; font-size:.72rem; }
+        .hero-preview figcaption span { color:var(--c-text-dim); }
+        .hero-preview figcaption a { margin-left:auto; color:var(--c-gold-light); text-decoration:none; }
+        .event-prep { padding-top:3rem; }
+        .prep-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+        .prep-card { display:flex; flex-direction:column; padding:1.75rem; background:var(--c-bg-card); border:1px solid var(--c-border); border-radius:1rem; }
+        .prep-number { color:var(--c-gold); font:400 1.5rem ui-monospace,monospace; }
+        .prep-card h3 { font-size:1.1rem; margin:1rem 0 .75rem; }
+        .prep-card p { color:var(--c-text-dim); line-height:1.9; font-size:.9rem; margin:0 0 1.5rem; }
+        .prep-card a { margin-top:auto; color:var(--c-gold-light); font-size:.83rem; text-decoration:none; line-height:1.7; }
+        .prep-footer { display:flex; justify-content:center; gap:1.5rem; flex-wrap:wrap; margin-top:1.5rem; }
+        .prep-footer a { font-size:.85rem; color:var(--c-gold-light); text-underline-offset:.3em; }
+        @media(max-width:900px) { .hero-layout { grid-template-columns:1fr; max-width:44rem; gap:2.5rem; } .hero-layout .hero-content { max-width:none; } .hero { min-height:auto; padding-top:3rem; } .prep-grid { grid-template-columns:1fr; } }
+        @media(max-width:480px) { .hero { padding:2.5rem 1rem; } .hero-layout h1 { font-size:2.3rem; } .hero-tagline { font-size:1.2rem; } .hero-preview figcaption span { flex-basis:100%; } .hero-preview figcaption a { margin-left:0; } .prep-card { padding:1.4rem; } }
     </style>
 </head>
 <body>
@@ -926,26 +943,37 @@
             @endfor
         </div>
 
-        <div class="hero-content">
-            <h1 data-reveal>
-                <span class="text-gradient">尾牙抽獎、線上抽獎</span><br>一站搞定
-            </h1>
-            <p class="subtitle" data-reveal data-reveal-delay="120">
-                不用再 Excel 手動抽、不怕現場出包。<br>
-                從獎項設定到兌獎管理，10 分鐘搞定一場專業抽獎。
-            </p>
-
-            <div class="btn-group" data-reveal data-reveal-delay="240">
-                <a href="/admin" class="btn btn-primary">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    開始使用
-                </a>
-                <a href="/demo/lottery" class="btn btn-secondary">試玩抽獎動畫</a>
+        <div class="hero-layout">
+            <div class="hero-content">
+                <p class="hero-eyebrow">公司尾牙・春酒・員工活動</p>
+                <h1 data-reveal><span class="text-gradient">尾牙抽獎系統</span></h1>
+                <p class="hero-tagline">名單、獎項與補抽管理</p>
+                <p class="subtitle" data-reveal data-reveal-delay="120">匯入員工名單、設定參加資格，從後台切換投影畫面。中獎者不在場時，可釋出名額再補抽，保留中獎與替補紀錄。</p>
+                <div class="btn-group" data-reveal data-reveal-delay="240">
+                    <a href="{{ route('demo.lottery.landing') }}" class="btn btn-primary" data-demo-event="play_click">免費試玩 7 種動畫 ↗</a>
+                    <a href="{{ route('register-account') }}" class="btn btn-secondary" data-demo-event="register_click">建立抽獎活動</a>
+                </div>
+                <p class="hero-account">動畫 Demo 免登入；正式活動需建立帳號。<a href="/admin">登入後台</a></p>
+                <div class="hero-shortcuts"><a href="{{ route('guides.year-end-lottery') }}">尾牙抽獎流程 →</a><a href="{{ route('features.index') }}">查看系統功能 →</a></div>
             </div>
-            <p data-reveal data-reveal-delay="320" style="text-align:center;margin-top:-1rem;">
-                <a href="/admin" style="color:var(--c-text-dim);font-size:0.88rem;text-decoration:underline;text-underline-offset:3px;">如何取得測試帳號？</a>
-            </p>
+            @if ($heroPreview)
+                <figure class="hero-preview">
+                    <div class="hero-preview-bar"><span><i></i><i></i><i></i></span><span>抽獎動畫實際畫面</span></div>
+                    <a href="{{ route('demo.lottery.style', ['slug' => 'battle-top']) }}"><img src="{{ $heroPreview['action']['url'] }}" width="{{ $heroPreview['action']['width'] }}" height="{{ $heroPreview['action']['height'] }}" alt="戰鬥陀螺抽獎動畫，八位合成參加者在競技場中對戰" fetchpriority="high" decoding="async"></a>
+                    <figcaption><strong>戰鬥陀螺</strong><span>合成名單的 Demo 截圖</span><a href="{{ route('demo.lottery.play', ['slug' => 'battle-top']) }}" data-demo-event="play_click" data-demo-style="battle_top">試玩這個動畫 ↗</a></figcaption>
+                </figure>
+            @endif
         </div>
+    </section>
+
+    <section class="section event-prep" id="year-end-planning" aria-labelledby="year-end-heading">
+        <div class="section-header"><div class="section-divider"></div><h2 id="year-end-heading">尾牙抽獎，先準備這三件事</h2><p>從名單到唱名，依公司的活動規則安排。</p></div>
+        <div class="prep-grid">
+            <article class="prep-card"><span class="prep-number">01</span><h3>整理名單與參加資格</h3><p>確認每個獎項誰能抽、能否重複中獎。用 Excel 整理名單，另存 CSV 匯入後台。</p><a href="{{ route('guides.lottery-participant-import') }}">名單匯入教學 →</a></article>
+            <article class="prep-card"><span class="prep-number">02</span><h3>安排抽獎流程與台詞</h3><p>決定獎項順序、揭獎方式與領獎安排。主持稿與流程表可依現場分工改寫。</p><a href="{{ route('guides.lottery-host-script') }}">尾牙抽獎主持稿與流程表 →</a></article>
+            <article class="prep-card"><span class="prep-number">03</span><h3>先約定缺席與補抽規則</h3><p>唱名後等多久、由誰確認缺席，事前說清楚。需要補抽時，先釋出名額再重新抽獎。</p><a href="{{ route('features.absent-redraw') }}">不在場重抽功能 →</a></article>
+        </div>
+        <div class="prep-footer"><a href="{{ route('guides.year-end-lottery') }}">閱讀完整尾牙抽獎流程 →</a><a href="{{ route('guides.lottery-rules') }}">重複中獎與資格設定 →</a></div>
     </section>
 
     {{-- ════════════════════════════════════════════
@@ -954,7 +982,7 @@
     <section class="section" id="features">
         <div class="section-header" data-reveal>
             <div class="section-divider"></div>
-            <h2>六大特色，讓<span class="accent">抽獎</span>更即時更好玩</h2>
+            <h2>尾牙抽獎的<span class="accent">現場管理功能</span></h2>
         </div>
 
         <div class="features-grid">
@@ -964,7 +992,8 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 </div>
                 <h3>即時切換</h3>
-                <p>活動進行中可即時切換獎項與顯示模式，主持流程不中斷，現場節奏更順暢。</p>
+                <p>後台安排目前獎項與預覽，確認前台完成切換，再交給現場開抽。</p>
+                <a href="{{ route('features.lottery-control') }}">了解後台與前台如何協作 →</a>
             </div>
 
             {{-- Feature 2: 設定簡單 --}}
@@ -972,8 +1001,8 @@
                 <div class="feature-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </div>
-                <h3>設定簡單</h3>
-                <p>支援員工資料與群組管理，面對活動臨時加碼也能快速上線，不怕手忙腳亂。</p>
+                <h3>名單與資格設定</h3>
+                <p>管理員工名單與群組，分別設定每個獎項的包含、排除與重複中獎規則。</p>
             </div>
 
             {{-- Feature 3: 報表分析 --}}
@@ -982,7 +1011,8 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 </div>
                 <h3>報表分析</h3>
-                <p>系統提供模擬多次抽獎中獎機率報表，可下載提供給老闆或管理部門做決策參考。</p>
+                <p>單次最多模擬 1,000 次，查看獎項與部門統計，下載分析表供籌備討論。</p>
+                <a href="{{ route('features.lottery-analysis') }}">查看分析內容與適用條件 →</a>
             </div>
 
             {{-- Feature 4: 即時彈幕 --}}
@@ -1012,6 +1042,7 @@
                 <p>提供多種抽獎動畫與視覺效果，營造年節與尾牙氛圍，讓活動更有記憶點。</p>
             </div>
         </div>
+        <p style="text-align:center;margin-top:2rem;"><a href="{{ route('features.index') }}" style="color:var(--c-gold);">深入了解功能：模擬分析、後台主控與不在場重抽 →</a></p>
     </section>
 
     {{-- ════════════════════════════════════════════
@@ -1021,7 +1052,7 @@
         <div class="section-header" data-reveal>
             <div class="section-divider"></div>
             <h2>適合<span class="accent">哪些活動</span>使用</h2>
-            <p>從企業尾牙、春酒到直播抽獎，都能在 10 分鐘內完成活動設定與上線。</p>
+            <p>適用尾牙、春酒及團隊活動，依名單、獎項與現場分工設定抽獎。</p>
         </div>
 
         <div class="scene-grid">
@@ -1072,7 +1103,10 @@
                 @foreach ($animationStyles as $style)
                     <article class="preview-card">
                         <a href="{{ route('demo.lottery.style', ['slug' => $style['slug']]) }}" class="preview-card-visual" aria-label="查看{{ $style['label'] }}介紹">
-                            @if (file_exists(public_path('images/previews/'.$style['key'].'.svg')))
+                            @php($previewImages = \App\Support\DemoPreviews::forStyle($style['key']))
+                            @if ($previewImages)
+                                <img src="{{ $previewImages['action']['url'] }}" alt="{{ $style['label'] }}抽獎動畫實際畫面，使用合成名單" width="{{ $previewImages['action']['width'] }}" height="{{ $previewImages['action']['height'] }}" loading="lazy" decoding="async">
+                            @elseif (file_exists(public_path('images/previews/'.$style['key'].'.svg')))
                                 <img src="{{ url('/images/previews/'.$style['key'].'.svg') }}" alt="{{ $style['label'] }}抽獎動畫示意圖" width="800" height="450" loading="lazy">
                             @else
                                 <span class="preview-card-visual-fallback">{{ $style['label'] }}<br>抽獎動畫</span>
@@ -1103,8 +1137,8 @@
         <div class="report-inner">
             <div class="report-text" data-reveal>
                 <div class="section-divider" style="margin: 0 0 1.5rem;"></div>
-                <h2>不只抽獎，更能提供<span class="accent">管理決策</span>參考</h2>
-                <p>提供抽獎結果整理與模擬多次抽獎中獎機率分析，協助管理部門檢視抽獎策略與公平性，讓活動不只熱鬧，也具備可追蹤、可檢核的數據依據。</p>
+                <h2>活動紀錄與<span class="accent">分析報表</span></h2>
+                <p>活動後可匯出中獎名單，核對釋出與替補紀錄。活動前也可執行模擬分析、下載獎項與部門統計，供籌備討論；分析的適用範圍請見功能說明。</p>
             </div>
             <div class="report-visual" data-reveal data-reveal-delay="150">
                 <div class="report-icon-box">
@@ -1115,7 +1149,7 @@
                         <line x1="16" y1="17" x2="8" y2="17"/>
                         <polyline points="10 9 9 9 8 9"/>
                     </svg>
-                    <span>一鍵下載分析報表</span>
+                    <span>中獎紀錄・模擬分析報表</span>
                 </div>
             </div>
         </div>
@@ -1155,12 +1189,12 @@
     ════════════════════════════════════════════ --}}
     <section class="final-cta">
         <div class="final-cta-content">
-            <h2 data-reveal>立即開始你的下一場<span class="accent">抽獎</span></h2>
+            <h2 data-reveal>準備你的<span class="accent">尾牙抽獎</span></h2>
 
             <div class="btn-group" data-reveal data-reveal-delay="100">
-                <a href="/admin" class="btn btn-primary">
+                <a href="{{ route('register-account') }}" class="btn btn-primary" data-demo-event="register_click">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    開始使用
+                    建立抽獎活動
                 </a>
                 <a href="/demo/lottery" class="btn btn-secondary">試玩抽獎動畫</a>
             </div>
@@ -1174,6 +1208,8 @@
         <p>
             &copy; {{ date('Y') }} 抽獎系統 &mdash;
             <a href="{{ route('faq') }}">常見問題</a> ·
+            <a href="{{ route('features.index') }}">功能介紹</a> ·
+            <a href="{{ route('guides.index') }}">活動準備指南</a> ·
             <a href="{{ route('feedback.index', ['from' => '/']) }}">意見回饋／聯絡我們</a> ·
             <a href="/demo/lottery">抽獎動畫 Demo</a> ·
             <a href="/admin">登入後台</a>

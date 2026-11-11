@@ -128,7 +128,7 @@
                 <a href="{{ route('demo.lottery.landing') }}">抽獎動畫</a><span>/</span>
                 <span>{{ $demoStyleLabel }}</span>
             </div>
-            <a href="{{ route('demo.lottery.templates.index') }}">瀏覽分享範本</a>
+            <div class="related"><a href="{{ route('guides.index') }}">活動準備指南</a><a href="{{ route('demo.lottery.templates.index') }}">瀏覽分享範本</a></div>
         </nav>
 
         <section class="hero">
@@ -172,6 +172,21 @@
                     <summary>查看手機直式畫面（390 × 844）</summary>
                     <img src="{{ $demoPreview['mobile']['url'] }}" alt="{{ $demoStyleLabel }}抽獎手機直式畫面與中獎名單" width="{{ $demoPreview['mobile']['width'] }}" height="{{ $demoPreview['mobile']['height'] }}" loading="lazy" decoding="async">
                 </details>
+            </section>
+        @endif
+
+        @if (in_array($demoCurrentStyle['key'], ['battle_top', 'marble_race'], true))
+            <section class="section" aria-labelledby="competition-settings">
+                <h2 id="competition-settings">從這組設定開始，比較完整一輪。</h2>
+                <p>上方實圖使用 <strong>8 位合成參加者、一次抽出 3 人</strong>。進入試玩選「設定抽獎」，貼上名單、把中獎人數設為 3，再選一次全抽；若想每位得主上台，改用逐一抽出比較節奏。</p>
+                <div class="feature-grid">
+                    <div class="feature"><strong>參加名單與中獎名額分開看</strong><p>8 位參加者抽 3 人，是從這份名單抽選 3 個名額；動畫負責揭曉。{{ $demoCurrentStyle['key'] === 'battle_top' ? '參加者較多時可能分批出現在場上；正式活動的陀螺獎項名額最多可設 15，這不是效能保證。' : '球上的長姓名可能縮短呈現，核對時請看完整中獎名單；先用實際名單與裝置彩排。' }}</p></div>
+                    <div class="feature"><strong>{{ $demoCurrentStyle['key'] === 'battle_top' ? '戰鬥秒數與整輪時間不同' : '秒數改變節奏，賽道不會變長' }}</strong><p>{{ $demoCurrentStyle['key'] === 'battle_top' ? '正式後台的 5–60 秒設定控制主要戰鬥段，另有倒數、入場與得主展示。比較 5 秒與 20 秒時，要量從開始到完整名單出現的時間。' : '正式後台較長秒數目前主要降低重力，讓競速放慢；5 秒與 20 秒使用相同長度的賽道，整輪另含倒數與結果展示。' }}免費 Demo 目前使用 10 秒設定，沒有秒數調整選項。</p></div>
+                </div>
+                <h3>彩排時做這三件事</h3>
+                <ol><li>分別試一次全抽與逐一抽出，量從開始到得主完整出現的時間。</li><li>用會場投影與手機直式各看一次，核對姓名、結果與工具面板能否清楚閱讀。</li><li>把介紹、唱名與領獎一起排進流程；看到畫面暫停時先核對後台紀錄。</li></ol>
+                <p>準備現場口播可用<a href="{{ route('guides.lottery-host-script') }}">主持稿與流程表</a>；正式活動的名單與資格則參考<a href="{{ route('guides.lottery-participant-import') }}">CSV 匯入教學</a>及<a href="{{ route('guides.lottery-rules') }}">重複中獎與重抽規則</a>。</p>
+                <a class="btn btn-primary" href="{{ $demoPlayUrl }}" data-demo-event="play_click">用自己的名單試跑{{ $demoStyleLabel }}</a>
             </section>
         @endif
 

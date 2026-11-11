@@ -79,14 +79,21 @@ Organization → LotteryEvent → Prize → PrizeWinner → Employee
 - 抽獎開始後，每次執行只記錄一個完成或失敗事件；保護性收尾、取消或過期執行記失敗，不可因統計送出失敗影響結果。跨頁離開可能沒有結束事件，不能將事件次數當同一批訪客轉換率。
 - `DemoMetricsPage` 全站資料必須由 `is_admin` 授權；7／28 天使用台灣日期，註冊入口點擊不可標成註冊成功。回歸測試 `DemoMetricsTest` 與 `tests/JavaScript/demo-metrics.test.mjs`。
 - `demo-style-toolbar` 預設抽獎透過 configure 明確重設空名單、5 人及一次全抽；空名單由 controller 還原預設 30 人，不能以 reset 冒充預設設定。
+- 指南入口 `guide_hub`、`guide_host`、`guide_csv`、`guide_rule` 須維持 10 字元以內以符合既有 DB 欄位。`download_click` 只接受主持／CSV 教學入口，`copy_click` 只接受主持教學；複製成功才計數，不記錄剪貼簿或文章內容。
 
 ### 活動指南與內容事實
 
+- 首頁以「尾牙抽獎系統」為主題，首屏截圖讀取 `DemoPreviews::forStyle('battle_top')`，標明合成名單。HowTo 使用可見的 `$setupSteps`，不再輸出與實際兌獎流程不符的領獎 HowTo；metadata 與頁面內容須一起更新。
+- `SiteFaqs` 同時供可見 FAQ 與 JSON-LD 使用。Email 通知由後台手動發送，領獎由工作人員後台核對；無獨立彩排模式，不可把組織共用名單寫成各活動獨立名單，也不可承諾固定延遲與未驗證容量。
 - `/guides/year-end-lottery` 為 `Route::view` 的公開 Blade 指南，self canonical、Article／BreadcrumbList、無外部 JS 或抽獎 session 初始化。首頁、總覽、FAQ、七種介紹頁均須保留指南連結；指南連回動畫介紹頁與試玩總覽。
 - `AnimationStyles::all()` 的 `planningTips` 是各風格的活動安排提醒；渲染於介紹頁，不加到 `/play`。手動刮除、搶紅包、自訂紅包圖樣、保證容量／效能等未證實功能不能寫成既有能力。
 - 時間相關文案描述目前引擎：圓球秒數影響重力、不改地圖長度；陀螺另有倒數入場與展示；刮刮樂與寶箱多人可能分批或逐位呈現。時間標準仍在 `todo/animation-timing-standard-pending.md`，不可當成已上線規格。
 - 指南流程範例為編排建議，不是新產品功能。結構化資料與可見內容一致，不編造日期、評價或人員資歷；sitemap 仍不使用部署時間生成 lastmod。
-- 回歸：`LotteryGuideTest` 檢查索引與結構化資料、目錄錨點及雙向內部連結；`DemoLotteryPagesTest` 檢查 13 個 sitemap 入口與 `/play` 邊界。
+- `/guides` 與三篇新教學共用 `LotteryGuides` 導覽 metadata、`guides.layout`／partials 及 `guides.js`；新增 Vite 入口須連同 build manifest 發布。既有尾牙總指南維持無 JS，新的指南僅載入複製與匿名事件模組，不載入 `lottery.js`。
+- CSV 範例必須與 `ListEmployees` 匯入器一致，使用合成姓名與 example.com 信箱；電話欄保留但可留空。包含資格未選時為 0、排除優先、同獎項與跨獎項規則分開，不可把釋出當成全場禁止參加。
+- 回歸：`LotteryGuideTest` 檢查索引與結構化資料、目錄錨點、下載範例及雙向內部連結；`DemoLotteryPagesTest` 檢查 21 個 sitemap 入口與 `/play` 邊界。
+- 功能介紹：`/features` 與模擬分析、後台主控、不在場重抽三篇，由 `LotteryFeatures` 管理 metadata。Blade 直接輸出、無外部 JS／iframe；WebPage／BreadcrumbList，與相關指南互連。
+- 文案須遵守 `todo/feature-content-audit.md` 的現況邊界：分析單次上限 1,000，動態資格尚未完整重現；後台切獎不自動抽獎，釋出不自動補抽。新增宣稱先核對服務行為，禁止寫成單次一萬次、完整公平認證、自動排程或保證零延遲。
 
 ### 意見回饋邊界
 

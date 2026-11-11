@@ -1,5 +1,5 @@
 @php
-    $title = '尾牙抽獎流程指南｜名單準備、動畫選擇與主持彩排';
+    $title = '尾牙抽獎流程｜名單、獎項、主持稿與不在場重抽';
     $description = '尾牙抽獎怎麼安排？從參加名單、重複中獎規則、獎項順序，到一次全抽與逐一抽出、7 種動畫選擇、主持台詞與現場彩排清單，整理成可照著準備的活動指南。';
     $canonical = route('guides.year-end-lottery');
     $sections = ['preparation' => '名單與資格', 'rules' => '抽獎規則', 'run-of-show' => '獎項與主持流程', 'animations' => '動畫怎麼選', 'rehearsal' => '彩排與時間', 'checklist' => '當天檢查清單', 'demo-or-event' => '試玩或正式活動'];
@@ -69,6 +69,8 @@
         p, li { line-height: 1.9; color: var(--muted); }
         strong { color: var(--text); }
         .lead { font-size: 1.13rem; }
+        .flow-overview { display:flex; flex-wrap:wrap; gap:.6rem 1.6rem; padding-left:1.2rem; margin:1.5rem 0; font-size:.85rem; }
+        .flow-overview li { color:var(--gold); }
         .byline { font-size: .85rem; }
         .actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1.5rem; }
         .button { display: inline-flex; align-items: center; justify-content: center; padding: .8rem 1.15rem; border-radius: .75rem; text-decoration: none; font-weight: 700; border: 1px solid #fde68a55; }
@@ -106,13 +108,14 @@
     <main class="wrap">
         <nav class="nav" aria-label="頁面導覽">
             <div class="crumbs"><a href="{{ url('/') }}">首頁</a><span>/</span><span>尾牙抽獎流程指南</span></div>
-            <a href="{{ route('demo.lottery.landing') }}">查看 7 種抽獎動畫</a>
+            <div><a href="{{ route('guides.index') }}">所有活動指南</a> · <a href="{{ route('demo.lottery.landing') }}">查看 7 種抽獎動畫</a></div>
         </nav>
         <article>
             <header class="hero">
                 <span class="eyebrow">活動準備指南</span>
-                <h1>尾牙抽獎流程怎麼安排？<br>從名單準備到主持彩排</h1>
+                <h1>尾牙抽獎流程指南<br>名單、獎項與現場安排</h1>
                 <p class="lead">先確認誰能抽、可以中幾次與獎項順序，再挑選動畫、安排唱名與領獎。這份指南把尾牙抽獎拆成可逐項核對的步驟，也適用於春酒、年會與團隊聚會。</p>
+                <ol class="flow-overview" aria-label="尾牙抽獎準備流程"><li>整理名單</li><li>設定獎項與資格</li><li>確認投影畫面</li><li>前台開抽</li><li>領獎與補抽</li></ol>
                 <p class="byline">內容整理：<a href="{{ url('/') }}">抽獎系統</a>。依本站功能與活動操作流程整理；資格、缺席與補抽方式請由主辦單位事先決定。</p>
                 <div class="actions"><a class="button primary" href="#checklist">查看當天檢查清單</a><a class="button" href="{{ route('demo.lottery.landing') }}">先免費試玩動畫</a></div>
             </header>
@@ -185,7 +188,7 @@
                             <li><strong>用實際規模測：</strong>一次抽一位與一次抽五位都跑過，記錄從操作到完整名單出現的時間。</li>
                             <li><strong>再量主持段落：</strong>把口播、唱名、走到領獎處與合照算進去，預留切換獎項和核對的緩衝。</li>
                             <li><strong>使用正式設備：</strong>實際投影、瀏覽器縮放與全螢幕都測過，確認後排看得到姓名、音量適合會場。</li>
-                            <li><strong>走一次完整流程：</strong>正式活動若使用測試模式，先確認本次為彩排設定，結束後再核對正式活動、目前獎項與中獎紀錄。</li>
+                            <li><strong>走一次完整流程：</strong>可先用免費 Demo 挑選動畫，完整操作則另建測試活動。直接在正式活動試抽，仍會留下該活動的中獎紀錄。</li>
                         </ol>
                         <p class="note">若動畫看起來停住，先由操作人員查看後台是否已有中獎紀錄。已抽出結果時應先核對資料，再處理顯示問題，避免把第二次抽選誤當成重播。</p>
                     </section>
@@ -196,7 +199,7 @@
                             <li>參加名單與群組已確認，每個獎項的可抽人數符合預期。</li>
                             <li>獎項順序、名額、一次全抽或逐一抽出已核對。</li>
                             <li>重複中獎、缺席、放棄與替補規則已交給主持人。</li>
-                            <li>前台顯示正確活動與獎項，操作權限與控制裝置可正常使用。</li>
+                            <li>「開放抽獎」已開啟，前台顯示正確活動與獎項，控制裝置可正常使用。</li>
                             <li>在實際投影解析度檢查姓名、結果分頁、音效與切換獎項。</li>
                             <li>現場網路可用；若異常，由固定操作窗口先核對中獎資料。</li>
                             <li>若使用通知與 QRCode 兌獎，已測試收件、開啟連結及工作人員核對流程。</li>
@@ -206,14 +209,15 @@
                     <section class="section" id="demo-or-event">
                         <h2>7. 先免費試玩，還是直接建立正式活動？</h2>
                         <p><strong>只想挑選動畫：</strong>免費 Demo 不需登入，可用預設名單或自訂姓名、中獎人數與模式。適合先確認視覺與操作感受。</p>
-                        <p><strong>需要管理完整尾牙抽獎：</strong>註冊登入後在組織後台建立活動、整理參加者與獎項，再設定資格、通知與兌獎流程。正式活動功能與額度依方案而定，免費 Demo 不代表全部正式功能免費。</p>
+                        <p><strong>需要管理完整尾牙抽獎：</strong>註冊登入後在組織後台建立活動、整理參加者與獎項，再設定資格、通知與兌獎流程。正式活動員工人數與每場獎項額度依方案而定，免費 Demo 不代表全部正式功能免費。</p>
                         <div class="actions"><a class="button primary" href="{{ route('demo.lottery.landing') }}">免費比較抽獎動畫</a><a class="button" href="{{ route('register-account') }}">註冊並設定正式活動</a></div>
                         <p>想確認重複中獎、通知與裝置問題，可查看<a href="{{ route('faq') }}">抽獎系統常見問題</a>；操作時有建議或異常，可透過<a href="{{ route('feedback.index') }}">意見回饋與聯絡我們</a>提供說明。</p>
                     </section>
                 </div>
             </div>
         </article>
-        <footer class="footer"><a href="{{ url('/') }}">首頁</a> · <a href="{{ route('demo.lottery.landing') }}">抽獎動畫</a> · <a href="{{ route('faq') }}">常見問題</a></footer>
+        <aside class="section" aria-labelledby="more-guides"><h2 id="more-guides">尾牙抽獎教學與範例</h2><ul><li><a href="{{ route('guides.lottery-host-script') }}">主持稿與流程表：準備開場、唱名與壓軸口播</a></li><li><a href="{{ route('guides.lottery-participant-import') }}">Excel 名單與 CSV 匯入：先核對欄位、重複資料及群組</a></li><li><a href="{{ route('guides.lottery-rules') }}">重複中獎與不在場重抽：把公告規則接到後台設定</a></li></ul></aside>
+        <footer class="footer"><a href="{{ url('/') }}">首頁</a> · <a href="{{ route('guides.index') }}">活動指南</a> · <a href="{{ route('demo.lottery.landing') }}">抽獎動畫</a> · <a href="{{ route('faq') }}">常見問題</a></footer>
     </main>
 </body>
 </html>

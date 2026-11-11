@@ -1,0 +1,1 @@
+<nav class="guide-nav" aria-label="主要導覽"><a class="guide-brand" href="{{ url('/') }}">抽獎系統</a><div class="guide-nav-links"><a href="{{ route('features.index') }}">功能介紹</a><a href="{{ route('guides.index') }}">操作指南</a><a href="{{ route('demo.lottery.landing') }}" data-demo-event="play_click">免費試玩 ↗</a></div></nav>

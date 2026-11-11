@@ -22,7 +22,15 @@ Route::get('/', function () {
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::get('/faq', [FaqController::class, 'index'])->name('faq');
+Route::view('/features', 'features.index')->name('features.index');
+Route::view('/features/lottery-analysis', 'features.analysis')->name('features.lottery-analysis');
+Route::view('/features/lottery-control', 'features.control')->name('features.lottery-control');
+Route::view('/features/absent-redraw', 'features.redraw')->name('features.absent-redraw');
+Route::view('/guides', 'guides.index')->name('guides.index');
 Route::view('/guides/year-end-lottery', 'guides.year-end-lottery')->name('guides.year-end-lottery');
+Route::view('/guides/lottery-host-script', 'guides.host-script')->name('guides.lottery-host-script');
+Route::view('/guides/lottery-participant-import', 'guides.participant-import')->name('guides.lottery-participant-import');
+Route::view('/guides/lottery-rules', 'guides.rules')->name('guides.lottery-rules');
 Route::get('/feedback', [FeedbackController::class, 'index'])->name('feedback.index');
 Route::post('/feedback', [FeedbackController::class, 'store'])->middleware('throttle:feedback')->name('feedback.store');
 

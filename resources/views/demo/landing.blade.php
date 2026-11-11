@@ -552,6 +552,8 @@
             <h2 class="landing-section__title">選好動畫後，尾牙抽獎流程怎麼安排？</h2>
             <p class="landing-section__lead">先整理參加名單與資格，決定能否重複中獎、各獎項的名額與順序，再選一次全抽或逐一抽出。多人動畫與倒數、唱名、領獎都會影響整輪時間，建議用正式設備完成彩排。</p>
             <p><a href="{{ route('guides.year-end-lottery') }}" style="color:var(--gold-light);">閱讀尾牙抽獎流程指南：主持範例、動畫選擇與檢查清單 →</a></p>
+            <p><a href="{{ route('features.index') }}" style="color:var(--gold-light);">正式活動有哪些功能？模擬分析、後台主控與不在場重抽 →</a></p>
+            <p><a href="{{ route('guides.index') }}" style="color:var(--gold-light);">活動準備指南：主持稿、名單匯入與重抽規則 →</a></p>
         </section>
 
         <section class="landing-section anim-fade-up" style="animation-delay: 1.1s;">

@@ -1,0 +1,1 @@
+<footer class="guide-footer"><span>抽獎系統 ／ 尾牙・春酒・員工活動</span><div><a href="{{ route('features.index') }}">功能介紹</a> · <a href="{{ route('guides.index') }}">活動指南</a> · <a href="{{ route('faq') }}">常見問題</a> · <a href="{{ route('feedback.index') }}">意見回饋</a></div></footer>
