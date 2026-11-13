@@ -55,6 +55,27 @@ class LotteryFeatureClaimsTest extends TestCase
         return compact('organization', 'user', 'event', 'prize', 'employees');
     }
 
+    public function test_claim_qr_is_a_png_and_lookup_does_not_claim_until_confirmation(): void
+    {
+        $data = $this->fixture();
+        $winner = app(LotteryDrawService::class)->drawCurrentPrize($data['event'])->first();
+        $uri = $winner->generateQrCodeBase64();
+        $this->assertStringStartsWith('data:image/png;base64,', $uri);
+        $png = base64_decode(substr($uri, strlen('data:image/png;base64,')), true);
+        $this->assertSame('image/png', getimagesizefromstring($png)['mime']);
+        $this->actingAs($data['user']);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Filament::setTenant($data['organization']);
+        $page = Livewire::test(\App\Filament\Resources\LotteryEventResource\Pages\ManageClaims::class,
+            ['record' => $data['event']->getRouteKey()]);
+        $preview = $page->instance()->previewByToken($winner->getClaimUrl());
+        $this->assertTrue($preview['found']);
+        $this->assertFalse($preview['claimed']);
+        $this->assertNull($winner->fresh()->claimed_at);
+        $page->call('confirmClaim', $winner->claim_token);
+        $this->assertNotNull($winner->fresh()->claimed_at);
+    }
+
     public function test_static_rule_analysis_counts_exposures_and_does_not_change_formal_winners_or_send_mail(): void
     {
         $data = $this->fixture();

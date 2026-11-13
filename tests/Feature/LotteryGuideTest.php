@@ -117,6 +117,35 @@ class LotteryGuideTest extends TestCase
         $this->get(route('guides.lottery-participant-import'))->assertOk()->assertSee(asset('examples/lottery-participants-sample.csv'));
     }
 
+    public function test_walkthroughs_are_public_with_complete_text_real_images_and_series_links(): void
+    {
+        foreach (\App\Support\LotteryWalkthroughs::all() as $slug => $guide) {
+            $response = $this->get(route('guides.'.$slug))->assertOk();
+            $xpath = $this->xpath($response->getContent());
+            foreach ($guide['steps'] as [$label, $text, $image]) {
+                $response->assertSee($text);
+                $this->assertFileExists(public_path('images/guides/lottery-flow/'.$image));
+                $size = getimagesize(public_path('images/guides/lottery-flow/'.$image));
+                $this->assertSame('image/jpeg', $size['mime']);
+                $this->assertGreaterThan(0, $xpath->query('//img[@width="'.$size[0].'" and @height="'.$size[1].'"]')->length);
+            }
+            $this->assertSame(0, $xpath->query('//*[@data-tour-step and @hidden]')->length);
+            foreach (\App\Support\LotteryWalkthroughs::series() as $otherSlug => $label) {
+                $response->assertSee(route('guides.'.$otherSlug));
+            }
+            $response->assertDontSee('本機')->assertDontSee('_lac=');
+            $this->get('/sitemap.xml')->assertSee('<loc>'.route('guides.'.$slug).'</loc>', false);
+        }
+    }
+
+    public function test_public_analysis_sample_is_a_readable_workbook_with_statistics(): void
+    {
+        $book = \PhpOffice\PhpSpreadsheet\IOFactory::load(public_path('examples/lottery-analysis-sample.xlsx'));
+        $this->assertSame(['總覽', '獎項統計', '部門比較', '機率比對', '圖表', 'PivotData'], $book->getSheetNames());
+        $this->get(route('guides.lottery-analysis-report'))->assertOk()->assertSee(asset('examples/lottery-analysis-sample.xlsx'));
+        $book->disconnectWorksheets();
+    }
+
     private function xpath(string $html): DOMXPath
     {
         $previous = libxml_use_internal_errors(true);

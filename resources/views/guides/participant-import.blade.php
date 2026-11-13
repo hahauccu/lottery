@@ -1,47 +1,61 @@
 @extends('guides.layout', ['guideSlug' => 'lottery-participant-import'])
+@section('guide-body-class', 'import-guide')
+@push('guide-styles')
+    @include('guides.partials.tour-styles')
+@endpush
 
 @section('actions')
-    <div class="actions"><a class="guide-btn primary" href="{{ asset('examples/lottery-participants-sample.csv') }}" download data-demo-event="download_click">下載合成名單 CSV ↓</a><a class="guide-btn" href="#columns">先看欄位說明</a></div>
+    <div class="actions"><a class="guide-btn primary" href="#walkthrough">匯入步驟 <span aria-hidden="true">↓</span></a><a class="guide-btn" href="{{ asset('examples/lottery-participants-sample.csv') }}" download data-demo-event="download_click">下載示範名單 CSV ↓</a></div>
 @endsection
 
 @section('content')
-    <section class="guide-section" id="sample">
-        <h2>1. 先用四筆合成資料，走一次匯入。</h2>
-        <p>本站員工後台目前提供<strong>「匯入 CSV」</strong>。名單可以在 Excel 整理，完成後另存為 UTF-8 CSV 再上傳；本教學不以直接上傳 XLSX 作為操作步驟。</p>
-        <p>範例包含四筆資料，刻意放入兩位同名「測試甲」，但使用不同 Email 和員工編號，方便觀察辨識方式。電話欄位保留但值留空。</p>
-        <div class="table-scroll" role="region" aria-label="可橫向捲動的合成名單預覽" tabindex="0"><table><caption>範例中的四位合成參加者</caption><thead><tr><th scope="col">姓名</th><th scope="col">Email</th><th scope="col">員工編號</th><th scope="col">部門／群組</th></tr></thead><tbody><tr><th scope="row">測試甲</th><td>demo001@example.com</td><td>DEMO001</td><td>企劃部／彩排甲組</td></tr><tr><th scope="row">測試甲</th><td>demo002@example.com</td><td>DEMO002</td><td>研發部／彩排乙組</td></tr><tr><th scope="row">測試乙</th><td>demo003@example.com</td><td>DEMO003</td><td>企劃部／彩排甲組</td></tr><tr><th scope="row">測試丙</th><td>demo004@example.com</td><td>DEMO004</td><td>研發部／彩排乙組</td></tr></tbody></table></div>
-        <p class="guide-note">範例使用不供實際收件的 example.com 信箱。請在測試用組織或彩排名單操作；正式活動前換成實際通知資料，再檢查每個獎項的資格。</p>
+    @php
+        $steps = [
+            ['id' => 'open-employees', 'label' => '開啟員工列表', 'text' => '在左側「員工管理」選擇「員工」，點選右上角「匯入 CSV」。', 'image' => '01-employees.jpg', 'alt' => '員工列表右上方的匯入 CSV 按鈕。', 'x' => 85, 'y' => 10],
+            ['id' => 'upload-csv', 'label' => '上傳 CSV', 'text' => '選擇 CSV 檔案，或將檔案拖入上傳區。顯示「已上傳」後，點選「開始匯入」。', 'image' => '02-upload.jpg', 'alt' => 'CSV 檔案已上傳，下方顯示開始匯入按鈕。', 'x' => 20, 'y' => 43],
+            ['id' => 'import-result', 'label' => '確認結果', 'text' => '匯入完成後，核對新增、更新與略過的筆數，並確認員工列表。本例新增 4 筆，更新與略過皆為 0 筆。', 'image' => '03-imported.jpg', 'alt' => '員工列表有四筆測試資料，通知顯示新增 4 筆、更新 0 筆、略過 0 筆。', 'x' => 69, 'y' => 7.5],
+            ['id' => 'check-employee', 'label' => '核對資料', 'text' => '點選員工右側的「編輯」，確認姓名、Email、部門、員工編號與群組是否正確。', 'image' => '04-check-employee.jpg', 'alt' => '員工編輯頁的姓名、Email、部門、員工編號與群組欄位。', 'x' => 68, 'y' => 49],
+        ];
+    @endphp
+    @include('guides.partials.screenshot-tour')
+
+    <section class="guide-section sample-section" id="sample">
+        <div class="section-title"><div><h2>範例名單</h2></div><a class="guide-btn" href="{{ asset('examples/lottery-participants-sample.csv') }}" download data-demo-event="download_click">下載示範 CSV ↓</a></div>
+        <p>下載 CSV，以 Excel 開啟後填入員工資料，並保留第一列欄位名稱。</p>
+        <div class="table-scroll" role="region" aria-label="可橫向捲動的示範名單" tabindex="0"><table><caption>四筆示範資料・電話欄位保留，內容留白</caption><thead><tr><th scope="col">姓名</th><th scope="col">Email</th><th scope="col">員工編號</th><th scope="col">部門</th><th scope="col">群組</th></tr></thead><tbody><tr><th scope="row">測試甲</th><td>demo001@example.com</td><td>DEMO001</td><td>企劃部</td><td>彩排甲組</td></tr><tr><th scope="row">測試甲</th><td>demo002@example.com</td><td>DEMO002</td><td>研發部</td><td>彩排乙組</td></tr><tr><th scope="row">測試乙</th><td>demo003@example.com</td><td>DEMO003</td><td>企劃部</td><td>彩排甲組</td></tr><tr><th scope="row">測試丙</th><td>demo004@example.com</td><td>DEMO004</td><td>研發部</td><td>彩排乙組</td></tr></tbody></table></div>
+        <p class="small">測試信箱無法接收通知，正式使用請換成員工 Email。同一組織的員工名單供各活動共用。</p>
     </section>
+
     <section class="guide-section" id="columns">
-        <h2>2. 四個必要欄位，兩個選填欄位。</h2>
-        <p>「必要欄位」指 CSV 第一列必須有該欄名。每筆姓名與 Email 也必須有值；電話與部門的欄位要保留，但單筆值可留空。</p>
-        <div class="table-scroll" role="region" aria-label="可橫向捲動的匯入欄位說明" tabindex="0"><table><caption>CSV 欄位與處理方式</caption><thead><tr><th scope="col">欄位</th><th scope="col">CSV 標題</th><th scope="col">填寫方式</th></tr></thead><tbody>
-            <tr><th scope="row">姓名</th><td><code>姓名</code> 或 <code>name</code></td><td>必須有欄位與值；同名者仍以 Email 區分。</td></tr>
-            <tr><th scope="row">Email</th><td><code>Email</code> 或 <code>email</code></td><td>必須有欄位與值；匯入時轉為小寫，用於同一組織內比對與更新。</td></tr>
-            <tr><th scope="row">電話</th><td><code>電話</code> 或 <code>phone</code></td><td>必須有欄位，值可空白；在 Excel 以文字格式保留前導 0。</td></tr>
-            <tr><th scope="row">部門</th><td><code>部門</code> 或 <code>department</code></td><td>必須有欄位，值可空白；部門文字與抽獎群組是不同欄位。</td></tr>
-            <tr><th scope="row">員工編號</th><td><code>員工編號</code> 或 <code>employee_no</code></td><td>選填，用於人工核對；更新既有員工時，若省略此欄或留白，原編號會被清空。</td></tr>
-            <tr><th scope="row">群組</th><td><code>群組</code> 或 <code>groups</code></td><td>選填；每筆只接受一個群組，且會取代該員工既有群組。</td></tr>
-        </tbody></table></div>
+        <h2>CSV 欄位說明</h2>
+        <p>第一列保留欄位名稱，每列填一位員工。姓名與 Email 必須填寫；電話、部門的欄名也要保留，內容可以空白。完成後另存為 <strong>CSV UTF-8</strong>，再上傳到後台。</p>
+        <div class="import-columns" aria-label="CSV 欄位總覽"><span>姓名 <small>必填</small></span><span>Email <small>必填</small></span><span>電話 <small>可留白</small></span><span>部門 <small>可留白</small></span><span>員工編號 <small>選填</small></span><span>群組 <small>選填</small></span></div>
+        <p class="guide-note">目前匯入的是 CSV 檔，不能直接上傳 Excel 的 XLSX 檔。電話與員工編號若有前導 0，請先在 Excel 設為文字格式，另存後再核對。</p>
+        <details class="import-faq"><summary>查看完整欄位對照</summary>
+            <div class="table-scroll" role="region" aria-label="CSV 欄位對照" tabindex="0"><table><thead><tr><th scope="col">欄位</th><th scope="col">可用欄名</th><th scope="col">注意事項</th></tr></thead><tbody>
+                <tr><th scope="row">姓名</th><td>姓名 / name</td><td>必須有值；同名者以 Email 區分。</td></tr>
+                <tr><th scope="row">Email</th><td>Email / email</td><td>必須有值；匯入時轉小寫，用於同組織比對與更新。</td></tr>
+                <tr><th scope="row">電話</th><td>電話 / phone</td><td>欄名必須保留，值可空白。</td></tr>
+                <tr><th scope="row">部門</th><td>部門 / department</td><td>欄名必須保留；部門文字不等於抽獎群組。</td></tr>
+                <tr><th scope="row">員工編號</th><td>員工編號 / employee_no</td><td>選填；更新既有員工時，省略或留白會清空原編號。</td></tr>
+                <tr><th scope="row">群組</th><td>群組 / groups</td><td>選填；每筆只填一個群組，更新方式見下方說明。</td></tr>
+            </tbody></table></div>
+        </details>
     </section>
-    <section class="guide-section" id="import">
-        <h2>3. 從 Excel 整理，到後台核對。</h2>
-        <ol><li><strong>下載 CSV：</strong>保留第一列標題，在每列填入一位參加者。</li><li><strong>檢查識別資料：</strong>確認姓名、Email 有值，Email、部門與群組沒有多餘空白或錯字。</li><li><strong>另存 UTF-8 CSV：</strong>若用 Excel 編輯，另存前先確認文字編碼與電話、編號的格式。</li><li><strong>進入正確組織：</strong>在員工列表選「匯入 CSV」，上傳檔案並開始匯入。</li><li><strong>閱讀結果：</strong>核對新增、更新、略過的數量，再查看幾筆員工的 Email、部門與群組。</li><li><strong>確認獎項資格：</strong>匯入員工不等於所有獎項都已包含這些人；到獎項設定檢查可抽人數。</li></ol>
-        <p>如果目的是先看動畫，免費 Demo 可以直接貼上姓名，不需要準備 Email 或匯入檔案。CSV 教學是正式組織後台的操作流程。</p>
+
+    <section class="guide-section" id="questions">
+        <h2>常見問題</h2>
+        <details class="import-faq"><summary>公司有兩位同名員工，會合併嗎？</summary><p>不會只因同名就合併。系統以同一組織內的 Email 辨識員工，上方兩位「測試甲」因 Email 不同而分開保存。員工編號可用於人工核對。</p></details>
+        <details class="import-faq"><summary>同一份名單再匯入一次，會怎樣？</summary><p>同組織已有的 Email 會更新資料，不會新增第二筆。同一檔案內重複 Email 則只採第一筆，後續同 Email 列會略過。</p><p>更新會覆寫姓名、電話、部門與員工編號，不是只補空欄。空白電話、部門與編號會清空原值；省略員工編號欄也會清空原編號。再次匯入前先保留原始名單並核對欄位。</p></details>
+        <details class="import-faq"><summary>群組留白，會保留原本的設定嗎？</summary><p>沒有「群組」欄位時，原群組不變；有欄位卻留白，會清空原群組。填一個群組名稱，會改成這一個群組，不存在的群組會建立。</p><p>一筆只能填一個群組。使用逗號、分號、頓號或直線分隔多個群組，該列會被略過。</p></details>
+        <details class="import-faq"><summary>顯示「略過」或「CSV 欄位錯誤」，先查哪裡？</summary><p>欄位錯誤時，確認第一列有姓名、Email、電話、部門。若有略過，檢查姓名或 Email 是否空白、同檔 Email 是否重複，以及是否一筆填了多個群組。修正後再次匯入時，也要留意既有 Email 的更新行為。</p></details>
     </section>
-    <section class="guide-section" id="duplicates">
-        <h2>4. 同名可以並存，重複 Email 會影響更新。</h2>
-        <ul><li><strong>同名、不同 Email：</strong>會視為不同員工；以員工編號或其他資料輔助現場核對。</li><li><strong>同一檔案重複 Email：</strong>只採第一筆，後續同 Email 列會略過。先確認第一筆的姓名與群組才是要保留的資料。</li><li><strong>同組織已存在該 Email：</strong>更新姓名、電話、部門、員工編號；其中空白電話、部門與員工編號會更新為空值；即使整個員工編號欄不存在，原編號也會被清空。</li><li><strong>姓名或 Email 空白：</strong>該列會略過。清理重複前，也要先移除空白或不完整列。</li></ul>
-        <p>匯入不是「只補空欄」；再次上傳前，先核對會覆寫的欄位，並保留活動前確認過的名單版本。</p>
+
+    <section class="guide-section import-next" id="next">
+        <h2>接著設定獎項</h2>
+        <p>建立活動與獎項後，確認包含、排除條件與可抽人數。</p>
+        <div class="actions"><a class="guide-btn primary" href="{{ route('guides.lottery-rules') }}">了解獎項資格與重複中獎規則 →</a><a class="guide-btn" href="{{ route('features.lottery-control') }}">看看後台如何切換獎項</a></div>
+        <p class="small">只想先看抽獎效果？<a href="{{ route('demo.lottery.landing') }}" data-demo-event="play_click">免費試玩動畫</a>可以直接貼上姓名，不必準備 CSV。</p>
     </section>
-    <section class="guide-section" id="groups">
-        <h2>5. 群組欄位，三種情況要分開看。</h2>
-        <div class="table-scroll" role="region" aria-label="可橫向捲動的群組匯入規則" tabindex="0"><table><caption>群組資料的實際更新效果</caption><thead><tr><th scope="col">檔案情況</th><th scope="col">更新效果</th></tr></thead><tbody><tr><th scope="row">沒有群組欄位</th><td>不修改該員工既有群組。</td></tr><tr><th scope="row">有欄位，這列留空</th><td>清空該員工既有群組。</td></tr><tr><th scope="row">填一個群組名稱</th><td>改為這一個群組；不存在的同組織群組會建立。</td></tr><tr><th scope="row">填多個群組名稱</th><td>該列會略過；不可用逗號、分號、頓號或直線分隔來一次指定多個群組。</td></tr></tbody></table></div>
-        <p>例如，只想更新員工編號而保留所有群組時，可以移除整個群組欄位；保留欄位卻把值清空，會有不同結果。</p>
-    </section>
-    <section class="guide-section" id="errors">
-        <h2>6. 匯入完成，再核對這四件事。</h2>
-        <ul><li>欄位錯誤時，檢查第一列是否包含姓名、Email、電話、部門。</li><li>略過數量較多時，檢查空白姓名、空白或重複 Email，以及多群組值。</li><li>員工資料有更新時，抽查原有欄位是否被空值覆寫。</li><li>到每個獎項確認包含、排除資格與可抽人數，再用測試名單彩排。</li></ul>
-        <div class="actions"><a class="guide-btn" href="{{ route('guides.lottery-rules') }}">接著設定抽獎資格與重複規則 →</a><a class="guide-btn" href="{{ route('demo.lottery.landing') }}" data-demo-event="play_click">先用 Demo 試玩動畫</a></div>
-    </section>
+    @include('guides.partials.image-dialog')
 @endsection

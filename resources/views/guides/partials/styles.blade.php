@@ -78,6 +78,10 @@
     .guide-related strong { display:block; margin-bottom:.4rem; }
     .guide-related span { color:var(--muted); font-size:.85rem; line-height:1.7; }
     .guide-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:1rem; padding:2rem 0; border-top:1px solid var(--line); margin-top:3rem; font-size:.8rem; color:var(--muted); }
+    .guide-series { display:flex; flex-wrap:wrap; gap:.6rem; margin:0 0 2rem; }
+    .guide-series a { display:flex; gap:.55rem; align-items:center; padding:.7rem .85rem; border:1px solid var(--line); border-radius:.6rem; color:var(--muted); font-size:.83rem; text-decoration:none; }
+    .guide-series a[aria-current="page"] { border-color:var(--gold); color:var(--gold); }
+    .guide-series span { color:var(--gold); font-size:.7rem; }
     @media(max-width:850px) { .guide-layout { grid-template-columns:1fr; gap:1rem; } .guide-toc { position:static; } .guide-toc ol { display:flex; flex-wrap:wrap; gap:.3rem 1.7rem; margin-bottom:0; } .guide-grid { grid-template-columns:1fr; } .guide-card { padding:1.5rem; } .guide-card h2 { margin-top:.6rem; } .guide-feature { grid-template-columns:1fr; gap:1.5rem; } }
     @media(max-width:560px) { .guide-wrap { width:calc(100% - 2rem); } .guide-hero { padding:3rem 0 2rem; } h1 { font-size:2rem; } .guide-feature,.guide-section { padding:1.25rem; } .guide-callout { flex-direction:column; align-items:flex-start; padding:1.3rem; } .guide-related { grid-template-columns:1fr; } .guide-nav-links { gap:1rem; } }
     @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .guide-card { transition:none; } }

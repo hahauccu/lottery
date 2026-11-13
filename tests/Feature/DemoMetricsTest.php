@@ -84,16 +84,16 @@ class DemoMetricsTest extends TestCase
 
     public function test_guide_events_use_bounded_entries_and_cannot_be_misreported_as_draws(): void
     {
-        foreach (['guide_hub', 'guide_host', 'guide_csv', 'guide_rule'] as $entry) {
+        foreach (['guide_hub', 'guide_host', 'guide_csv', 'guide_rule', 'g_event', 'g_prize', 'g_draw', 'g_redraw', 'g_claims', 'g_danmaku', 'g_analysis', 'g_qr'] as $entry) {
             $this->assertLessThanOrEqual(10, strlen($entry));
             $this->postJson('/demo/metrics', ['event' => 'page_view', 'entry' => $entry, 'animation_style' => 'all'])->assertNoContent();
         }
-        foreach ([['download_click', 'guide_csv'], ['download_click', 'guide_host'], ['copy_click', 'guide_host']] as [$event, $entry]) {
+        foreach ([['download_click', 'guide_csv'], ['download_click', 'guide_host'], ['copy_click', 'guide_host'], ['download_click', 'g_analysis']] as [$event, $entry]) {
             $this->postJson('/demo/metrics', ['event' => $event, 'entry' => $entry, 'animation_style' => 'all'])->assertNoContent();
         }
         foreach ([['download_click', 'intro'], ['copy_click', 'guide_csv'], ['draw_complete', 'guide_host']] as [$event, $entry]) {
             $this->postJson('/demo/metrics', ['event' => $event, 'entry' => $entry, 'animation_style' => 'battle_top'])->assertUnprocessable();
         }
-        $this->assertDatabaseCount('demo_metrics', 7);
+        $this->assertDatabaseCount('demo_metrics', 16);
     }
 }

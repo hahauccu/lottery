@@ -31,6 +31,9 @@ Route::view('/guides/year-end-lottery', 'guides.year-end-lottery')->name('guides
 Route::view('/guides/lottery-host-script', 'guides.host-script')->name('guides.lottery-host-script');
 Route::view('/guides/lottery-participant-import', 'guides.participant-import')->name('guides.lottery-participant-import');
 Route::view('/guides/lottery-rules', 'guides.rules')->name('guides.lottery-rules');
+foreach (\App\Support\LotteryWalkthroughs::all() as $slug => $walkthrough) {
+    Route::view('/guides/'.$slug, 'guides.walkthrough', ['guideSlug' => $slug, 'walkthrough' => $walkthrough])->name('guides.'.$slug);
+}
 Route::get('/feedback', [FeedbackController::class, 'index'])->name('feedback.index');
 Route::post('/feedback', [FeedbackController::class, 'store'])->middleware('throttle:feedback')->name('feedback.store');
 

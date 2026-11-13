@@ -17,6 +17,8 @@ class DemoMetric extends Model
     public const ENTRIES = [
         'home' => '首頁', 'hub' => '動畫總覽', 'intro' => '介紹頁', 'play' => '試玩頁',
         'guide_hub' => '指南總覽', 'guide_host' => '主持稿教學', 'guide_csv' => '名單匯入教學', 'guide_rule' => '抽獎規則教學',
+        'g_event' => '建立活動教學', 'g_prize' => '獎項設定教學', 'g_draw' => '切換與抽獎教學', 'g_redraw' => '補抽教學', 'g_claims' => '領獎匯出教學',
+        'g_danmaku' => '彈幕互動教學', 'g_analysis' => '分析報表教學', 'g_qr' => 'QR領獎教學',
     ];
 
     public static function record(string $event, string $style, string $entry, int $durationMs = 0): void

@@ -245,7 +245,7 @@ class DemoLotteryPagesTest extends TestCase
 
         $xml = simplexml_load_string($response->getContent());
         $urls = array_map(fn ($url) => (string) $url->loc, iterator_to_array($xml->url, false));
-        $this->assertCount(21, $urls);
+        $this->assertCount(29, $urls);
         $this->assertContains(route('guides.year-end-lottery'), $urls);
         $this->assertContains(route('feedback.index'), $urls);
         foreach (AnimationStyles::all() as $style) {

@@ -28,6 +28,7 @@
             <p class="lead">整理參加名單、設定獎項與資格，再安排主持與領獎。這裡提供抽獎流程、台詞範例與可下載名單，依公司的活動規則調整使用。</p>
             <div class="actions"><a class="guide-btn primary" href="{{ route('guides.year-end-lottery') }}">從完整流程開始 <span aria-hidden="true">↗</span></a><a class="guide-btn" href="{{ route('demo.lottery.landing') }}" data-demo-event="play_click">先看看 7 種抽獎動畫</a></div>
         </header>
+        <section aria-labelledby="operation-series"><h2 id="operation-series">完整抽獎操作流程</h2>@include('guides.partials.series')</section>
         <section class="guide-feature" aria-labelledby="start-here">
             <div>
                 <span class="eyebrow">01 ／ 完整籌備</span>

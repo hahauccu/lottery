@@ -22,13 +22,14 @@ class LotteryGuides
                 'sections' => ['before' => '口播前先確認', 'scripts' => '四段主持稿', 'schedule' => '流程與交接', 'rehearsal' => '彩排與異常處理'],
             ],
             'lottery-participant-import' => [
-                'title' => 'Excel 名單整理與 CSV 匯入教學', 'eyebrow' => '整理參加名單', 'step' => '03',
-                'summary' => '弄懂必要欄位、同名與重複 Email，以及群組留白的影響，先用範例檔走過一次匯入。',
-                'detail' => '欄位對照・合成 CSV 樣本・匯入錯誤排查',
-                'seoTitle' => '抽獎名單 Excel 整理與 CSV 匯入教學｜欄位、重複 Email 與群組',
-                'description' => '抽獎名單怎麼從 Excel 匯入？依本站 CSV 匯入功能說明姓名、Email、電話、部門、員工編號與群組欄位，提供合成名單下載與常見錯誤修正。',
+                'title' => '員工名單匯入教學', 'eyebrow' => '後台操作圖解・名單準備', 'step' => '03',
+                'summary' => '將 Excel 名單另存為 CSV，再到後台匯入員工資料。',
+                'detail' => '操作步驟・欄位說明・範例 CSV',
+                'seoTitle' => '員工名單匯入圖文教學｜Excel 轉 CSV、實際後台操作示範',
+                'description' => '尾牙抽獎員工名單匯入教學：Excel 轉 CSV、上傳檔案、確認匯入結果與核對群組，附操作畫面、範例檔及欄位說明。',
+                'byline' => '畫面使用測試資料。',
                 'entry' => 'guide_csv',
-                'sections' => ['sample' => '先下載合成樣本', 'columns' => '欄位怎麼填', 'import' => '從 Excel 到後台', 'duplicates' => '同名與更新規則', 'groups' => '群組的三種情況', 'errors' => '匯入後核對'],
+                'sections' => ['walkthrough' => '看實際操作', 'sample' => '下載示範名單', 'columns' => '準備 CSV 欄位', 'questions' => '匯入常見問題', 'next' => '接著準備什麼'],
             ],
             'lottery-rules' => [
                 'title' => '重複中獎與不在場重抽規則', 'eyebrow' => '先說清楚規則', 'step' => '04',
@@ -39,6 +40,7 @@ class LotteryGuides
                 'entry' => 'guide_rule',
                 'sections' => ['compare' => '先分清兩種重複', 'eligibility' => '包含與排除資格', 'redraw' => '不在場重抽', 'announce' => '事前公告與彩排'],
             ],
+            ...LotteryWalkthroughs::guides(),
         ];
     }
 }
