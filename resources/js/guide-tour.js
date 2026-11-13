@@ -8,6 +8,13 @@ document.querySelectorAll('[data-guide-tour]').forEach((tour) => {
     const status = tour.querySelector('[data-tour-status]');
     if (!panels.length || panels.length !== links.length || !controls || !previous || !next || !status) return;
     let current = 0;
+    const fitImage = () => {
+        const image = panels[current].querySelector('img');
+        if (!image) return;
+        image.style.maxHeight = '';
+        const surroundingHeight = tour.getBoundingClientRect().height - image.getBoundingClientRect().height;
+        image.style.maxHeight = `${Math.max(120, Math.min(512, window.innerHeight - surroundingHeight - 32))}px`;
+    };
     const show = (index) => {
         current = Math.max(0, Math.min(index, panels.length - 1));
         panels.forEach((panel, position) => { panel.hidden = position !== current; });
@@ -18,6 +25,7 @@ document.querySelectorAll('[data-guide-tour]').forEach((tour) => {
         previous.disabled = current === 0;
         next.textContent = current === panels.length - 1 ? '從頭看一次 ↺' : '下一步 →';
         status.textContent = `步驟 ${current + 1} / ${panels.length}`;
+        fitImage();
     };
     const showHash = () => {
         const index = panels.findIndex((panel) => `#${panel.id}` === window.location.hash);
@@ -28,13 +36,16 @@ document.querySelectorAll('[data-guide-tour]').forEach((tour) => {
         event.preventDefault();
         show(index);
         history.replaceState(null, '', link.hash);
+        tour.scrollIntoView({ block: 'start', behavior: 'instant' });
     }));
-    previous.addEventListener('click', () => { show(current - 1); history.replaceState(null, '', links[current].hash); });
-    next.addEventListener('click', () => { show((current + 1) % panels.length); history.replaceState(null, '', links[current].hash); });
+    previous.addEventListener('click', () => { show(current - 1); history.replaceState(null, '', links[current].hash); tour.scrollIntoView({ block: 'start', behavior: 'instant' }); });
+    next.addEventListener('click', () => { show((current + 1) % panels.length); history.replaceState(null, '', links[current].hash); tour.scrollIntoView({ block: 'start', behavior: 'instant' }); });
     window.addEventListener('hashchange', showHash);
+    controls.hidden = false;
     show(0);
     showHash();
-    controls.hidden = false;
+    window.addEventListener('resize', fitImage);
+    panels.forEach((panel) => panel.querySelector('img')?.addEventListener('load', fitImage));
 });
 
 const dialog = document.querySelector('[data-guide-image-dialog]');

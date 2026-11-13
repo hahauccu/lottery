@@ -118,6 +118,33 @@ class LotteryFeatureClaimsTest extends TestCase
         Queue::assertPushed(RunLotteryAnalysis::class);
     }
 
+    public function test_analysis_charts_appear_when_polling_finishes_without_reloading(): void
+    {
+        $data = $this->fixture();
+        $this->actingAs($data['user']);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Filament::setTenant($data['organization']);
+        $run = LotteryAnalysisRun::create(['lottery_event_id' => $data['event']->id, 'iterations' => 20,
+            'status' => 'running', 'progress' => 50]);
+        $page = Livewire::test(AnalyzeLotteryEvent::class, ['record' => $data['event']->getRouteKey()]);
+        $page->assertDontSee('data-analysis-chart>', false);
+        $run->update(['status' => 'completed', 'progress' => 100, 'result' => [
+            'prizes' => [['name' => '圖表測試獎', 'win_rate' => 0.25, 'eligible_avg' => 4, 'winners_count' => 1]],
+            'departments' => [
+                ['department' => '正差部門', 'eligible_pct' => 0.5, 'win_pct' => 0.6, 'delta_pct' => 0.1],
+                ['department' => '負差部門', 'eligible_pct' => 0.5, 'win_pct' => 0.4, 'delta_pct' => -0.1],
+            ],
+        ]]);
+        $page->call('refreshRun')->assertSee('data-analysis-chart>', false)
+            ->assertSee('25.0%')->assertSee('10.0%')->assertSee('-10.0%')
+            ->assertSee('負差部門')->assertDontSee('cdn.jsdelivr.net');
+        $html = $page->html();
+        $this->assertSame(4, substr_count($html, 'data-analysis-chart>'));
+        $this->assertSame(9, substr_count($html, '<rect '));
+        $run->update(['result' => ['prizes' => [['name' => '零值獎', 'win_rate' => 0, 'eligible_avg' => 0, 'winners_count' => 0]]]]);
+        $page->call('refreshRun')->assertSee('零值獎')->assertSee('0.0%')->assertDontSee('負差部門');
+    }
+
     public function test_completed_analysis_download_contains_readable_excel_sheets_and_is_scoped_to_organization(): void
     {
         $data = $this->fixture();

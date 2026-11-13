@@ -2,7 +2,6 @@
 @section('guide-body-class', 'import-guide flow-guide')
 @push('guide-styles')
     @include('guides.partials.tour-styles')
-    <style>.flow-guide .tour-image-link img { max-height:40rem; object-fit:contain; }</style>
 @endpush
 @section('actions')
     @if (isset($walkthrough['download']))
