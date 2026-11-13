@@ -17,9 +17,9 @@
     .tour-number { font: .72rem ui-monospace,monospace; opacity:.7; }
     .tour-panel { padding:1.5rem 2rem 2rem; scroll-margin-top:1rem; }
     .tour-copy p { font-size:1rem; margin:0 0 1.25rem; }
-    .tour-figure { margin:0; min-width:0; }
+    .tour-figure { margin:0 auto; min-width:0; width:fit-content; max-width:100%; }
     .tour-image-link { position:relative; display:block; border:1px solid #ffffff24; border-radius:.65rem; overflow:hidden; background:#09090b; cursor:zoom-in; }
-    .tour-image-link img { display:block; width:100%; height:auto; }
+    .tour-image-link img { display:block; width:auto; max-width:100%; height:auto; max-height:clamp(10rem,calc(100svh - 20rem),32rem); object-fit:contain; }
     .tour-pin { position:absolute; left:var(--pin-x); top:var(--pin-y); transform:translate(-50%,-50%); display:grid; place-items:center; width:1.7rem; height:1.7rem; border-radius:50%; background:var(--gold); color:#17130d; border:2px solid #fff0cf; box-shadow:0 0 0 5px #f0cb8325; font-size:.8rem; font-weight:800; pointer-events:none; }
     .tour-zoom { display:block; padding:.55rem .75rem; font-size:.72rem; text-align:right; color:var(--gold); background:#191a20; border-top:1px solid var(--line); }
     .tour-controls { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1.25rem 2rem; border-top:1px solid var(--line); }
@@ -40,7 +40,7 @@
     .guide-image-toolbar p { margin:0; font-size:.85rem; }
     .guide-image-toolbar button { white-space:nowrap; }
     .guide-image-scroll { overflow:auto; max-height:calc(94dvh - 7rem); }
-    .guide-image-scroll img { display:block; width:100%; min-width:800px; height:auto; }
+    .guide-image-scroll img { display:block; margin:auto; width:auto; max-width:100%; height:auto; max-height:calc(94dvh - 7rem); object-fit:contain; }
     @media(max-width:560px) { .import-guide .guide-hero { padding:2.2rem 0 1.5rem; } .import-guide .guide-toc ol { gap:.25rem 1rem; } .import-guide .guide-section { padding:1.25rem; }    .tour-steps { margin:1rem 1.25rem 0; grid-template-columns:repeat(2,minmax(0,1fr)); } .tour-steps a { padding:.8rem; font-size:.8rem; } .tour-steps a:nth-child(2) { border-right:0; } .tour-steps a:nth-child(-n+2) { border-bottom:1px solid var(--line); } .tour-panel { padding:1.25rem; }    .tour-controls { padding:1rem 1.25rem; gap:.4rem; } .tour-controls .guide-btn { padding:.6rem .75rem; font-size:.8rem; } .tour-controls [role="status"] { font-size:.72rem; }  .import-columns { grid-template-columns:repeat(3,minmax(0,1fr)); } .tour-pin { width:1.25rem; height:1.25rem; font-size:.65rem; border-width:1px; box-shadow:0 0 0 3px #f0cb8325; } }
     @media print { .import-guide .guide-toc,.tour-steps,.tour-controls,.tour-zoom,.tour-pin,.guide-image-dialog { display:none!important; } .tour-panel[hidden] { display:grid!important; } .import-tour { background:#fff; border:0; } .tour-panel { grid-template-columns:1fr; break-inside:avoid; padding:1rem 0; }  }
 </style>
