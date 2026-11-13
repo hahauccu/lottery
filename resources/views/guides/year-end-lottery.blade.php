@@ -117,7 +117,7 @@
                 <p class="lead">先確認誰能抽、可以中幾次與獎項順序，再挑選動畫、安排唱名與領獎。這份指南把尾牙抽獎拆成可逐項核對的步驟，也適用於春酒、年會與團隊聚會。</p>
                 <ol class="flow-overview" aria-label="尾牙抽獎準備流程"><li>整理名單</li><li>設定獎項與資格</li><li>確認投影畫面</li><li>前台開抽</li><li>領獎與補抽</li></ol>
                 <p class="byline">內容整理：<a href="{{ url('/') }}">抽獎系統</a>。依本站功能與活動操作流程整理；資格、缺席與補抽方式請由主辦單位事先決定。</p>
-                <div class="actions"><a class="button primary" href="#checklist">查看當天檢查清單</a><a class="button" href="{{ route('demo.lottery.landing') }}">先免費試玩動畫</a></div>
+                <div class="actions"><a class="button primary" href="#checklist">查看當天檢查清單</a><a class="button" href="{{ route('guides.lottery-participant-import') }}">從員工匯入開始看操作教學</a><a class="button" href="{{ route('demo.lottery.landing') }}">先免費試玩動畫</a></div>
             </header>
             <div class="layout">
                 <nav class="toc" aria-label="指南目錄">

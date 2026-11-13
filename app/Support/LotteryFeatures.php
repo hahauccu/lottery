@@ -16,7 +16,7 @@ class LotteryFeatures
                 'summary' => '單次最多模擬 1,000 次，查看各獎項的中獎次數與部門分布，下載 Excel 報表，供活動規劃參考。',
                 'detail' => '單次最多 1,000 次模擬・Excel 報表',
                 'sections' => ['workflow' => '產生分析報表', 'report' => '報表內容', 'scope' => '適用範圍', 'questions' => '常見問題'],
-                'guide' => 'lottery-participant-import',
+                'guide' => 'lottery-analysis-report',
             ],
             'lottery-control' => [
                 'title' => '後台主控與前台投影',

@@ -1,4 +1,5 @@
 import { trackDemoEvent } from './demo-metrics.js';
+import './guide-tour.js';
 
 document.querySelectorAll('[data-copy-target]').forEach((button) => {
     const source = document.getElementById(button.dataset.copyTarget);

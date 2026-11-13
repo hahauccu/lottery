@@ -23,7 +23,7 @@ class DemoMetricController extends Controller
         abort_if($isDraw && ($data['entry'] !== 'play' || $data['animation_style'] === 'all'), 422);
         abort_if(in_array($event, ['play_click', 'register_click'], true) && $data['entry'] === 'play', 422);
         abort_if($data['entry'] === 'intro' && $data['animation_style'] === 'all', 422);
-        abort_if($event === 'download_click' && ! in_array($data['entry'], ['guide_host', 'guide_csv'], true), 422);
+        abort_if($event === 'download_click' && ! in_array($data['entry'], ['guide_host', 'guide_csv', 'g_analysis'], true), 422);
         abort_if($event === 'copy_click' && $data['entry'] !== 'guide_host', 422);
 
         DemoMetric::record($event, $data['animation_style'], $data['entry'],
